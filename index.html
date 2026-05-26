@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Catatan Kas</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">Rp</div>
+          <div>
+            <h1>Catatan Kas</h1>
+            <p>Arus uang pribadi dan usaha</p>
+          </div>
+        </div>
+
+        <nav class="nav-list" aria-label="Menu utama">
+          <button class="nav-item active" data-view="dashboard" type="button">Dashboard</button>
+          <button class="nav-item" data-view="transactions" type="button">Transaksi</button>
+          <button class="nav-item" data-view="categories" type="button">Tab & Jenis</button>
+          <button class="nav-item" data-view="tools" type="button">Tools</button>
+        </nav>
+
+        <div class="sidebar-panel">
+          <p class="panel-label">Saldo Bulan Ini</p>
+          <strong id="monthBalance">Rp0</strong>
+          <span id="monthMeta">0 transaksi</span>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Real-time finance tracker</p>
+            <h2 id="pageTitle">Dashboard</h2>
+          </div>
+          <div class="topbar-actions">
+            <span class="sync-status" id="syncStatus">Mode lokal</span>
+            <label class="month-picker">
+              Bulan
+              <input id="monthFilter" type="month" />
+            </label>
+            <button class="primary-button" id="quickAddButton" type="button">+ Transaksi</button>
+          </div>
+        </header>
+
+        <section class="view active" id="dashboardView" aria-labelledby="pageTitle">
+          <div class="summary-grid">
+            <article class="metric income">
+              <span>Pemasukan</span>
+              <strong id="totalIncome">Rp0</strong>
+              <small id="incomeCount">0 transaksi</small>
+            </article>
+            <article class="metric expense">
+              <span>Pengeluaran</span>
+              <strong id="totalExpense">Rp0</strong>
+              <small id="expenseCount">0 transaksi</small>
+            </article>
+            <article class="metric balance">
+              <span>Selisih Bulan Ini</span>
+              <strong id="totalBalance">Rp0</strong>
+              <small id="balanceStatus">Netral</small>
+            </article>
+            <article class="metric balance">
+              <span>Sisa Saldo</span>
+              <strong id="runningBalance">Rp0</strong>
+              <small>continue dari semua transaksi</small>
+            </article>
+            <article class="metric">
+              <span>Rata-rata Harian</span>
+              <strong id="dailyAverage">Rp0</strong>
+              <small>berdasarkan bulan aktif</small>
+            </article>
+          </div>
+
+          <div class="dashboard-grid">
+            <section class="surface wide">
+              <div class="section-head">
+                <div>
+                  <h3>Chart Nominal per Tab</h3>
+                  <p>Pemasukan dan pengeluaran dihitung dari bulan aktif.</p>
+                </div>
+                <div class="segmented" role="tablist" aria-label="Jenis chart">
+                  <button class="segment active" data-chart-type="income" type="button">Pemasukan</button>
+                  <button class="segment" data-chart-type="expense" type="button">Pengeluaran</button>
+                </div>
+              </div>
+              <div class="chart-wrap">
+                <canvas id="categoryChart" height="260"></canvas>
+                <div class="chart-tooltip hidden" id="chartTooltip"></div>
+                <div class="empty-state hidden" id="chartEmpty">Belum ada data untuk bulan ini.</div>
+              </div>
+              <div class="chart-details" id="chartDetails"></div>
+            </section>
+
+            <section class="surface">
+              <div class="section-head compact">
+                <h3>Tab Terbesar</h3>
+                <p id="topCategoryHint">Berdasarkan bulan aktif</p>
+              </div>
+              <div class="rank-list" id="topCategories"></div>
+            </section>
+
+            <section class="surface">
+              <div class="section-head compact">
+                <h3>Aktivitas Terbaru</h3>
+                <p>5 transaksi terakhir</p>
+              </div>
+              <div class="activity-list" id="recentTransactions"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="transactionsView" aria-labelledby="pageTitle">
+          <div class="workspace-grid">
+            <form class="surface form-panel" id="transactionForm">
+              <div class="section-head compact">
+                <h3 id="transactionFormTitle">Tambah Transaksi</h3>
+                <p id="storageHint">Data otomatis tersimpan di browser.</p>
+              </div>
+
+              <input id="editingTransactionId" type="hidden" />
+              <label>
+                Tipe
+                <select id="transactionType" required>
+                  <option value="income">Pemasukan</option>
+                  <option value="expense">Pengeluaran</option>
+                </select>
+              </label>
+              <label>
+                Tab/Jenis
+                <select id="transactionCategory" required></select>
+              </label>
+              <label>
+                Judul
+                <input id="transactionTitle" type="text" placeholder="Contoh: Gaji, makan, listrik" required />
+              </label>
+              <label>
+                Nominal
+                <input id="transactionAmount" type="text" inputmode="numeric" placeholder="0" required />
+              </label>
+              <label>
+                Tanggal
+                <input id="transactionDate" type="date" required />
+              </label>
+              <label>
+                Catatan
+                <textarea id="transactionNote" rows="3" placeholder="Opsional"></textarea>
+              </label>
+              <div class="form-actions">
+                <button class="primary-button" type="submit">Simpan</button>
+                <button class="ghost-button" id="cancelEditButton" type="button">Batal</button>
+              </div>
+            </form>
+
+            <section class="surface table-panel">
+              <div class="table-toolbar">
+                <label>
+                  Cari
+                  <input id="searchInput" type="search" placeholder="Judul, tab, catatan" />
+                </label>
+                <label>
+                  Tipe
+                  <select id="typeFilter">
+                    <option value="all">Semua</option>
+                    <option value="income">Pemasukan</option>
+                    <option value="expense">Pengeluaran</option>
+                  </select>
+                </label>
+                <label>
+                  Tab
+                  <select id="categoryFilter">
+                    <option value="all">Semua tab</option>
+                  </select>
+                </label>
+                <label class="checkbox-label">
+                  Semua bulan
+                  <input id="allMonthsFilter" type="checkbox" />
+                </label>
+              </div>
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Tanggal</th>
+                      <th>Judul</th>
+                      <th>Tab</th>
+                      <th>Tipe</th>
+                      <th>Nominal</th>
+                      <th>Saldo Setelah</th>
+                      <th>Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="transactionTable"></tbody>
+                </table>
+              </div>
+              <div class="empty-state hidden" id="tableEmpty">Belum ada transaksi sesuai filter.</div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="categoriesView" aria-labelledby="pageTitle">
+          <div class="workspace-grid">
+            <form class="surface form-panel" id="categoryForm">
+              <div class="section-head compact">
+                <h3>Buat Tab/Jenis</h3>
+                <p>User bebas membuat jenis pemasukan dan pengeluaran.</p>
+              </div>
+              <label>
+                Tipe
+                <select id="categoryType" required>
+                  <option value="income">Pemasukan</option>
+                  <option value="expense">Pengeluaran</option>
+                </select>
+              </label>
+              <label>
+                Nama Tab/Jenis
+                <input id="categoryName" type="text" placeholder="Contoh: Proyek, Belanja, Transport" required />
+              </label>
+              <label>
+                Warna
+                <input id="categoryColor" type="color" value="#2563eb" />
+              </label>
+              <button class="primary-button" type="submit">Tambah Tab</button>
+            </form>
+
+            <section class="surface table-panel">
+              <div class="section-head compact">
+                <h3>Daftar Tab</h3>
+                <p>Tab yang sudah dipakai transaksi tetap aman saat nama diubah.</p>
+              </div>
+              <div class="category-board" id="categoryBoard"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="toolsView" aria-labelledby="pageTitle">
+          <div class="tools-grid">
+            <section class="surface">
+              <div class="section-head compact">
+                <h3>Export & Import</h3>
+                <p>Pindahkan data ke perangkat lain atau backup manual.</p>
+              </div>
+              <div class="button-row">
+                <button class="primary-button" id="exportJsonButton" type="button">Export JSON</button>
+                <button class="ghost-button" id="exportCsvButton" type="button">Export CSV</button>
+              </div>
+              <label class="file-input">
+                Import JSON
+                <input id="importFile" type="file" accept="application/json" />
+              </label>
+            </section>
+            <section class="surface danger-zone">
+              <div class="section-head compact">
+                <h3>Reset Data</h3>
+                <p>Menghapus semua transaksi dan tab lokal.</p>
+              </div>
+              <button class="danger-button" id="resetButton" type="button">Reset Semua Data</button>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./supabase-config.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
