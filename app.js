@@ -38,6 +38,8 @@ const rupiah = new Intl.NumberFormat("id-ID", {
 let state = loadState();
 let activeView = "dashboard";
 let activeChartType = "income";
+let transactionSelectionMode = false;
+let selectedTransactionIds = new Set();
 let chartBars = [];
 let remoteStore = {
   enabled: false,
@@ -73,6 +75,11 @@ const el = {
   typeFilter: document.querySelector("#typeFilter"),
   categoryFilter: document.querySelector("#categoryFilter"),
   allMonthsFilter: document.querySelector("#allMonthsFilter"),
+  toggleSelectionButton: document.querySelector("#toggleSelectionButton"),
+  selectionSummary: document.querySelector("#selectionSummary"),
+  selectedCount: document.querySelector("#selectedCount"),
+  selectedTotal: document.querySelector("#selectedTotal"),
+  transactionTableHead: document.querySelector("#transactionTableHead"),
   transactionTable: document.querySelector("#transactionTable"),
   tableEmpty: document.querySelector("#tableEmpty"),
   categoryForm: document.querySelector("#categoryForm"),
@@ -555,10 +562,32 @@ function renderTransactions() {
     })
     .sort((a, b) => b.date.localeCompare(a.date));
 
+  const visibleIds = new Set(rows.map((item) => item.id));
+  selectedTransactionIds = new Set([...selectedTransactionIds].filter((id) => visibleIds.has(id)));
+  renderTransactionSelectionSummary(rows);
+
+  el.transactionTableHead.innerHTML = `
+    ${transactionSelectionMode ? `<th class="select-column">Pilih</th>` : ""}
+    <th>Tanggal</th>
+    <th>Judul</th>
+    <th>Tab</th>
+    <th>Tipe</th>
+    <th>Nominal</th>
+    <th>Saldo Setelah</th>
+    <th>Aksi</th>
+  `;
+
   el.transactionTable.innerHTML = rows
     .map(
       (item) => `
         <tr>
+          ${
+            transactionSelectionMode
+              ? `<td class="select-column"><input class="transaction-select" data-select-transaction="${item.id}" type="checkbox" ${
+                  selectedTransactionIds.has(item.id) ? "checked" : ""
+                } aria-label="Pilih ${escapeHtml(item.title)}" /></td>`
+              : ""
+          }
           <td>${formatDate(item.date)}</td>
           <td>
             <strong>${escapeHtml(item.title)}</strong>
@@ -584,6 +613,15 @@ function renderTransactions() {
     .join("");
 
   el.tableEmpty.classList.toggle("hidden", rows.length > 0);
+}
+
+function renderTransactionSelectionSummary(visibleRows = []) {
+  el.toggleSelectionButton.textContent = transactionSelectionMode ? "Selesai Pilih" : "Pilih Nominal";
+  el.selectionSummary.classList.toggle("hidden", !transactionSelectionMode);
+
+  const selectedRows = visibleRows.filter((item) => selectedTransactionIds.has(item.id));
+  el.selectedCount.textContent = `${selectedRows.length} dipilih`;
+  el.selectedTotal.textContent = formatMoney(sum(selectedRows));
 }
 
 function renderCategories() {
@@ -789,6 +827,11 @@ function initEvents() {
   el.typeFilter.addEventListener("change", renderTransactions);
   el.categoryFilter.addEventListener("change", renderTransactions);
   el.allMonthsFilter.addEventListener("change", renderTransactions);
+  el.toggleSelectionButton.addEventListener("click", () => {
+    transactionSelectionMode = !transactionSelectionMode;
+    selectedTransactionIds.clear();
+    renderTransactions();
+  });
   window.addEventListener("resize", () => renderChart(monthTransactions()));
   el.categoryChart.addEventListener("mousemove", showChartTooltip);
   el.categoryChart.addEventListener("mouseleave", () => el.chartTooltip.classList.add("hidden"));
@@ -851,6 +894,18 @@ function initEvents() {
 
   el.cancelEditButton.addEventListener("click", resetTransactionForm);
 
+  el.transactionTable.addEventListener("change", (event) => {
+    const selectedId = event.target.dataset.selectTransaction;
+    if (!selectedId) return;
+
+    if (event.target.checked) {
+      selectedTransactionIds.add(selectedId);
+    } else {
+      selectedTransactionIds.delete(selectedId);
+    }
+    renderTransactions();
+  });
+
   el.transactionTable.addEventListener("click", async (event) => {
     const editId = event.target.dataset.edit;
     const deleteId = event.target.dataset.delete;
@@ -872,6 +927,7 @@ function initEvents() {
 
     if (deleteId && confirm("Hapus transaksi ini?")) {
       state.transactions = state.transactions.filter((transaction) => transaction.id !== deleteId);
+      selectedTransactionIds.delete(deleteId);
       try {
         await deleteTransactionRemote(deleteId);
         renderAll();
