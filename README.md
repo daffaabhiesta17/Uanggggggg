@@ -6,6 +6,7 @@ Web UI statis untuk pencatatan pemasukan dan pengeluaran. Bisa berjalan lokal di
 
 - Tab/jenis pemasukan dan pengeluaran fleksibel, bisa dibuat oleh user.
 - Input, edit, hapus, cari, dan filter transaksi.
+- Pilih beberapa transaksi untuk menghitung total nominal terpilih.
 - Ringkasan pemasukan, pengeluaran, selisih saldo, dan rata-rata harian per bulan.
 - Chart nominal setiap tab per bulan untuk pemasukan dan pengeluaran.
 - Daftar tab terbesar dan aktivitas terbaru.
