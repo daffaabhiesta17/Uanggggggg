@@ -29,7 +29,29 @@ const defaultState = {
       note: "",
     },
   ],
+  investments: {
+    horizonYears: 11,
+    tickers: ["BMRI", "ICBP"],
+    stockPurchases: [],
+    rdpuPurchases: [],
+  },
 };
+
+const INVESTMENT_START_YEAR = new Date().getFullYear();
+const INVESTMENT_MONTHS = [
+  "Januari",
+  "Februari",
+  "Maret",
+  "April",
+  "Mei",
+  "Juni",
+  "Juli",
+  "Agustus",
+  "September",
+  "Oktober",
+  "November",
+  "Desember",
+];
 
 const rupiah = new Intl.NumberFormat("id-ID", {
   style: "currency",
@@ -43,8 +65,11 @@ let activeChartType = "income";
 let transactionSelectionMode = false;
 let selectedTransactionIds = new Set();
 let chartBars = [];
+let investmentStockChart = null;
+let investmentChartPurchases = [];
 let remoteStore = {
   enabled: false,
+  investmentsEnabled: false,
   client: null,
   channel: null,
   refreshing: false,
@@ -101,6 +126,40 @@ const el = {
   resetButton: document.querySelector("#resetButton"),
   syncStatus: document.querySelector("#syncStatus"),
   storageHint: document.querySelector("#storageHint"),
+  investmentHorizon: document.querySelector("#investmentHorizon"),
+  addInvestmentYearButton: document.querySelector("#addInvestmentYearButton"),
+  investmentStockTotal: document.querySelector("#investmentStockTotal"),
+  investmentLotTotal: document.querySelector("#investmentLotTotal"),
+  investmentRdpuTotal: document.querySelector("#investmentRdpuTotal"),
+  investmentPortfolioTotal: document.querySelector("#investmentPortfolioTotal"),
+  investmentTickerForm: document.querySelector("#investmentTickerForm"),
+  investmentTickerInput: document.querySelector("#investmentTickerInput"),
+  investmentTickerList: document.querySelector("#investmentTickerList"),
+  investmentStockForm: document.querySelector("#investmentStockForm"),
+  investmentStockTicker: document.querySelector("#investmentStockTicker"),
+  investmentStockMonth: document.querySelector("#investmentStockMonth"),
+  investmentStockYear: document.querySelector("#investmentStockYear"),
+  investmentStockLotPrice: document.querySelector("#investmentStockLotPrice"),
+  investmentStockLots: document.querySelector("#investmentStockLots"),
+  investmentStockTable: document.querySelector("#investmentStockTable"),
+  investmentRdpuForm: document.querySelector("#investmentRdpuForm"),
+  investmentRdpuMonth: document.querySelector("#investmentRdpuMonth"),
+  investmentRdpuYear: document.querySelector("#investmentRdpuYear"),
+  investmentRdpuAmount: document.querySelector("#investmentRdpuAmount"),
+  investmentRdpuTable: document.querySelector("#investmentRdpuTable"),
+  investmentChartTickerFilter: document.querySelector("#investmentChartTickerFilter"),
+  investmentChartYearFilter: document.querySelector("#investmentChartYearFilter"),
+  investmentStockChart: document.querySelector("#investmentStockChart"),
+  investmentChartEmpty: document.querySelector("#investmentChartEmpty"),
+  investmentMinPrice: document.querySelector("#investmentMinPrice"),
+  investmentMinPriceMeta: document.querySelector("#investmentMinPriceMeta"),
+  investmentMaxPrice: document.querySelector("#investmentMaxPrice"),
+  investmentMaxPriceMeta: document.querySelector("#investmentMaxPriceMeta"),
+  investmentMinLots: document.querySelector("#investmentMinLots"),
+  investmentMinLotsMeta: document.querySelector("#investmentMinLotsMeta"),
+  investmentMaxLots: document.querySelector("#investmentMaxLots"),
+  investmentMaxLotsMeta: document.querySelector("#investmentMaxLotsMeta"),
+  investmentSummaryTable: document.querySelector("#investmentSummaryTable"),
 };
 
 function loadState() {
@@ -112,6 +171,7 @@ function loadState() {
     return normalizeState({
       categories: Array.isArray(parsed.categories) ? parsed.categories : defaultState.categories,
       transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [],
+      investments: parsed.investments,
     });
   } catch {
     return normalizeState(structuredClone(defaultState));
@@ -127,6 +187,42 @@ function normalizeState(snapshot) {
   return {
     categories: Array.isArray(snapshot.categories) ? snapshot.categories : [],
     transactions: Array.isArray(snapshot.transactions) ? snapshot.transactions.map(normalizeTransaction) : [],
+    investments: normalizeInvestments(snapshot.investments),
+  };
+}
+
+function normalizeInvestments(investments = {}) {
+  const tickers = Array.isArray(investments.tickers) ? investments.tickers.map(sanitizeTicker).filter(Boolean) : [];
+  const stockPurchases = Array.isArray(investments.stockPurchases)
+    ? investments.stockPurchases
+        .map((purchase) => ({
+          id: String(purchase.id || uid("stock")),
+          ticker: sanitizeTicker(purchase.ticker),
+          month: clampNumber(Math.round(Number(purchase.month) || 1), 1, 12),
+          year: Math.round(Number(purchase.year) || INVESTMENT_START_YEAR),
+          lotPrice: positiveNumber(purchase.lotPrice),
+          lots: Math.max(0, Math.floor(positiveNumber(purchase.lots))),
+          createdAt: purchase.createdAt || purchase.created_at || new Date().toISOString(),
+        }))
+        .filter((purchase) => purchase.ticker && purchase.lotPrice > 0 && purchase.lots > 0)
+    : [];
+  const rdpuPurchases = Array.isArray(investments.rdpuPurchases)
+    ? investments.rdpuPurchases
+        .map((purchase) => ({
+          id: String(purchase.id || uid("rdpu")),
+          month: clampNumber(Math.round(Number(purchase.month) || 1), 1, 12),
+          year: Math.round(Number(purchase.year) || INVESTMENT_START_YEAR),
+          amount: positiveNumber(purchase.amount),
+          createdAt: purchase.createdAt || purchase.created_at || new Date().toISOString(),
+        }))
+        .filter((purchase) => purchase.amount > 0)
+    : [];
+
+  return {
+    horizonYears: clampNumber(Math.round(Number(investments.horizonYears) || 11), 1, 50),
+    tickers: [...new Set(["BMRI", "ICBP", ...tickers, ...stockPurchases.map((purchase) => purchase.ticker)])],
+    stockPurchases,
+    rdpuPurchases,
   };
 }
 
@@ -211,6 +307,67 @@ function fromDbTransaction(transaction) {
   };
 }
 
+function toDbInvestmentTicker(ticker) {
+  return {
+    symbol: ticker,
+  };
+}
+
+function fromDbInvestmentTicker(row) {
+  return sanitizeTicker(row.symbol);
+}
+
+function toDbStockPurchase(purchase) {
+  return {
+    id: purchase.id,
+    ticker: purchase.ticker,
+    month: purchase.month,
+    year: purchase.year,
+    lot_price: purchase.lotPrice,
+    lots: purchase.lots,
+    created_at: purchase.createdAt || new Date().toISOString(),
+  };
+}
+
+function fromDbStockPurchase(purchase) {
+  return {
+    id: purchase.id,
+    ticker: sanitizeTicker(purchase.ticker),
+    month: Number(purchase.month),
+    year: Number(purchase.year),
+    lotPrice: Number(purchase.lot_price),
+    lots: Number(purchase.lots),
+    createdAt: purchase.created_at,
+  };
+}
+
+function toDbRdpuPurchase(purchase) {
+  return {
+    id: purchase.id,
+    month: purchase.month,
+    year: purchase.year,
+    amount: purchase.amount,
+    created_at: purchase.createdAt || new Date().toISOString(),
+  };
+}
+
+function fromDbRdpuPurchase(purchase) {
+  return {
+    id: purchase.id,
+    month: Number(purchase.month),
+    year: Number(purchase.year),
+    amount: Number(purchase.amount),
+    createdAt: purchase.created_at,
+  };
+}
+
+function toDbInvestmentSettings(investments) {
+  return {
+    id: "default",
+    horizon_years: investments.horizonYears,
+  };
+}
+
 async function initRemoteStore() {
   if (!hasSupabaseConfig()) {
     setSyncStatus("Mode lokal");
@@ -242,6 +399,10 @@ async function initRemoteStore() {
       .channel("catatan-kas-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "categories" }, refreshFromRemote)
       .on("postgres_changes", { event: "*", schema: "public", table: "transactions" }, refreshFromRemote)
+      .on("postgres_changes", { event: "*", schema: "public", table: "investment_settings" }, refreshFromRemote)
+      .on("postgres_changes", { event: "*", schema: "public", table: "investment_tickers" }, refreshFromRemote)
+      .on("postgres_changes", { event: "*", schema: "public", table: "stock_purchases" }, refreshFromRemote)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rdpu_purchases" }, refreshFromRemote)
       .subscribe();
   } catch (error) {
     console.error(error);
@@ -251,6 +412,7 @@ async function initRemoteStore() {
 }
 
 async function loadRemoteState() {
+  const localInvestments = structuredClone(state.investments);
   const [categoriesResult, transactionsResult] = await Promise.all([
     remoteStore.client.from("categories").select("*").order("created_at", { ascending: true }),
     remoteStore.client
@@ -266,8 +428,64 @@ async function loadRemoteState() {
   state = {
     categories: categoriesResult.data.map(fromDbCategory),
     transactions: transactionsResult.data.map(fromDbTransaction),
+    investments: state.investments,
   };
+  await loadRemoteInvestments(localInvestments);
   saveState();
+}
+
+function isMissingInvestmentTableError(error) {
+  return error?.code === "42P01" || String(error?.message || "").toLowerCase().includes("does not exist");
+}
+
+async function loadRemoteInvestments(localInvestments = state.investments) {
+  try {
+    const [settingsResult, tickersResult, stockResult, rdpuResult] = await Promise.all([
+      remoteStore.client.from("investment_settings").select("*").eq("id", "default").maybeSingle(),
+      remoteStore.client.from("investment_tickers").select("*").order("symbol", { ascending: true }),
+      remoteStore.client
+        .from("stock_purchases")
+        .select("*")
+        .order("year", { ascending: true })
+        .order("month", { ascending: true })
+        .order("created_at", { ascending: true }),
+      remoteStore.client
+        .from("rdpu_purchases")
+        .select("*")
+        .order("year", { ascending: true })
+        .order("month", { ascending: true })
+        .order("created_at", { ascending: true }),
+    ]);
+
+    const errors = [settingsResult.error, tickersResult.error, stockResult.error, rdpuResult.error].filter(Boolean);
+    if (errors.length) throw errors[0];
+
+    const remoteHasInvestmentData =
+      Boolean(settingsResult.data) ||
+      tickersResult.data.length > 0 ||
+      stockResult.data.length > 0 ||
+      rdpuResult.data.length > 0;
+
+    state.investments = remoteHasInvestmentData
+      ? normalizeInvestments({
+          horizonYears: Number(settingsResult.data?.horizon_years) || state.investments.horizonYears,
+          tickers: tickersResult.data.map(fromDbInvestmentTicker),
+          stockPurchases: stockResult.data.map(fromDbStockPurchase),
+          rdpuPurchases: rdpuResult.data.map(fromDbRdpuPurchase),
+        })
+      : normalizeInvestments(localInvestments);
+
+    remoteStore.investmentsEnabled = true;
+
+    if (!remoteHasInvestmentData && state.investments.tickers.length) {
+      await syncInvestmentsToRemote();
+    }
+  } catch (error) {
+    remoteStore.investmentsEnabled = false;
+    if (!isMissingInvestmentTableError(error)) {
+      console.warn("Investment cloud sync disabled:", error);
+    }
+  }
 }
 
 async function syncFullStateToRemote() {
@@ -283,7 +501,86 @@ async function syncFullStateToRemote() {
     if (transactionsResult.error) throw transactionsResult.error;
   }
 
+  await syncInvestmentsToRemote();
   saveState();
+}
+
+async function syncInvestmentsToRemote() {
+  saveState();
+  if (!remoteStore.enabled || !remoteStore.investmentsEnabled) return;
+
+  const settingsResult = await remoteStore.client
+    .from("investment_settings")
+    .upsert(toDbInvestmentSettings(state.investments));
+  if (settingsResult.error) throw settingsResult.error;
+
+  const tickerResult = await remoteStore.client
+    .from("investment_tickers")
+    .upsert(state.investments.tickers.map(toDbInvestmentTicker));
+  if (tickerResult.error) throw tickerResult.error;
+
+  if (state.investments.stockPurchases.length) {
+    const stockResult = await remoteStore.client
+      .from("stock_purchases")
+      .upsert(state.investments.stockPurchases.map(toDbStockPurchase));
+    if (stockResult.error) throw stockResult.error;
+  }
+
+  if (state.investments.rdpuPurchases.length) {
+    const rdpuResult = await remoteStore.client
+      .from("rdpu_purchases")
+      .upsert(state.investments.rdpuPurchases.map(toDbRdpuPurchase));
+    if (rdpuResult.error) throw rdpuResult.error;
+  }
+}
+
+async function persistInvestmentSettings() {
+  saveState();
+  if (!remoteStore.enabled || !remoteStore.investmentsEnabled) return;
+  const { error } = await remoteStore.client.from("investment_settings").upsert(toDbInvestmentSettings(state.investments));
+  if (error) throw error;
+}
+
+async function persistInvestmentTicker(ticker) {
+  saveState();
+  if (!remoteStore.enabled || !remoteStore.investmentsEnabled) return;
+  const { error } = await remoteStore.client.from("investment_tickers").upsert(toDbInvestmentTicker(ticker));
+  if (error) throw error;
+}
+
+async function deleteInvestmentTickerRemote(ticker) {
+  saveState();
+  if (!remoteStore.enabled || !remoteStore.investmentsEnabled) return;
+  const { error } = await remoteStore.client.from("investment_tickers").delete().eq("symbol", ticker);
+  if (error) throw error;
+}
+
+async function persistStockPurchase(purchase) {
+  saveState();
+  if (!remoteStore.enabled || !remoteStore.investmentsEnabled) return;
+  const { error } = await remoteStore.client.from("stock_purchases").upsert(toDbStockPurchase(purchase));
+  if (error) throw error;
+}
+
+async function deleteStockPurchaseRemote(id) {
+  saveState();
+  if (!remoteStore.enabled || !remoteStore.investmentsEnabled) return;
+  const { error } = await remoteStore.client.from("stock_purchases").delete().eq("id", id);
+  if (error) throw error;
+}
+
+async function persistRdpuPurchase(purchase) {
+  saveState();
+  if (!remoteStore.enabled || !remoteStore.investmentsEnabled) return;
+  const { error } = await remoteStore.client.from("rdpu_purchases").upsert(toDbRdpuPurchase(purchase));
+  if (error) throw error;
+}
+
+async function deleteRdpuPurchaseRemote(id) {
+  saveState();
+  if (!remoteStore.enabled || !remoteStore.investmentsEnabled) return;
+  const { error } = await remoteStore.client.from("rdpu_purchases").delete().eq("id", id);
+  if (error) throw error;
 }
 
 async function refreshFromRemote() {
@@ -340,6 +637,25 @@ async function resetRemoteData() {
 
   const seedResult = await remoteStore.client.from("categories").upsert(defaultState.categories.map(toDbCategory));
   if (seedResult.error) throw seedResult.error;
+
+  if (remoteStore.investmentsEnabled) {
+    const stockResult = await remoteStore.client.from("stock_purchases").delete().neq("id", "__never__");
+    if (stockResult.error) throw stockResult.error;
+
+    const rdpuResult = await remoteStore.client.from("rdpu_purchases").delete().neq("id", "__never__");
+    if (rdpuResult.error) throw rdpuResult.error;
+
+    const tickerResult = await remoteStore.client.from("investment_tickers").delete().neq("symbol", "__never__");
+    if (tickerResult.error) throw tickerResult.error;
+
+    const settingsResult = await remoteStore.client.from("investment_settings").upsert(toDbInvestmentSettings(defaultState.investments));
+    if (settingsResult.error) throw settingsResult.error;
+
+    const defaultTickerResult = await remoteStore.client
+      .from("investment_tickers")
+      .upsert(defaultState.investments.tickers.map(toDbInvestmentTicker));
+    if (defaultTickerResult.error) throw defaultTickerResult.error;
+  }
 }
 
 function uid(prefix) {
@@ -358,6 +674,41 @@ function formatNumberInput(value) {
 
 function parseNumberInput(value) {
   return Number(String(value).replace(/\D/g, "")) || 0;
+}
+
+function clampNumber(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function positiveNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : 0;
+}
+
+function sanitizeTicker(ticker) {
+  return String(ticker || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+}
+
+function investmentValue(purchase) {
+  return purchase.lotPrice * purchase.lots;
+}
+
+function investmentTimestamp(purchase) {
+  return purchase.year * 100 + purchase.month;
+}
+
+function investmentMonthLabel(month) {
+  return INVESTMENT_MONTHS[month - 1] || "";
+}
+
+function formatInvestmentDate(purchase) {
+  return `${investmentMonthLabel(purchase.month)} ${purchase.year}`;
+}
+
+function formatInvestmentMeta(purchase) {
+  return purchase
+    ? `${purchase.ticker} - ${formatInvestmentDate(purchase)} - ${purchase.lots.toLocaleString("id-ID")} lot`
+    : "-";
 }
 
 function currentMonth() {
@@ -389,6 +740,7 @@ function renderAll() {
   renderDashboard();
   renderTransactions();
   renderCategories();
+  renderInvestments();
 }
 
 function renderCategoryOptions() {
@@ -814,6 +1166,295 @@ function roundRect(ctx, x, y, width, height, radius) {
   ctx.closePath();
 }
 
+function investmentYears() {
+  return Array.from({ length: state.investments.horizonYears }, (_, index) => INVESTMENT_START_YEAR + index);
+}
+
+function renderOptionList(select, options, selectedValue) {
+  select.innerHTML = options.map((option) => `<option value="${option.value}">${escapeHtml(option.label)}</option>`).join("");
+  select.value = options.some((option) => option.value === selectedValue) ? selectedValue : options[0]?.value || "";
+}
+
+function renderInvestmentOptions() {
+  el.investmentHorizon.value = String(state.investments.horizonYears);
+  const years = investmentYears();
+  const yearOptions = years.map((year) => ({ value: String(year), label: String(year) }));
+  const monthOptions = INVESTMENT_MONTHS.map((month, index) => ({ value: String(index + 1), label: month }));
+
+  renderOptionList(el.investmentStockMonth, monthOptions, el.investmentStockMonth.value || "1");
+  renderOptionList(el.investmentRdpuMonth, monthOptions, el.investmentRdpuMonth.value || "1");
+  renderOptionList(el.investmentStockYear, yearOptions, el.investmentStockYear.value || String(years[0]));
+  renderOptionList(el.investmentRdpuYear, yearOptions, el.investmentRdpuYear.value || String(years[0]));
+  renderOptionList(
+    el.investmentStockTicker,
+    state.investments.tickers.map((ticker) => ({ value: ticker, label: ticker })),
+    el.investmentStockTicker.value || state.investments.tickers[0],
+  );
+  renderOptionList(
+    el.investmentChartTickerFilter,
+    [{ value: "all", label: "Semua Saham" }, ...state.investments.tickers.map((ticker) => ({ value: ticker, label: ticker }))],
+    el.investmentChartTickerFilter.value || "all",
+  );
+  renderOptionList(
+    el.investmentChartYearFilter,
+    [{ value: "all", label: "Semua Tahun" }, ...yearOptions],
+    el.investmentChartYearFilter.value || "all",
+  );
+}
+
+function renderInvestmentTickers() {
+  el.investmentTickerList.innerHTML = state.investments.tickers
+    .map((ticker) => {
+      const locked = ticker === "BMRI" || ticker === "ICBP";
+      return `
+        <span class="ticker-chip">
+          ${escapeHtml(ticker)}
+          ${locked ? "" : `<button data-delete-investment-ticker="${ticker}" type="button" aria-label="Hapus ${ticker}">x</button>`}
+        </span>
+      `;
+    })
+    .join("");
+}
+
+function calculateInvestmentSummary() {
+  const stockTotal = state.investments.stockPurchases.reduce((total, purchase) => total + investmentValue(purchase), 0);
+  const lotTotal = state.investments.stockPurchases.reduce((total, purchase) => total + purchase.lots, 0);
+  const rdpuTotal = state.investments.rdpuPurchases.reduce((total, purchase) => total + purchase.amount, 0);
+  const rows = investmentYears().map((year) => {
+    const yearStocks = state.investments.stockPurchases.filter((purchase) => purchase.year === year);
+    const yearRdpu = state.investments.rdpuPurchases.filter((purchase) => purchase.year === year);
+    const yearStockTotal = yearStocks.reduce((total, purchase) => total + investmentValue(purchase), 0);
+    const yearLotTotal = yearStocks.reduce((total, purchase) => total + purchase.lots, 0);
+    const yearRdpuTotal = yearRdpu.reduce((total, purchase) => total + purchase.amount, 0);
+
+    return {
+      year,
+      stockTotal: yearStockTotal,
+      lotTotal: yearLotTotal,
+      rdpuTotal: yearRdpuTotal,
+      portfolioTotal: yearStockTotal + yearRdpuTotal,
+    };
+  });
+
+  return {
+    stockTotal,
+    lotTotal,
+    rdpuTotal,
+    portfolioTotal: stockTotal + rdpuTotal,
+    rows,
+  };
+}
+
+function renderInvestmentTables() {
+  const stockRows = [...state.investments.stockPurchases].sort((a, b) => investmentTimestamp(a) - investmentTimestamp(b));
+  const rdpuRows = [...state.investments.rdpuPurchases].sort((a, b) => investmentTimestamp(a) - investmentTimestamp(b));
+
+  el.investmentStockTable.innerHTML = stockRows.length
+    ? stockRows
+        .map(
+          (purchase) => `
+            <tr>
+              <td>${formatInvestmentDate(purchase)}</td>
+              <td><strong>${escapeHtml(purchase.ticker)}</strong></td>
+              <td>${formatMoney(purchase.lotPrice)}</td>
+              <td>${purchase.lots.toLocaleString("id-ID")} lot</td>
+              <td><strong>${formatMoney(investmentValue(purchase))}</strong></td>
+              <td><button class="icon-button delete" data-delete-stock-purchase="${purchase.id}" type="button">Hapus</button></td>
+            </tr>
+          `,
+        )
+        .join("")
+    : `<tr><td colspan="6"><div class="empty-state">Belum ada pembelian saham.</div></td></tr>`;
+
+  el.investmentRdpuTable.innerHTML = rdpuRows.length
+    ? rdpuRows
+        .map(
+          (purchase) => `
+            <tr>
+              <td>${formatInvestmentDate(purchase)}</td>
+              <td><strong>${formatMoney(purchase.amount)}</strong></td>
+              <td><button class="icon-button delete" data-delete-rdpu-purchase="${purchase.id}" type="button">Hapus</button></td>
+            </tr>
+          `,
+        )
+        .join("")
+    : `<tr><td colspan="3"><div class="empty-state">Belum ada pembelian RDPU.</div></td></tr>`;
+}
+
+function renderInvestmentSummary() {
+  const summary = calculateInvestmentSummary();
+  el.investmentStockTotal.textContent = formatMoney(summary.stockTotal);
+  el.investmentLotTotal.textContent = `${summary.lotTotal.toLocaleString("id-ID")} lot`;
+  el.investmentRdpuTotal.textContent = formatMoney(summary.rdpuTotal);
+  el.investmentPortfolioTotal.textContent = formatMoney(summary.portfolioTotal);
+  el.investmentSummaryTable.innerHTML = summary.rows
+    .map(
+      (row) => `
+        <tr>
+          <td><strong>${row.year}</strong></td>
+          <td>${formatMoney(row.stockTotal)}</td>
+          <td>${row.lotTotal.toLocaleString("id-ID")} lot</td>
+          <td>${formatMoney(row.rdpuTotal)}</td>
+          <td><strong>${formatMoney(row.portfolioTotal)}</strong></td>
+        </tr>
+      `,
+    )
+    .join("");
+}
+
+function filteredInvestmentStockPurchases() {
+  const ticker = el.investmentChartTickerFilter.value || "all";
+  const year = el.investmentChartYearFilter.value || "all";
+  return state.investments.stockPurchases
+    .filter((purchase) => ticker === "all" || purchase.ticker === ticker)
+    .filter((purchase) => year === "all" || purchase.year === Number(year))
+    .sort((a, b) => investmentTimestamp(a) - investmentTimestamp(b));
+}
+
+function findInvestmentByMetric(purchases, metric, direction) {
+  if (!purchases.length) return null;
+  return purchases.reduce((selected, purchase) => {
+    if (direction === "min") return purchase[metric] < selected[metric] ? purchase : selected;
+    return purchase[metric] > selected[metric] ? purchase : selected;
+  }, purchases[0]);
+}
+
+function updateInvestmentStats(purchases) {
+  const minPrice = findInvestmentByMetric(purchases, "lotPrice", "min");
+  const maxPrice = findInvestmentByMetric(purchases, "lotPrice", "max");
+  const minLots = findInvestmentByMetric(purchases, "lots", "min");
+  const maxLots = findInvestmentByMetric(purchases, "lots", "max");
+
+  el.investmentMinPrice.textContent = minPrice ? formatMoney(minPrice.lotPrice) : "-";
+  el.investmentMinPriceMeta.textContent = formatInvestmentMeta(minPrice);
+  el.investmentMaxPrice.textContent = maxPrice ? formatMoney(maxPrice.lotPrice) : "-";
+  el.investmentMaxPriceMeta.textContent = formatInvestmentMeta(maxPrice);
+  el.investmentMinLots.textContent = minLots ? `${minLots.lots.toLocaleString("id-ID")} lot` : "-";
+  el.investmentMinLotsMeta.textContent = minLots ? `${minLots.ticker} - ${formatInvestmentDate(minLots)} - ${formatMoney(minLots.lotPrice)}` : "-";
+  el.investmentMaxLots.textContent = maxLots ? `${maxLots.lots.toLocaleString("id-ID")} lot` : "-";
+  el.investmentMaxLotsMeta.textContent = maxLots ? `${maxLots.ticker} - ${formatInvestmentDate(maxLots)} - ${formatMoney(maxLots.lotPrice)}` : "-";
+}
+
+function initInvestmentChart() {
+  if (investmentStockChart || !el.investmentStockChart || !window.Chart) return;
+  investmentStockChart = new Chart(el.investmentStockChart, {
+    type: "line",
+    data: {
+      labels: [],
+      datasets: [
+        {
+          label: "Harga / Lot",
+          data: [],
+          borderColor: "#dc2626",
+          backgroundColor: "rgba(220, 38, 38, 0.10)",
+          borderWidth: 3,
+          pointRadius: 3,
+          pointHoverRadius: 6,
+          tension: 0.28,
+          yAxisID: "y",
+        },
+        {
+          label: "Jumlah Lot",
+          data: [],
+          borderColor: "#0f9f6e",
+          backgroundColor: "rgba(15, 159, 110, 0.12)",
+          borderWidth: 3,
+          pointRadius: 3,
+          pointHoverRadius: 6,
+          tension: 0.28,
+          fill: true,
+          yAxisID: "y1",
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { intersect: false, mode: "index" },
+      plugins: {
+        legend: {
+          labels: {
+            boxWidth: 12,
+            boxHeight: 12,
+            color: "#172033",
+            font: { weight: "bold" },
+          },
+        },
+        tooltip: {
+          callbacks: {
+            title(items) {
+              const purchase = investmentChartPurchases[items[0]?.dataIndex];
+              return purchase ? `${purchase.ticker} - ${formatInvestmentDate(purchase)}` : "";
+            },
+            label(context) {
+              const purchase = investmentChartPurchases[context.dataIndex];
+              if (!purchase) return "";
+              return context.dataset.label === "Harga / Lot"
+                ? `Harga / lot: ${formatMoney(purchase.lotPrice)}`
+                : `Jumlah lot: ${purchase.lots.toLocaleString("id-ID")} lot`;
+            },
+            afterBody(items) {
+              const purchase = investmentChartPurchases[items[0]?.dataIndex];
+              return purchase ? `Nominal: ${formatMoney(investmentValue(purchase))}` : "";
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: "#64748b", maxRotation: 0, autoSkip: true },
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: "#64748b",
+            callback(value) {
+              return compactMoney(value);
+            },
+          },
+          grid: { color: "rgba(15, 23, 42, 0.08)" },
+        },
+        y1: {
+          beginAtZero: true,
+          position: "right",
+          ticks: {
+            color: "#64748b",
+            precision: 0,
+            callback(value) {
+              return `${value} lot`;
+            },
+          },
+          grid: { drawOnChartArea: false },
+        },
+      },
+    },
+  });
+}
+
+function updateInvestmentChart() {
+  initInvestmentChart();
+  const purchases = filteredInvestmentStockPurchases();
+  investmentChartPurchases = purchases;
+  el.investmentChartEmpty.classList.toggle("hidden", purchases.length > 0);
+  updateInvestmentStats(purchases);
+  if (!investmentStockChart) return;
+
+  investmentStockChart.data.labels = purchases.map((purchase) => `${purchase.ticker} - ${formatInvestmentDate(purchase)}`);
+  investmentStockChart.data.datasets[0].data = purchases.map((purchase) => purchase.lotPrice);
+  investmentStockChart.data.datasets[1].data = purchases.map((purchase) => purchase.lots);
+  investmentStockChart.update();
+}
+
+function renderInvestments() {
+  state.investments = normalizeInvestments(state.investments);
+  renderInvestmentOptions();
+  renderInvestmentTickers();
+  renderInvestmentTables();
+  renderInvestmentSummary();
+  updateInvestmentChart();
+}
+
 function switchView(view) {
   activeView = view;
   document.querySelectorAll(".view").forEach((node) => node.classList.remove("active"));
@@ -823,8 +1464,15 @@ function switchView(view) {
     dashboard: "Dashboard",
     transactions: "Transaksi",
     categories: "Tab & Jenis",
+    investments: "Investasi",
     tools: "Tools",
   }[view];
+  if (view === "investments") {
+    setTimeout(() => {
+      investmentStockChart?.resize();
+      updateInvestmentChart();
+    }, 0);
+  }
 }
 
 function resetTransactionForm() {
@@ -886,9 +1534,166 @@ function initEvents() {
   window.addEventListener("resize", () => renderChart(monthTransactions()));
   el.categoryChart.addEventListener("mousemove", showChartTooltip);
   el.categoryChart.addEventListener("mouseleave", () => el.chartTooltip.classList.add("hidden"));
+  window.addEventListener("resize", () => investmentStockChart?.resize());
 
   el.transactionAmount.addEventListener("input", () => {
     el.transactionAmount.value = formatNumberInput(el.transactionAmount.value);
+  });
+
+  el.investmentStockLotPrice.addEventListener("input", () => {
+    el.investmentStockLotPrice.value = formatNumberInput(el.investmentStockLotPrice.value);
+  });
+
+  el.investmentRdpuAmount.addEventListener("input", () => {
+    el.investmentRdpuAmount.value = formatNumberInput(el.investmentRdpuAmount.value);
+  });
+
+  el.investmentHorizon.addEventListener("change", async () => {
+    state.investments.horizonYears = clampNumber(Math.round(Number(el.investmentHorizon.value) || 11), 1, 50);
+    renderInvestments();
+    try {
+      await persistInvestmentSettings();
+    } catch (error) {
+      console.error(error);
+      setSyncStatus("Simpan investasi cloud gagal", "error");
+    }
+  });
+
+  el.addInvestmentYearButton.addEventListener("click", async () => {
+    state.investments.horizonYears = clampNumber(state.investments.horizonYears + 1, 1, 50);
+    renderInvestments();
+    try {
+      await persistInvestmentSettings();
+    } catch (error) {
+      console.error(error);
+      setSyncStatus("Simpan investasi cloud gagal", "error");
+    }
+  });
+
+  el.investmentChartTickerFilter.addEventListener("change", updateInvestmentChart);
+  el.investmentChartYearFilter.addEventListener("change", updateInvestmentChart);
+
+  el.investmentTickerInput.addEventListener("input", () => {
+    el.investmentTickerInput.value = sanitizeTicker(el.investmentTickerInput.value);
+  });
+
+  el.investmentTickerForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const ticker = sanitizeTicker(el.investmentTickerInput.value);
+    if (!ticker || state.investments.tickers.includes(ticker)) return;
+
+    state.investments.tickers.push(ticker);
+    el.investmentTickerInput.value = "";
+    renderInvestments();
+    el.investmentStockTicker.value = ticker;
+    try {
+      await persistInvestmentTicker(ticker);
+    } catch (error) {
+      console.error(error);
+      setSyncStatus("Simpan saham cloud gagal", "error");
+    }
+  });
+
+  el.investmentTickerList.addEventListener("click", async (event) => {
+    const ticker = event.target.dataset.deleteInvestmentTicker;
+    if (!ticker) return;
+
+    state.investments.tickers = state.investments.tickers.filter((item) => item !== ticker);
+    state.investments.stockPurchases = state.investments.stockPurchases.filter((purchase) => purchase.ticker !== ticker);
+    renderInvestments();
+    try {
+      await deleteInvestmentTickerRemote(ticker);
+      await syncInvestmentsToRemote();
+    } catch (error) {
+      console.error(error);
+      setSyncStatus("Hapus saham cloud gagal", "error");
+    }
+  });
+
+  el.investmentStockForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const lotPrice = parseNumberInput(el.investmentStockLotPrice.value);
+    const lots = Math.floor(Number(el.investmentStockLots.value) || 0);
+    if (!el.investmentStockTicker.value || lotPrice <= 0 || lots <= 0) {
+      alert("Harga per lot dan jumlah lot harus lebih dari 0.");
+      return;
+    }
+
+    const purchase = {
+      id: uid("stock"),
+      ticker: el.investmentStockTicker.value,
+      month: Number(el.investmentStockMonth.value),
+      year: Number(el.investmentStockYear.value),
+      lotPrice,
+      lots,
+      createdAt: new Date().toISOString(),
+    };
+
+    state.investments.stockPurchases.push(purchase);
+    el.investmentStockLotPrice.value = "";
+    el.investmentStockLots.value = "";
+    renderInvestments();
+    try {
+      await persistStockPurchase(purchase);
+    } catch (error) {
+      console.error(error);
+      setSyncStatus("Simpan pembelian saham cloud gagal", "error");
+    }
+  });
+
+  el.investmentRdpuForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const amount = parseNumberInput(el.investmentRdpuAmount.value);
+    if (amount <= 0) {
+      alert("Nominal RDPU harus lebih dari 0.");
+      return;
+    }
+
+    const purchase = {
+      id: uid("rdpu"),
+      month: Number(el.investmentRdpuMonth.value),
+      year: Number(el.investmentRdpuYear.value),
+      amount,
+      createdAt: new Date().toISOString(),
+    };
+
+    state.investments.rdpuPurchases.push(purchase);
+    el.investmentRdpuAmount.value = "";
+    renderInvestments();
+    try {
+      await persistRdpuPurchase(purchase);
+    } catch (error) {
+      console.error(error);
+      setSyncStatus("Simpan RDPU cloud gagal", "error");
+    }
+  });
+
+  el.investmentStockTable.addEventListener("click", async (event) => {
+    const id = event.target.dataset.deleteStockPurchase;
+    if (!id) return;
+
+    state.investments.stockPurchases = state.investments.stockPurchases.filter((purchase) => purchase.id !== id);
+    renderInvestments();
+    try {
+      await deleteStockPurchaseRemote(id);
+    } catch (error) {
+      console.error(error);
+      setSyncStatus("Hapus saham cloud gagal", "error");
+    }
+  });
+
+  el.investmentRdpuTable.addEventListener("click", async (event) => {
+    const id = event.target.dataset.deleteRdpuPurchase;
+    if (!id) return;
+
+    state.investments.rdpuPurchases = state.investments.rdpuPurchases.filter((purchase) => purchase.id !== id);
+    renderInvestments();
+    try {
+      await deleteRdpuPurchaseRemote(id);
+    } catch (error) {
+      console.error(error);
+      setSyncStatus("Hapus RDPU cloud gagal", "error");
+    }
   });
 
   el.transactionForm.addEventListener("submit", async (event) => {

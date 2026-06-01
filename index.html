@@ -21,6 +21,7 @@
           <button class="nav-item active" data-view="dashboard" type="button">Dashboard</button>
           <button class="nav-item" data-view="transactions" type="button">Transaksi</button>
           <button class="nav-item" data-view="categories" type="button">Tab & Jenis</button>
+          <button class="nav-item" data-view="investments" type="button">Investasi</button>
           <button class="nav-item" data-view="tools" type="button">Tools</button>
         </nav>
 
@@ -269,10 +270,214 @@
             </section>
           </div>
         </section>
+
+        <section class="view" id="investmentsView" aria-labelledby="pageTitle">
+          <div class="investment-stack">
+            <section class="surface">
+              <div class="section-head">
+                <div>
+                  <h3>Compounding Saham & RDPU</h3>
+                  <p>Catat pembelian saham individual dan RDPU per tahun, lalu pantau total portofolio investasi.</p>
+                </div>
+                <div class="investment-year-control">
+                  <label>
+                    Horizon Tahun
+                    <input id="investmentHorizon" type="number" min="1" max="50" step="1" value="11" />
+                  </label>
+                  <button class="primary-button" id="addInvestmentYearButton" type="button">Tambah Tahun</button>
+                </div>
+              </div>
+
+              <div class="summary-grid investment-summary">
+                <article class="metric income">
+                  <span>Akumulasi Saham</span>
+                  <strong id="investmentStockTotal">Rp0</strong>
+                  <small>total nominal pembelian saham</small>
+                </article>
+                <article class="metric">
+                  <span>Akumulasi Lot</span>
+                  <strong id="investmentLotTotal">0 lot</strong>
+                  <small>jumlah lot semua saham</small>
+                </article>
+                <article class="metric">
+                  <span>Akumulasi RDPU</span>
+                  <strong id="investmentRdpuTotal">Rp0</strong>
+                  <small>total nominal pembelian RDPU</small>
+                </article>
+                <article class="metric balance">
+                  <span>Total Portofolio</span>
+                  <strong id="investmentPortfolioTotal">Rp0</strong>
+                  <small>saham + RDPU</small>
+                </article>
+              </div>
+            </section>
+
+            <div class="investment-grid">
+              <section class="surface">
+                <div class="section-head compact">
+                  <h3>Pembelian Saham</h3>
+                  <p>Default BMRI dan ICBP, saham lain bisa ditambahkan.</p>
+                </div>
+                <form class="investment-inline-form" id="investmentTickerForm">
+                  <label>
+                    Tambah Saham
+                    <input id="investmentTickerInput" type="text" maxlength="8" placeholder="Kode saham" />
+                  </label>
+                  <button class="primary-button" type="submit">Tambah</button>
+                </form>
+                <div class="ticker-list" id="investmentTickerList"></div>
+
+                <form class="investment-form" id="investmentStockForm">
+                  <label>
+                    Saham
+                    <select id="investmentStockTicker"></select>
+                  </label>
+                  <label>
+                    Bulan
+                    <select id="investmentStockMonth"></select>
+                  </label>
+                  <label>
+                    Tahun
+                    <select id="investmentStockYear"></select>
+                  </label>
+                  <label>
+                    Harga / Lot
+                    <input id="investmentStockLotPrice" type="text" inputmode="numeric" placeholder="0" />
+                  </label>
+                  <label>
+                    Jumlah Lot
+                    <input id="investmentStockLots" type="number" min="1" step="1" placeholder="0" />
+                  </label>
+                  <button class="primary-button investment-submit" type="submit">Simpan Saham</button>
+                </form>
+
+                <div class="table-scroll investment-table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Bulan</th>
+                        <th>Saham</th>
+                        <th>Harga / Lot</th>
+                        <th>Lot</th>
+                        <th>Nominal</th>
+                        <th>Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody id="investmentStockTable"></tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section class="surface">
+                <div class="section-head compact">
+                  <h3>Pembelian RDPU</h3>
+                  <p>Nominal RDPU dicatat per bulan dan tahun.</p>
+                </div>
+                <form class="investment-form rdpu-form" id="investmentRdpuForm">
+                  <label>
+                    Bulan
+                    <select id="investmentRdpuMonth"></select>
+                  </label>
+                  <label>
+                    Tahun
+                    <select id="investmentRdpuYear"></select>
+                  </label>
+                  <label>
+                    Nominal RDPU
+                    <input id="investmentRdpuAmount" type="text" inputmode="numeric" placeholder="0" />
+                  </label>
+                  <button class="primary-button investment-submit" type="submit">Simpan RDPU</button>
+                </form>
+
+                <div class="table-scroll investment-table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Bulan</th>
+                        <th>Nominal</th>
+                        <th>Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody id="investmentRdpuTable"></tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+
+            <section class="surface">
+              <div class="section-head">
+                <div>
+                  <h3>Grafik Pembelian Saham</h3>
+                  <p>Garis harga per lot dan jumlah lot mengikuti transaksi yang difilter.</p>
+                </div>
+                <div class="investment-filters">
+                  <label>
+                    Saham
+                    <select id="investmentChartTickerFilter"></select>
+                  </label>
+                  <label>
+                    Tahun
+                    <select id="investmentChartYearFilter"></select>
+                  </label>
+                </div>
+              </div>
+              <div class="investment-chart-layout">
+                <div class="chart-wrap investment-chart-wrap">
+                  <canvas id="investmentStockChart" height="300"></canvas>
+                  <div class="empty-state hidden" id="investmentChartEmpty">Belum ada data pembelian saham untuk filter ini.</div>
+                </div>
+                <div class="investment-stat-grid">
+                  <article class="metric">
+                    <span>Harga Terendah</span>
+                    <strong id="investmentMinPrice">-</strong>
+                    <small id="investmentMinPriceMeta">-</small>
+                  </article>
+                  <article class="metric">
+                    <span>Harga Termahal</span>
+                    <strong id="investmentMaxPrice">-</strong>
+                    <small id="investmentMaxPriceMeta">-</small>
+                  </article>
+                  <article class="metric">
+                    <span>Lot Paling Sedikit</span>
+                    <strong id="investmentMinLots">-</strong>
+                    <small id="investmentMinLotsMeta">-</small>
+                  </article>
+                  <article class="metric">
+                    <span>Lot Paling Banyak</span>
+                    <strong id="investmentMaxLots">-</strong>
+                    <small id="investmentMaxLotsMeta">-</small>
+                  </article>
+                </div>
+              </div>
+            </section>
+
+            <section class="surface">
+              <div class="section-head compact">
+                <h3>Akumulasi Tahunan</h3>
+                <p>Setiap baris hanya menghitung transaksi pada tahun yang sama.</p>
+              </div>
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Tahun</th>
+                      <th>Pembelian Saham</th>
+                      <th>Total Lot</th>
+                      <th>Pembelian RDPU</th>
+                      <th>Total Tahun Ini</th>
+                    </tr>
+                  </thead>
+                  <tbody id="investmentSummaryTable"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
       </main>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="./supabase-config.js"></script>
     <script src="./app.js"></script>
   </body>

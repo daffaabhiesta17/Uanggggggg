@@ -645,11 +645,118 @@ th {
   margin-top: 16px;
 }
 
+.investment-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.investment-year-control,
+.investment-filters,
+.investment-inline-form {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.investment-year-control label,
+.investment-filters label,
+.investment-inline-form label {
+  min-width: 160px;
+}
+
+.investment-summary {
+  margin-bottom: 0;
+}
+
+.investment-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  gap: 18px;
+}
+
+.ticker-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.ticker-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #f8fafc;
+  color: var(--text);
+  font-weight: 800;
+}
+
+.ticker-chip button {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #991b1b;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.investment-form {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+.investment-form.rdpu-form {
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+}
+
+.investment-submit {
+  grid-column: 1 / -1;
+}
+
+.investment-table-scroll {
+  margin-top: 16px;
+}
+
+.investment-table-scroll table {
+  min-width: 720px;
+}
+
+.investment-chart-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  gap: 18px;
+}
+
+.investment-chart-wrap {
+  min-height: 340px;
+}
+
+#investmentStockChart {
+  width: 100%;
+  min-height: 300px;
+  display: block;
+}
+
+.investment-stat-grid {
+  display: grid;
+  gap: 10px;
+}
+
 @media (max-width: 1080px) {
   .app-shell,
   .dashboard-grid,
   .workspace-grid,
-  .tools-grid {
+  .tools-grid,
+  .investment-grid,
+  .investment-chart-layout {
     grid-template-columns: 1fr;
   }
 
@@ -679,8 +786,16 @@ th {
   }
 
   .summary-grid,
-  .table-toolbar {
+  .table-toolbar,
+  .investment-form,
+  .investment-form.rdpu-form {
     grid-template-columns: 1fr;
+  }
+
+  .investment-year-control,
+  .investment-filters,
+  .investment-inline-form {
+    display: grid;
   }
 
   .segmented {

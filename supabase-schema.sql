@@ -17,13 +17,54 @@ create table if not exists public.transactions (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.investment_settings (
+  id text primary key default 'default',
+  horizon_years integer not null default 11 check (horizon_years between 1 and 50),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.investment_tickers (
+  symbol text primary key,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.stock_purchases (
+  id text primary key,
+  ticker text not null references public.investment_tickers(symbol) on update cascade on delete cascade,
+  month integer not null check (month between 1 and 12),
+  year integer not null check (year between 1900 and 2200),
+  lot_price numeric not null check (lot_price > 0),
+  lots integer not null check (lots > 0),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.rdpu_purchases (
+  id text primary key,
+  month integer not null check (month between 1 and 12),
+  year integer not null check (year between 1900 and 2200),
+  amount numeric not null check (amount > 0),
+  created_at timestamptz not null default now()
+);
+
 alter table public.categories enable row level security;
 alter table public.transactions enable row level security;
+alter table public.investment_settings enable row level security;
+alter table public.investment_tickers enable row level security;
+alter table public.stock_purchases enable row level security;
+alter table public.rdpu_purchases enable row level security;
 
 drop policy if exists "public categories read" on public.categories;
 drop policy if exists "public categories write" on public.categories;
 drop policy if exists "public transactions read" on public.transactions;
 drop policy if exists "public transactions write" on public.transactions;
+drop policy if exists "public investment settings read" on public.investment_settings;
+drop policy if exists "public investment settings write" on public.investment_settings;
+drop policy if exists "public investment tickers read" on public.investment_tickers;
+drop policy if exists "public investment tickers write" on public.investment_tickers;
+drop policy if exists "public stock purchases read" on public.stock_purchases;
+drop policy if exists "public stock purchases write" on public.stock_purchases;
+drop policy if exists "public rdpu purchases read" on public.rdpu_purchases;
+drop policy if exists "public rdpu purchases write" on public.rdpu_purchases;
 
 create policy "public categories read"
 on public.categories for select
@@ -47,6 +88,50 @@ to anon
 using (true)
 with check (true);
 
+create policy "public investment settings read"
+on public.investment_settings for select
+to anon
+using (true);
+
+create policy "public investment settings write"
+on public.investment_settings for all
+to anon
+using (true)
+with check (true);
+
+create policy "public investment tickers read"
+on public.investment_tickers for select
+to anon
+using (true);
+
+create policy "public investment tickers write"
+on public.investment_tickers for all
+to anon
+using (true)
+with check (true);
+
+create policy "public stock purchases read"
+on public.stock_purchases for select
+to anon
+using (true);
+
+create policy "public stock purchases write"
+on public.stock_purchases for all
+to anon
+using (true)
+with check (true);
+
+create policy "public rdpu purchases read"
+on public.rdpu_purchases for select
+to anon
+using (true);
+
+create policy "public rdpu purchases write"
+on public.rdpu_purchases for all
+to anon
+using (true)
+with check (true);
+
 do $$
 begin
   alter publication supabase_realtime add table public.categories;
@@ -60,3 +145,39 @@ begin
 exception
   when duplicate_object then null;
 end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.investment_settings;
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.investment_tickers;
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.stock_purchases;
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.rdpu_purchases;
+exception
+  when duplicate_object then null;
+end $$;
+
+insert into public.investment_settings (id, horizon_years)
+values ('default', 11)
+on conflict (id) do nothing;
+
+insert into public.investment_tickers (symbol)
+values ('BMRI'), ('ICBP')
+on conflict (symbol) do nothing;
