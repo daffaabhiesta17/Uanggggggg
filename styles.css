@@ -731,52 +731,13 @@ th {
   min-width: 720px;
 }
 
-.investment-chart-layout {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 18px;
-}
-
-.investment-chart-wrap {
-  min-height: 290px;
-}
-
-#investmentStockChart {
-  width: 100%;
-  min-height: 260px;
-  display: block;
-}
-
-.investment-stat-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.investment-stat-grid .metric {
-  padding: 14px;
-}
-
-.investment-stat-grid .metric strong {
-  font-size: 1.05rem;
-}
-
-.investment-stat-grid .metric small {
-  word-break: break-word;
-}
-
 @media (max-width: 1080px) {
   .app-shell,
   .dashboard-grid,
   .workspace-grid,
   .tools-grid,
-  .investment-grid,
-  .investment-chart-layout {
+  .investment-grid {
     grid-template-columns: 1fr;
-  }
-
-  .investment-stat-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .sidebar {
@@ -806,7 +767,6 @@ th {
 
   .summary-grid,
   .table-toolbar,
-  .investment-stat-grid,
   .investment-form,
   .investment-form.rdpu-form {
     grid-template-columns: 1fr;

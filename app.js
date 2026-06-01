@@ -65,10 +65,7 @@ let activeChartType = "income";
 let transactionSelectionMode = false;
 let selectedTransactionIds = new Set();
 let chartBars = [];
-let investmentStockChart = null;
-let investmentChartPurchases = [];
 let investmentsDirty = true;
-let chartJsLoadPromise = null;
 let remoteStore = {
   enabled: false,
   investmentsEnabled: false,
@@ -149,18 +146,6 @@ const el = {
   investmentRdpuYear: document.querySelector("#investmentRdpuYear"),
   investmentRdpuAmount: document.querySelector("#investmentRdpuAmount"),
   investmentRdpuTable: document.querySelector("#investmentRdpuTable"),
-  investmentChartTickerFilter: document.querySelector("#investmentChartTickerFilter"),
-  investmentChartYearFilter: document.querySelector("#investmentChartYearFilter"),
-  investmentStockChart: document.querySelector("#investmentStockChart"),
-  investmentChartEmpty: document.querySelector("#investmentChartEmpty"),
-  investmentMinPrice: document.querySelector("#investmentMinPrice"),
-  investmentMinPriceMeta: document.querySelector("#investmentMinPriceMeta"),
-  investmentMaxPrice: document.querySelector("#investmentMaxPrice"),
-  investmentMaxPriceMeta: document.querySelector("#investmentMaxPriceMeta"),
-  investmentMinLots: document.querySelector("#investmentMinLots"),
-  investmentMinLotsMeta: document.querySelector("#investmentMinLotsMeta"),
-  investmentMaxLots: document.querySelector("#investmentMaxLots"),
-  investmentMaxLotsMeta: document.querySelector("#investmentMaxLotsMeta"),
   investmentSummaryTable: document.querySelector("#investmentSummaryTable"),
 };
 
@@ -707,12 +692,6 @@ function formatInvestmentDate(purchase) {
   return `${investmentMonthLabel(purchase.month)} ${purchase.year}`;
 }
 
-function formatInvestmentMeta(purchase) {
-  return purchase
-    ? `${purchase.ticker} - ${formatInvestmentDate(purchase)} - ${purchase.lots.toLocaleString("id-ID")} lot`
-    : "-";
-}
-
 function currentMonth() {
   return new Date().toISOString().slice(0, 7);
 }
@@ -1192,16 +1171,6 @@ function renderInvestmentOptions() {
     state.investments.tickers.map((ticker) => ({ value: ticker, label: ticker })),
     el.investmentStockTicker.value || state.investments.tickers[0],
   );
-  renderOptionList(
-    el.investmentChartTickerFilter,
-    [{ value: "all", label: "Semua Saham" }, ...state.investments.tickers.map((ticker) => ({ value: ticker, label: ticker }))],
-    el.investmentChartTickerFilter.value || "all",
-  );
-  renderOptionList(
-    el.investmentChartYearFilter,
-    [{ value: "all", label: "Semua Tahun" }, ...yearOptions],
-    el.investmentChartYearFilter.value || "all",
-  );
 }
 
 function renderInvestmentTickers() {
@@ -1304,185 +1273,12 @@ function renderInvestmentSummary() {
     .join("");
 }
 
-function filteredInvestmentStockPurchases() {
-  const ticker = el.investmentChartTickerFilter.value || "all";
-  const year = el.investmentChartYearFilter.value || "all";
-  return state.investments.stockPurchases
-    .filter((purchase) => ticker === "all" || purchase.ticker === ticker)
-    .filter((purchase) => year === "all" || purchase.year === Number(year))
-    .sort((a, b) => investmentTimestamp(a) - investmentTimestamp(b));
-}
-
-function findInvestmentByMetric(purchases, metric, direction) {
-  if (!purchases.length) return null;
-  return purchases.reduce((selected, purchase) => {
-    if (direction === "min") return purchase[metric] < selected[metric] ? purchase : selected;
-    return purchase[metric] > selected[metric] ? purchase : selected;
-  }, purchases[0]);
-}
-
-function updateInvestmentStats(purchases) {
-  const minPrice = findInvestmentByMetric(purchases, "lotPrice", "min");
-  const maxPrice = findInvestmentByMetric(purchases, "lotPrice", "max");
-  const minLots = findInvestmentByMetric(purchases, "lots", "min");
-  const maxLots = findInvestmentByMetric(purchases, "lots", "max");
-
-  el.investmentMinPrice.textContent = minPrice ? formatMoney(minPrice.lotPrice) : "-";
-  el.investmentMinPriceMeta.textContent = formatInvestmentMeta(minPrice);
-  el.investmentMaxPrice.textContent = maxPrice ? formatMoney(maxPrice.lotPrice) : "-";
-  el.investmentMaxPriceMeta.textContent = formatInvestmentMeta(maxPrice);
-  el.investmentMinLots.textContent = minLots ? `${minLots.lots.toLocaleString("id-ID")} lot` : "-";
-  el.investmentMinLotsMeta.textContent = minLots ? `${minLots.ticker} - ${formatInvestmentDate(minLots)} - ${formatMoney(minLots.lotPrice)}` : "-";
-  el.investmentMaxLots.textContent = maxLots ? `${maxLots.lots.toLocaleString("id-ID")} lot` : "-";
-  el.investmentMaxLotsMeta.textContent = maxLots ? `${maxLots.ticker} - ${formatInvestmentDate(maxLots)} - ${formatMoney(maxLots.lotPrice)}` : "-";
-}
-
-function ensureChartJs() {
-  if (window.Chart) return Promise.resolve();
-  if (chartJsLoadPromise) return chartJsLoadPromise;
-
-  chartJsLoadPromise = new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/chart.js";
-    script.async = true;
-    script.onload = resolve;
-    script.onerror = reject;
-    document.head.appendChild(script);
-  });
-
-  return chartJsLoadPromise;
-}
-
-function initInvestmentChart() {
-  if (investmentStockChart || !el.investmentStockChart || !window.Chart) return;
-  investmentStockChart = new Chart(el.investmentStockChart, {
-    type: "line",
-    data: {
-      labels: [],
-      datasets: [
-        {
-          label: "Harga / Lot",
-          data: [],
-          borderColor: "#dc2626",
-          backgroundColor: "rgba(220, 38, 38, 0.10)",
-          borderWidth: 3,
-          pointRadius: 3,
-          pointHoverRadius: 6,
-          tension: 0.28,
-          yAxisID: "y",
-        },
-        {
-          label: "Jumlah Lot",
-          data: [],
-          borderColor: "#0f9f6e",
-          backgroundColor: "rgba(15, 159, 110, 0.12)",
-          borderWidth: 3,
-          pointRadius: 3,
-          pointHoverRadius: 6,
-          tension: 0.28,
-          fill: true,
-          yAxisID: "y1",
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { intersect: false, mode: "index" },
-      plugins: {
-        legend: {
-          labels: {
-            boxWidth: 12,
-            boxHeight: 12,
-            color: "#172033",
-            font: { weight: "bold" },
-          },
-        },
-        tooltip: {
-          callbacks: {
-            title(items) {
-              const purchase = investmentChartPurchases[items[0]?.dataIndex];
-              return purchase ? `${purchase.ticker} - ${formatInvestmentDate(purchase)}` : "";
-            },
-            label(context) {
-              const purchase = investmentChartPurchases[context.dataIndex];
-              if (!purchase) return "";
-              return context.dataset.label === "Harga / Lot"
-                ? `Harga / lot: ${formatMoney(purchase.lotPrice)}`
-                : `Jumlah lot: ${purchase.lots.toLocaleString("id-ID")} lot`;
-            },
-            afterBody(items) {
-              const purchase = investmentChartPurchases[items[0]?.dataIndex];
-              return purchase ? `Nominal: ${formatMoney(investmentValue(purchase))}` : "";
-            },
-          },
-        },
-      },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: { color: "#64748b", maxRotation: 0, autoSkip: true },
-        },
-        y: {
-          beginAtZero: true,
-          ticks: {
-            color: "#64748b",
-            callback(value) {
-              return compactMoney(value);
-            },
-          },
-          grid: { color: "rgba(15, 23, 42, 0.08)" },
-        },
-        y1: {
-          beginAtZero: true,
-          position: "right",
-          ticks: {
-            color: "#64748b",
-            precision: 0,
-            callback(value) {
-              return `${value} lot`;
-            },
-          },
-          grid: { drawOnChartArea: false },
-        },
-      },
-    },
-  });
-}
-
-function updateInvestmentChart() {
-  if (activeView !== "investments") return;
-  const purchases = filteredInvestmentStockPurchases();
-  investmentChartPurchases = purchases;
-  el.investmentChartEmpty.classList.toggle("hidden", purchases.length > 0);
-  updateInvestmentStats(purchases);
-  if (!window.Chart) {
-    ensureChartJs()
-      .then(() => updateInvestmentChart())
-      .catch((error) => {
-        console.error(error);
-        el.investmentChartEmpty.textContent = "Chart gagal dimuat. Data tabel tetap bisa digunakan.";
-        el.investmentChartEmpty.classList.remove("hidden");
-      });
-    return;
-  }
-
-  initInvestmentChart();
-  if (!investmentStockChart) return;
-
-  investmentStockChart.data.labels = purchases.map((purchase) => `${purchase.ticker} - ${formatInvestmentDate(purchase)}`);
-  investmentStockChart.data.datasets[0].data = purchases.map((purchase) => purchase.lotPrice);
-  investmentStockChart.data.datasets[1].data = purchases.map((purchase) => purchase.lots);
-  investmentStockChart.update();
-}
-
 function renderInvestments() {
   state.investments = normalizeInvestments(state.investments);
   renderInvestmentOptions();
   renderInvestmentTickers();
   renderInvestmentTables();
   renderInvestmentSummary();
-  updateInvestmentChart();
   investmentsDirty = false;
 }
 
@@ -1513,10 +1309,6 @@ function switchView(view) {
   }[view];
   if (view === "investments") {
     renderInvestmentsIfActive(true);
-    setTimeout(() => {
-      investmentStockChart?.resize();
-      updateInvestmentChart();
-    }, 0);
   }
 }
 
@@ -1579,7 +1371,6 @@ function initEvents() {
   window.addEventListener("resize", () => renderChart(monthTransactions()));
   el.categoryChart.addEventListener("mousemove", showChartTooltip);
   el.categoryChart.addEventListener("mouseleave", () => el.chartTooltip.classList.add("hidden"));
-  window.addEventListener("resize", () => investmentStockChart?.resize());
 
   el.transactionAmount.addEventListener("input", () => {
     el.transactionAmount.value = formatNumberInput(el.transactionAmount.value);
@@ -1614,9 +1405,6 @@ function initEvents() {
       setSyncStatus("Simpan investasi cloud gagal", "error");
     }
   });
-
-  el.investmentChartTickerFilter.addEventListener("change", updateInvestmentChart);
-  el.investmentChartYearFilter.addEventListener("change", updateInvestmentChart);
 
   el.investmentTickerInput.addEventListener("input", () => {
     el.investmentTickerInput.value = sanitizeTicker(el.investmentTickerInput.value);
