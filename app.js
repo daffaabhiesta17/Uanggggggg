@@ -67,6 +67,8 @@ let selectedTransactionIds = new Set();
 let chartBars = [];
 let investmentStockChart = null;
 let investmentChartPurchases = [];
+let investmentsDirty = true;
+let chartJsLoadPromise = null;
 let remoteStore = {
   enabled: false,
   investmentsEnabled: false,
@@ -740,7 +742,7 @@ function renderAll() {
   renderDashboard();
   renderTransactions();
   renderCategories();
-  renderInvestments();
+  renderInvestmentsIfActive();
 }
 
 function renderCategoryOptions() {
@@ -1335,6 +1337,22 @@ function updateInvestmentStats(purchases) {
   el.investmentMaxLotsMeta.textContent = maxLots ? `${maxLots.ticker} - ${formatInvestmentDate(maxLots)} - ${formatMoney(maxLots.lotPrice)}` : "-";
 }
 
+function ensureChartJs() {
+  if (window.Chart) return Promise.resolve();
+  if (chartJsLoadPromise) return chartJsLoadPromise;
+
+  chartJsLoadPromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/chart.js";
+    script.async = true;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+
+  return chartJsLoadPromise;
+}
+
 function initInvestmentChart() {
   if (investmentStockChart || !el.investmentStockChart || !window.Chart) return;
   investmentStockChart = new Chart(el.investmentStockChart, {
@@ -1433,11 +1451,23 @@ function initInvestmentChart() {
 }
 
 function updateInvestmentChart() {
-  initInvestmentChart();
+  if (activeView !== "investments") return;
   const purchases = filteredInvestmentStockPurchases();
   investmentChartPurchases = purchases;
   el.investmentChartEmpty.classList.toggle("hidden", purchases.length > 0);
   updateInvestmentStats(purchases);
+  if (!window.Chart) {
+    ensureChartJs()
+      .then(() => updateInvestmentChart())
+      .catch((error) => {
+        console.error(error);
+        el.investmentChartEmpty.textContent = "Chart gagal dimuat. Data tabel tetap bisa digunakan.";
+        el.investmentChartEmpty.classList.remove("hidden");
+      });
+    return;
+  }
+
+  initInvestmentChart();
   if (!investmentStockChart) return;
 
   investmentStockChart.data.labels = purchases.map((purchase) => `${purchase.ticker} - ${formatInvestmentDate(purchase)}`);
@@ -1453,6 +1483,20 @@ function renderInvestments() {
   renderInvestmentTables();
   renderInvestmentSummary();
   updateInvestmentChart();
+  investmentsDirty = false;
+}
+
+function markInvestmentsDirty() {
+  investmentsDirty = true;
+}
+
+function renderInvestmentsIfActive(force = false) {
+  if (activeView !== "investments") {
+    markInvestmentsDirty();
+    return;
+  }
+  if (!force && !investmentsDirty) return;
+  renderInvestments();
 }
 
 function switchView(view) {
@@ -1468,6 +1512,7 @@ function switchView(view) {
     tools: "Tools",
   }[view];
   if (view === "investments") {
+    renderInvestmentsIfActive(true);
     setTimeout(() => {
       investmentStockChart?.resize();
       updateInvestmentChart();
