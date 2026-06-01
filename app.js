@@ -15,6 +15,7 @@ const defaultState = {
       title: "Contoh pemasukan",
       amount: 3500000,
       date: new Date().toISOString().slice(0, 10),
+      createdAt: new Date().toISOString(),
       note: "Data contoh bisa dihapus.",
     },
     {
@@ -24,6 +25,7 @@ const defaultState = {
       title: "Contoh pengeluaran",
       amount: 125000,
       date: new Date().toISOString().slice(0, 10),
+      createdAt: new Date(Date.now() + 1).toISOString(),
       note: "",
     },
   ],
@@ -103,21 +105,52 @@ const el = {
 
 function loadState() {
   const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return structuredClone(defaultState);
+  if (!raw) return normalizeState(structuredClone(defaultState));
 
   try {
     const parsed = JSON.parse(raw);
-    return {
+    return normalizeState({
       categories: Array.isArray(parsed.categories) ? parsed.categories : defaultState.categories,
       transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [],
-    };
+    });
   } catch {
-    return structuredClone(defaultState);
+    return normalizeState(structuredClone(defaultState));
   }
 }
 
 function saveState() {
+  state = normalizeState(state);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function normalizeState(snapshot) {
+  return {
+    categories: Array.isArray(snapshot.categories) ? snapshot.categories : [],
+    transactions: Array.isArray(snapshot.transactions) ? snapshot.transactions.map(normalizeTransaction) : [],
+  };
+}
+
+function normalizeTransaction(transaction) {
+  return {
+    ...transaction,
+    amount: Number(transaction.amount) || 0,
+    createdAt: transactionCreatedAt(transaction),
+  };
+}
+
+function createdAtFromId(id) {
+  const match = String(id || "").match(/^trx_(\d+)_/);
+  if (!match) return "";
+
+  const timestamp = Number(match[1]);
+  if (!Number.isFinite(timestamp)) return "";
+
+  const date = new Date(timestamp);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString();
+}
+
+function transactionCreatedAt(transaction) {
+  return transaction.createdAt || transaction.created_at || createdAtFromId(transaction.id) || `${transaction.date || ""}T00:00:00.000Z`;
 }
 
 function setSyncStatus(text, mode = "") {
@@ -160,6 +193,7 @@ function toDbTransaction(transaction) {
     title: transaction.title,
     amount: transaction.amount,
     date: transaction.date,
+    created_at: transactionCreatedAt(transaction),
     note: transaction.note || "",
   };
 }
@@ -172,6 +206,7 @@ function fromDbTransaction(transaction) {
     title: transaction.title,
     amount: Number(transaction.amount),
     date: transaction.date,
+    createdAt: transactionCreatedAt(transaction),
     note: transaction.note || "",
   };
 }
@@ -218,7 +253,11 @@ async function initRemoteStore() {
 async function loadRemoteState() {
   const [categoriesResult, transactionsResult] = await Promise.all([
     remoteStore.client.from("categories").select("*").order("created_at", { ascending: true }),
-    remoteStore.client.from("transactions").select("*").order("date", { ascending: false }),
+    remoteStore.client
+      .from("transactions")
+      .select("*")
+      .order("date", { ascending: false })
+      .order("created_at", { ascending: true }),
   ]);
 
   if (categoriesResult.error) throw categoriesResult.error;
@@ -528,7 +567,7 @@ function renderTopCategories(transactions) {
 }
 
 function renderRecentTransactions() {
-  const recent = [...state.transactions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+  const recent = [...state.transactions].sort(compareTransactionsNewestFirst).slice(0, 5);
   el.recentTransactions.innerHTML = recent.length
     ? recent
         .map(
@@ -560,7 +599,7 @@ function renderTransactions() {
       const haystack = `${item.title} ${item.note} ${categoryName(item.categoryId)}`.toLowerCase();
       return haystack.includes(query);
     })
-    .sort((a, b) => b.date.localeCompare(a.date));
+    .sort(compareTransactionsForDisplay);
 
   const visibleIds = new Set(rows.map((item) => item.id));
   selectedTransactionIds = new Set([...selectedTransactionIds].filter((id) => visibleIds.has(id)));
@@ -680,12 +719,30 @@ function totalRunningBalance() {
   return state.transactions.reduce((total, transaction) => total + signedAmount(transaction), 0);
 }
 
+function compareTransactionsChronological(a, b) {
+  const dateCompare = a.date.localeCompare(b.date);
+  if (dateCompare !== 0) return dateCompare;
+  const createdCompare = transactionCreatedAt(a).localeCompare(transactionCreatedAt(b));
+  if (createdCompare !== 0) return createdCompare;
+  return a.id.localeCompare(b.id);
+}
+
+function compareTransactionsForDisplay(a, b) {
+  const dateCompare = b.date.localeCompare(a.date);
+  if (dateCompare !== 0) return dateCompare;
+  return compareTransactionsChronological(a, b);
+}
+
+function compareTransactionsNewestFirst(a, b) {
+  const dateCompare = b.date.localeCompare(a.date);
+  if (dateCompare !== 0) return dateCompare;
+  const createdCompare = transactionCreatedAt(b).localeCompare(transactionCreatedAt(a));
+  if (createdCompare !== 0) return createdCompare;
+  return b.id.localeCompare(a.id);
+}
+
 function sortedTransactionsAscending() {
-  return [...state.transactions].sort((a, b) => {
-    const dateCompare = a.date.localeCompare(b.date);
-    if (dateCompare !== 0) return dateCompare;
-    return a.id.localeCompare(b.id);
-  });
+  return [...state.transactions].sort(compareTransactionsChronological);
 }
 
 function runningBalanceByTransaction() {
@@ -871,10 +928,15 @@ function initEvents() {
     const editingId = el.editingTransactionId.value;
     let savedTransaction;
     if (editingId) {
-      savedTransaction = { id: editingId, ...payload };
+      const existingTransaction = state.transactions.find((item) => item.id === editingId);
+      savedTransaction = {
+        id: editingId,
+        createdAt: transactionCreatedAt(existingTransaction || { id: editingId, ...payload }),
+        ...payload,
+      };
       state.transactions = state.transactions.map((item) => (item.id === editingId ? savedTransaction : item));
     } else {
-      savedTransaction = { id: uid("trx"), ...payload };
+      savedTransaction = { id: uid("trx"), createdAt: new Date().toISOString(), ...payload };
       state.transactions.push(savedTransaction);
     }
 
@@ -1032,7 +1094,7 @@ function initEvents() {
       if (!Array.isArray(imported.categories) || !Array.isArray(imported.transactions)) {
         throw new Error("Format tidak sesuai.");
       }
-      state = imported;
+      state = normalizeState(imported);
       saveState();
       if (remoteStore.enabled) {
         await remoteStore.client.from("categories").upsert(state.categories.map(toDbCategory));
@@ -1049,7 +1111,7 @@ function initEvents() {
 
   el.resetButton.addEventListener("click", async () => {
     if (confirm("Reset semua data? Aksi ini tidak bisa dibatalkan.")) {
-      state = structuredClone(defaultState);
+      state = normalizeState(structuredClone(defaultState));
       try {
         await resetRemoteData();
         renderAll();
