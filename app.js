@@ -1126,6 +1126,7 @@ function initEvents() {
 
 el.monthFilter.value = currentMonth();
 el.transactionDate.value = new Date().toISOString().slice(0, 10);
+el.allMonthsFilter.checked = true;
 initEvents();
 renderAll();
 initRemoteStore().then(renderAll);
