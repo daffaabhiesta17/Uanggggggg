@@ -146,6 +146,20 @@ const el = {
   investmentRdpuYear: document.querySelector("#investmentRdpuYear"),
   investmentRdpuAmount: document.querySelector("#investmentRdpuAmount"),
   investmentRdpuTable: document.querySelector("#investmentRdpuTable"),
+  investmentInfoTickerFilter: document.querySelector("#investmentInfoTickerFilter"),
+  investmentInfoYearFilter: document.querySelector("#investmentInfoYearFilter"),
+  investmentMinPrice: document.querySelector("#investmentMinPrice"),
+  investmentMinPriceMeta: document.querySelector("#investmentMinPriceMeta"),
+  investmentMaxPrice: document.querySelector("#investmentMaxPrice"),
+  investmentMaxPriceMeta: document.querySelector("#investmentMaxPriceMeta"),
+  investmentMinLots: document.querySelector("#investmentMinLots"),
+  investmentMinLotsMeta: document.querySelector("#investmentMinLotsMeta"),
+  investmentMaxLots: document.querySelector("#investmentMaxLots"),
+  investmentMaxLotsMeta: document.querySelector("#investmentMaxLotsMeta"),
+  investmentMinRdpu: document.querySelector("#investmentMinRdpu"),
+  investmentMinRdpuMeta: document.querySelector("#investmentMinRdpuMeta"),
+  investmentMaxRdpu: document.querySelector("#investmentMaxRdpu"),
+  investmentMaxRdpuMeta: document.querySelector("#investmentMaxRdpuMeta"),
   investmentSummaryTable: document.querySelector("#investmentSummaryTable"),
 };
 
@@ -1171,6 +1185,16 @@ function renderInvestmentOptions() {
     state.investments.tickers.map((ticker) => ({ value: ticker, label: ticker })),
     el.investmentStockTicker.value || state.investments.tickers[0],
   );
+  renderOptionList(
+    el.investmentInfoTickerFilter,
+    [{ value: "all", label: "Semua Saham" }, ...state.investments.tickers.map((ticker) => ({ value: ticker, label: ticker }))],
+    el.investmentInfoTickerFilter.value || "all",
+  );
+  renderOptionList(
+    el.investmentInfoYearFilter,
+    [{ value: "all", label: "Semua Tahun" }, ...yearOptions],
+    el.investmentInfoYearFilter.value || "all",
+  );
 }
 
 function renderInvestmentTickers() {
@@ -1273,12 +1297,66 @@ function renderInvestmentSummary() {
     .join("");
 }
 
+function filteredInvestmentInfoStocks() {
+  const ticker = el.investmentInfoTickerFilter.value || "all";
+  const year = el.investmentInfoYearFilter.value || "all";
+  return state.investments.stockPurchases
+    .filter((purchase) => ticker === "all" || purchase.ticker === ticker)
+    .filter((purchase) => year === "all" || purchase.year === Number(year));
+}
+
+function filteredInvestmentInfoRdpu() {
+  const year = el.investmentInfoYearFilter.value || "all";
+  return state.investments.rdpuPurchases.filter((purchase) => year === "all" || purchase.year === Number(year));
+}
+
+function findInvestmentByMetric(purchases, metric, direction) {
+  if (!purchases.length) return null;
+  return purchases.reduce((selected, purchase) => {
+    if (direction === "min") return purchase[metric] < selected[metric] ? purchase : selected;
+    return purchase[metric] > selected[metric] ? purchase : selected;
+  }, purchases[0]);
+}
+
+function updateInvestmentInfo() {
+  const stockRows = filteredInvestmentInfoStocks();
+  const rdpuRows = filteredInvestmentInfoRdpu();
+  const minPrice = findInvestmentByMetric(stockRows, "lotPrice", "min");
+  const maxPrice = findInvestmentByMetric(stockRows, "lotPrice", "max");
+  const minLots = findInvestmentByMetric(stockRows, "lots", "min");
+  const maxLots = findInvestmentByMetric(stockRows, "lots", "max");
+  const minRdpu = findInvestmentByMetric(rdpuRows, "amount", "min");
+  const maxRdpu = findInvestmentByMetric(rdpuRows, "amount", "max");
+
+  el.investmentMinPrice.textContent = minPrice ? formatMoney(minPrice.lotPrice) : "-";
+  el.investmentMinPriceMeta.textContent = minPrice
+    ? `${minPrice.ticker} - ${formatInvestmentDate(minPrice)} - ${minPrice.lots.toLocaleString("id-ID")} lot`
+    : "-";
+  el.investmentMaxPrice.textContent = maxPrice ? formatMoney(maxPrice.lotPrice) : "-";
+  el.investmentMaxPriceMeta.textContent = maxPrice
+    ? `${maxPrice.ticker} - ${formatInvestmentDate(maxPrice)} - ${maxPrice.lots.toLocaleString("id-ID")} lot`
+    : "-";
+  el.investmentMinLots.textContent = minLots ? `${minLots.lots.toLocaleString("id-ID")} lot` : "-";
+  el.investmentMinLotsMeta.textContent = minLots
+    ? `${minLots.ticker} - ${formatInvestmentDate(minLots)} - ${formatMoney(minLots.lotPrice)}`
+    : "-";
+  el.investmentMaxLots.textContent = maxLots ? `${maxLots.lots.toLocaleString("id-ID")} lot` : "-";
+  el.investmentMaxLotsMeta.textContent = maxLots
+    ? `${maxLots.ticker} - ${formatInvestmentDate(maxLots)} - ${formatMoney(maxLots.lotPrice)}`
+    : "-";
+  el.investmentMinRdpu.textContent = minRdpu ? formatMoney(minRdpu.amount) : "-";
+  el.investmentMinRdpuMeta.textContent = minRdpu ? formatInvestmentDate(minRdpu) : "-";
+  el.investmentMaxRdpu.textContent = maxRdpu ? formatMoney(maxRdpu.amount) : "-";
+  el.investmentMaxRdpuMeta.textContent = maxRdpu ? formatInvestmentDate(maxRdpu) : "-";
+}
+
 function renderInvestments() {
   state.investments = normalizeInvestments(state.investments);
   renderInvestmentOptions();
   renderInvestmentTickers();
   renderInvestmentTables();
   renderInvestmentSummary();
+  updateInvestmentInfo();
   investmentsDirty = false;
 }
 
@@ -1405,6 +1483,9 @@ function initEvents() {
       setSyncStatus("Simpan investasi cloud gagal", "error");
     }
   });
+
+  el.investmentInfoTickerFilter.addEventListener("change", updateInvestmentInfo);
+  el.investmentInfoYearFilter.addEventListener("change", updateInvestmentInfo);
 
   el.investmentTickerInput.addEventListener("input", () => {
     el.investmentTickerInput.value = sanitizeTicker(el.investmentTickerInput.value);

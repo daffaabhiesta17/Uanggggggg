@@ -405,6 +405,67 @@
             </div>
 
             <section class="surface">
+              <div class="section-head">
+                <div>
+                  <h3>Informasi Pembelian</h3>
+                  <p>Ringkasan harga, lot, dan nominal RDPU dari transaksi yang sudah dicatat.</p>
+                </div>
+                <div class="investment-filters">
+                  <label>
+                    Saham
+                    <select id="investmentInfoTickerFilter"></select>
+                  </label>
+                  <label>
+                    Tahun
+                    <select id="investmentInfoYearFilter"></select>
+                  </label>
+                </div>
+              </div>
+              <div class="investment-info-grid">
+                <div>
+                  <h4 class="investment-info-title">Saham</h4>
+                  <div class="investment-info-cards">
+                    <article class="metric">
+                      <span>Harga Terendah</span>
+                      <strong id="investmentMinPrice">-</strong>
+                      <small id="investmentMinPriceMeta">-</small>
+                    </article>
+                    <article class="metric">
+                      <span>Harga Termahal</span>
+                      <strong id="investmentMaxPrice">-</strong>
+                      <small id="investmentMaxPriceMeta">-</small>
+                    </article>
+                    <article class="metric">
+                      <span>Lot Paling Sedikit</span>
+                      <strong id="investmentMinLots">-</strong>
+                      <small id="investmentMinLotsMeta">-</small>
+                    </article>
+                    <article class="metric">
+                      <span>Lot Paling Banyak</span>
+                      <strong id="investmentMaxLots">-</strong>
+                      <small id="investmentMaxLotsMeta">-</small>
+                    </article>
+                  </div>
+                </div>
+                <div>
+                  <h4 class="investment-info-title">RDPU</h4>
+                  <div class="investment-info-cards rdpu-info-cards">
+                    <article class="metric">
+                      <span>Nominal Terendah</span>
+                      <strong id="investmentMinRdpu">-</strong>
+                      <small id="investmentMinRdpuMeta">-</small>
+                    </article>
+                    <article class="metric">
+                      <span>Nominal Terbesar</span>
+                      <strong id="investmentMaxRdpu">-</strong>
+                      <small id="investmentMaxRdpuMeta">-</small>
+                    </article>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="surface">
               <div class="section-head compact">
                 <h3>Akumulasi Tahunan</h3>
                 <p>Setiap baris hanya menghitung transaksi pada tahun yang sama.</p>

@@ -731,12 +731,49 @@ th {
   min-width: 720px;
 }
 
+.investment-info-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
+  gap: 18px;
+}
+
+.investment-info-title {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.investment-info-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.rdpu-info-cards {
+  grid-template-columns: 1fr;
+}
+
+.investment-info-cards .metric {
+  padding: 14px;
+}
+
+.investment-info-cards .metric strong {
+  font-size: 1.2rem;
+}
+
+.investment-info-cards .metric small {
+  word-break: break-word;
+}
+
 @media (max-width: 1080px) {
   .app-shell,
   .dashboard-grid,
   .workspace-grid,
   .tools-grid,
-  .investment-grid {
+  .investment-grid,
+  .investment-info-grid {
     grid-template-columns: 1fr;
   }
 
@@ -767,6 +804,8 @@ th {
 
   .summary-grid,
   .table-toolbar,
+  .investment-info-cards,
+  .rdpu-info-cards,
   .investment-form,
   .investment-form.rdpu-form {
     grid-template-columns: 1fr;
