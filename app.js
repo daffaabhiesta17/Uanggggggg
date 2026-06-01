@@ -599,7 +599,7 @@ function renderTransactions() {
       const haystack = `${item.title} ${item.note} ${categoryName(item.categoryId)}`.toLowerCase();
       return haystack.includes(query);
     })
-    .sort(compareTransactionsForDisplay);
+    .sort(compareTransactionsChronological);
 
   const visibleIds = new Set(rows.map((item) => item.id));
   selectedTransactionIds = new Set([...selectedTransactionIds].filter((id) => visibleIds.has(id)));
@@ -725,12 +725,6 @@ function compareTransactionsChronological(a, b) {
   const createdCompare = transactionCreatedAt(a).localeCompare(transactionCreatedAt(b));
   if (createdCompare !== 0) return createdCompare;
   return a.id.localeCompare(b.id);
-}
-
-function compareTransactionsForDisplay(a, b) {
-  const dateCompare = b.date.localeCompare(a.date);
-  if (dateCompare !== 0) return dateCompare;
-  return compareTransactionsChronological(a, b);
 }
 
 function compareTransactionsNewestFirst(a, b) {
