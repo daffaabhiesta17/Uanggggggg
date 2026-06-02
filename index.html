@@ -311,24 +311,26 @@
                   </label>
                 </div>
 
-                <label class="switch-row" id="simPriceChangeToggle">
-                  <span>
-                    <strong>Aktifkan kenaikan / penurunan harga saham</strong>
-                    <small id="simPriceChangeStatus">Mati - harga saham tetap memakai harga awal.</small>
-                  </span>
-                  <input id="simEnablePriceChange" type="checkbox" />
-                  <span class="switch-control" aria-hidden="true"></span>
-                </label>
+                <div class="price-change-panel" id="simPriceChangePanel">
+                  <label class="switch-row" id="simPriceChangeToggle">
+                    <span>
+                      <strong>Aktifkan kenaikan / penurunan harga saham</strong>
+                      <small id="simPriceChangeStatus">Mati - harga saham tetap memakai harga awal.</small>
+                    </span>
+                    <input id="simEnablePriceChange" type="checkbox" />
+                    <span class="switch-control" aria-hidden="true"></span>
+                  </label>
 
-                <div class="input-pair">
-                  <label>
-                    BMRI % / Tahun
-                    <input id="simBmriPriceChange" type="number" step="0.1" value="5" disabled />
-                  </label>
-                  <label>
-                    ICBP % / Tahun
-                    <input id="simIcbpPriceChange" type="number" step="0.1" value="5" disabled />
-                  </label>
+                  <div class="input-pair price-change-fields" id="simPriceChangeFields">
+                    <label>
+                      BMRI % / Tahun
+                      <input id="simBmriPriceChange" type="number" step="0.1" value="5" disabled />
+                    </label>
+                    <label>
+                      ICBP % / Tahun
+                      <input id="simIcbpPriceChange" type="number" step="0.1" value="5" disabled />
+                    </label>
+                  </div>
                 </div>
 
                 <div class="input-pair">

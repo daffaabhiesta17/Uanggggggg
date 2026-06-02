@@ -719,22 +719,29 @@ th {
   font-size: 0.84rem;
 }
 
+.price-change-panel {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.price-change-panel.active {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
 .switch-row {
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 14px;
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #f8fafc;
+  padding: 0;
   color: var(--text);
-}
-
-.switch-row.active {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
 }
 
 .switch-row input {
@@ -780,6 +787,27 @@ th {
 
 .switch-row input:checked + .switch-control::before {
   transform: translateX(24px);
+}
+
+.price-change-fields {
+  padding-top: 2px;
+  transition: opacity 160ms ease, filter 160ms ease;
+}
+
+.price-change-fields.disabled {
+  opacity: 0.58;
+  filter: grayscale(0.4);
+}
+
+.price-change-fields.disabled label {
+  color: #94a3b8;
+}
+
+input:disabled {
+  border-color: #cfd8dc;
+  background: #eef3f0;
+  color: #7b8782;
+  cursor: not-allowed;
 }
 
 .switch-row small,
