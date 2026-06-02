@@ -273,10 +273,190 @@
 
         <section class="view" id="investmentsView" aria-labelledby="pageTitle">
           <div class="investment-stack">
+            <section class="investment-simulator-grid">
+              <form class="surface investment-simulator-form" id="investmentSimulatorForm">
+                <div class="section-head compact">
+                  <h3>Simulator 120 Bulan</h3>
+                  <p>Bola salju saham BMRI, ICBP, dan RDPU dengan pola beli selang-seling.</p>
+                </div>
+
+                <label>
+                  Total Setoran Bulanan
+                  <input id="simMonthlyDeposit" type="number" min="0" step="10000" value="1100000" />
+                </label>
+
+                <div class="allocation-control">
+                  <div class="row-between">
+                    <label for="simStockAllocation">Alokasi Saham</label>
+                    <div class="allocation-number">
+                      <input id="simStockAllocationNumber" type="number" min="0" max="100" step="1" value="80" />
+                      <span>%</span>
+                    </div>
+                  </div>
+                  <input id="simStockAllocation" type="range" min="0" max="100" step="1" value="80" />
+                  <div class="row-between allocation-meta">
+                    <span>RDPU otomatis</span>
+                    <strong id="simRdpuAllocationLabel">20%</strong>
+                  </div>
+                </div>
+
+                <div class="input-pair">
+                  <label>
+                    Harga BMRI
+                    <input id="simBmriPrice" type="number" min="1" step="1" value="4130" />
+                  </label>
+                  <label>
+                    Harga ICBP
+                    <input id="simIcbpPrice" type="number" min="1" step="1" value="6875" />
+                  </label>
+                </div>
+
+                <label class="checkbox-row">
+                  <input id="simEnablePriceChange" type="checkbox" />
+                  <span>
+                    <strong>Aktifkan kenaikan / penurunan harga saham</strong>
+                    <small>Nilai positif menaikkan harga per tahun, nilai negatif menurunkan harga.</small>
+                  </span>
+                </label>
+
+                <div class="input-pair">
+                  <label>
+                    BMRI % / Tahun
+                    <input id="simBmriPriceChange" type="number" step="0.1" value="5" disabled />
+                  </label>
+                  <label>
+                    ICBP % / Tahun
+                    <input id="simIcbpPriceChange" type="number" step="0.1" value="5" disabled />
+                  </label>
+                </div>
+
+                <div class="input-pair">
+                  <label>
+                    Return RDPU / Tahun
+                    <input id="simRdpuReturn" type="number" min="0" step="0.01" value="4.14" />
+                  </label>
+                  <label>
+                    Growth Dividen / Tahun
+                    <input id="simDividendGrowth" type="number" min="0" step="0.1" value="5" />
+                  </label>
+                </div>
+
+                <div class="input-pair">
+                  <label>
+                    Yield Awal BMRI
+                    <input id="simBmriYield" type="number" min="0" step="0.1" value="5" />
+                  </label>
+                  <label>
+                    Yield Awal ICBP
+                    <input id="simIcbpYield" type="number" min="0" step="0.1" value="4" />
+                  </label>
+                </div>
+
+                <p class="simulator-note">
+                  Jalur likuidasi memakai Aset Akhir dan Keuntungan Bersih. Jalur keep lot memakai Gaji Pasif Tahun 10 dan Saldo RDPU Akhir.
+                </p>
+              </form>
+
+              <div class="investment-simulator-results">
+                <div class="summary-grid investment-summary">
+                  <article class="metric">
+                    <span>Total Modal</span>
+                    <strong id="simTotalContribution">Rp0</strong>
+                    <small>setoran 120 bulan</small>
+                  </article>
+                  <article class="metric income">
+                    <span>Aset Akhir</span>
+                    <strong id="simFinalAsset">Rp0</strong>
+                    <small>saham + RDPU</small>
+                  </article>
+                  <article class="metric balance">
+                    <span>Keuntungan Bersih</span>
+                    <strong id="simNetProfit">Rp0</strong>
+                    <small>setelah fee jual saham</small>
+                  </article>
+                  <article class="metric">
+                    <span>Gaji Pasif Tahun 10</span>
+                    <strong id="simPassiveIncome">Rp0</strong>
+                    <small>estimasi dividen tahunan</small>
+                  </article>
+                </div>
+
+                <section class="surface">
+                  <div class="section-head">
+                    <div>
+                      <h3>Modal vs Pertumbuhan Aset</h3>
+                      <p>Snapshot tahunan hasil simulasi 120 bulan.</p>
+                    </div>
+                    <strong class="chart-badge" id="simAssetMultiple">0,00x modal</strong>
+                  </div>
+                  <div class="chart-panel">
+                    <canvas id="investmentGrowthChart" aria-label="Grafik pertumbuhan portofolio" role="img"></canvas>
+                  </div>
+                </section>
+
+                <section class="surface">
+                  <div class="section-head compact">
+                    <h3>Posisi Akhir</h3>
+                    <p>Komposisi akhir saham dan RDPU dari hasil simulasi.</p>
+                  </div>
+                  <div class="composition-list">
+                    <div class="composition-item">
+                      <div class="row-between"><strong>BMRI</strong><span id="simBmriLots">0 lot</span></div>
+                      <div class="composition-track"><span id="simBmriBar"></span></div>
+                      <small id="simBmriValue">Rp0</small>
+                    </div>
+                    <div class="composition-item">
+                      <div class="row-between"><strong>ICBP</strong><span id="simIcbpLots">0 lot</span></div>
+                      <div class="composition-track"><span id="simIcbpBar"></span></div>
+                      <small id="simIcbpValue">Rp0</small>
+                    </div>
+                    <div class="composition-item">
+                      <div class="row-between"><strong>RDPU</strong><span id="simRdpuShare">0%</span></div>
+                      <div class="composition-track"><span id="simRdpuBar"></span></div>
+                      <small id="simRdpuValue">Rp0</small>
+                    </div>
+                  </div>
+                  <div class="investment-mini-grid">
+                    <article>
+                      <span>Fee jual saham</span>
+                      <strong id="simSellingFee">Rp0</strong>
+                    </article>
+                    <article>
+                      <span>Dividen cair total</span>
+                      <strong id="simTotalDividends">Rp0</strong>
+                    </article>
+                  </div>
+                </section>
+              </div>
+            </section>
+
+            <section class="surface">
+              <div class="section-head compact">
+                <h3>Riwayat Tahunan Simulator</h3>
+                <p>Snapshot tahun 1 sampai 10 dari simulator compounding.</p>
+              </div>
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Tahun</th>
+                      <th>Total Setoran</th>
+                      <th>Lot BMRI</th>
+                      <th>Lot ICBP</th>
+                      <th>Dividen Cair</th>
+                      <th>Saldo RDPU</th>
+                      <th>Total Portofolio</th>
+                    </tr>
+                  </thead>
+                  <tbody id="simHistoryTable"></tbody>
+                </table>
+              </div>
+            </section>
+
             <section class="surface">
               <div class="section-head">
                 <div>
-                  <h3>Compounding Saham & RDPU</h3>
+                  <h3>Catatan Pembelian Saham & RDPU</h3>
                   <p>Catat pembelian saham individual dan RDPU per tahun, lalu pantau total portofolio investasi.</p>
                 </div>
                 <div class="investment-year-control">
@@ -407,6 +587,29 @@
             <section class="surface">
               <div class="section-head">
                 <div>
+                  <h3>Grafik Pembelian Saham</h3>
+                  <p>Harga per lot dan jumlah lot dari catatan pembelian yang tersimpan.</p>
+                </div>
+                <div class="investment-filters">
+                  <label>
+                    Saham
+                    <select id="investmentStockChartTickerFilter"></select>
+                  </label>
+                  <label>
+                    Tahun
+                    <select id="investmentStockChartYearFilter"></select>
+                  </label>
+                </div>
+              </div>
+              <div class="chart-panel">
+                <canvas id="investmentStockChart" aria-label="Grafik pembelian saham" role="img"></canvas>
+                <div class="empty-state hidden" id="investmentStockChartEmpty">Belum ada pembelian saham sesuai filter.</div>
+              </div>
+            </section>
+
+            <section class="surface">
+              <div class="section-head">
+                <div>
                   <h3>Informasi Pembelian</h3>
                   <p>Ringkasan harga, lot, dan nominal RDPU dari transaksi yang sudah dicatat.</p>
                 </div>
@@ -491,6 +694,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="./supabase-config.js"></script>
     <script src="./app.js"></script>
   </body>

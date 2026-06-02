@@ -1,4 +1,5 @@
 const STORAGE_KEY = "catatan-kas-v1";
+const LEGACY_INVESTMENT_STORAGE_KEY = "compoundingSahamRdpuManualPurchases";
 
 const defaultState = {
   categories: [
@@ -52,11 +53,19 @@ const INVESTMENT_MONTHS = [
   "November",
   "Desember",
 ];
+const SIMULATION_MONTHS = 120;
+const LOT_SIZE = 100;
+const SELLING_FEE_RATE = 0.0035;
 
 const rupiah = new Intl.NumberFormat("id-ID", {
   style: "currency",
   currency: "IDR",
   maximumFractionDigits: 0,
+});
+
+const decimal = new Intl.NumberFormat("id-ID", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
 });
 
 let state = loadState();
@@ -66,6 +75,9 @@ let transactionSelectionMode = false;
 let selectedTransactionIds = new Set();
 let chartBars = [];
 let investmentsDirty = true;
+let investmentGrowthChart = null;
+let investmentStockChart = null;
+let investmentStockChartPurchases = [];
 let remoteStore = {
   enabled: false,
   investmentsEnabled: false,
@@ -125,6 +137,38 @@ const el = {
   resetButton: document.querySelector("#resetButton"),
   syncStatus: document.querySelector("#syncStatus"),
   storageHint: document.querySelector("#storageHint"),
+  investmentSimulatorForm: document.querySelector("#investmentSimulatorForm"),
+  simMonthlyDeposit: document.querySelector("#simMonthlyDeposit"),
+  simStockAllocation: document.querySelector("#simStockAllocation"),
+  simStockAllocationNumber: document.querySelector("#simStockAllocationNumber"),
+  simRdpuAllocationLabel: document.querySelector("#simRdpuAllocationLabel"),
+  simBmriPrice: document.querySelector("#simBmriPrice"),
+  simIcbpPrice: document.querySelector("#simIcbpPrice"),
+  simEnablePriceChange: document.querySelector("#simEnablePriceChange"),
+  simBmriPriceChange: document.querySelector("#simBmriPriceChange"),
+  simIcbpPriceChange: document.querySelector("#simIcbpPriceChange"),
+  simRdpuReturn: document.querySelector("#simRdpuReturn"),
+  simDividendGrowth: document.querySelector("#simDividendGrowth"),
+  simBmriYield: document.querySelector("#simBmriYield"),
+  simIcbpYield: document.querySelector("#simIcbpYield"),
+  simTotalContribution: document.querySelector("#simTotalContribution"),
+  simFinalAsset: document.querySelector("#simFinalAsset"),
+  simNetProfit: document.querySelector("#simNetProfit"),
+  simPassiveIncome: document.querySelector("#simPassiveIncome"),
+  simAssetMultiple: document.querySelector("#simAssetMultiple"),
+  simBmriLots: document.querySelector("#simBmriLots"),
+  simIcbpLots: document.querySelector("#simIcbpLots"),
+  simBmriValue: document.querySelector("#simBmriValue"),
+  simIcbpValue: document.querySelector("#simIcbpValue"),
+  simRdpuValue: document.querySelector("#simRdpuValue"),
+  simRdpuShare: document.querySelector("#simRdpuShare"),
+  simBmriBar: document.querySelector("#simBmriBar"),
+  simIcbpBar: document.querySelector("#simIcbpBar"),
+  simRdpuBar: document.querySelector("#simRdpuBar"),
+  simSellingFee: document.querySelector("#simSellingFee"),
+  simTotalDividends: document.querySelector("#simTotalDividends"),
+  simHistoryTable: document.querySelector("#simHistoryTable"),
+  investmentGrowthChart: document.querySelector("#investmentGrowthChart"),
   investmentHorizon: document.querySelector("#investmentHorizon"),
   addInvestmentYearButton: document.querySelector("#addInvestmentYearButton"),
   investmentStockTotal: document.querySelector("#investmentStockTotal"),
@@ -160,22 +204,46 @@ const el = {
   investmentMinRdpuMeta: document.querySelector("#investmentMinRdpuMeta"),
   investmentMaxRdpu: document.querySelector("#investmentMaxRdpu"),
   investmentMaxRdpuMeta: document.querySelector("#investmentMaxRdpuMeta"),
+  investmentStockChartTickerFilter: document.querySelector("#investmentStockChartTickerFilter"),
+  investmentStockChartYearFilter: document.querySelector("#investmentStockChartYearFilter"),
+  investmentStockChart: document.querySelector("#investmentStockChart"),
+  investmentStockChartEmpty: document.querySelector("#investmentStockChartEmpty"),
   investmentSummaryTable: document.querySelector("#investmentSummaryTable"),
 };
 
 function loadState() {
   const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return normalizeState(structuredClone(defaultState));
+  if (!raw) {
+    return normalizeState({
+      ...structuredClone(defaultState),
+      investments: loadLegacyInvestments() || defaultState.investments,
+    });
+  }
 
   try {
     const parsed = JSON.parse(raw);
     return normalizeState({
       categories: Array.isArray(parsed.categories) ? parsed.categories : defaultState.categories,
       transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [],
-      investments: parsed.investments,
+      investments: parsed.investments || loadLegacyInvestments(),
     });
   } catch {
     return normalizeState(structuredClone(defaultState));
+  }
+}
+
+function loadLegacyInvestments() {
+  try {
+    const legacy = JSON.parse(localStorage.getItem(LEGACY_INVESTMENT_STORAGE_KEY));
+    if (!legacy || typeof legacy !== "object") return null;
+    return {
+      horizonYears: Number(legacy.horizonYears) || 11,
+      tickers: Array.isArray(legacy.tickers) ? legacy.tickers : [],
+      stockPurchases: Array.isArray(legacy.stockPurchases) ? legacy.stockPurchases : [],
+      rdpuPurchases: Array.isArray(legacy.rdpuPurchases) ? legacy.rdpuPurchases : [],
+    };
+  } catch {
+    return null;
   }
 }
 
@@ -706,6 +774,345 @@ function formatInvestmentDate(purchase) {
   return `${investmentMonthLabel(purchase.month)} ${purchase.year}`;
 }
 
+function readNumber(input, fallback = 0) {
+  const value = Number(input.value);
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function compactMoney(value) {
+  if (value >= 1000000000) return `${decimal.format(value / 1000000000)} M`;
+  if (value >= 1000000) return `${decimal.format(value / 1000000)} jt`;
+  return formatMoney(value);
+}
+
+function dividendPerShare(price, initialYieldPercent, growthPercent, year) {
+  const initialDividend = price * (initialYieldPercent / 100);
+  const growthMultiplier = Math.pow(1 + growthPercent / 100, year - 1);
+  return initialDividend * growthMultiplier;
+}
+
+function applyAnnualPriceChange(currentPrice, annualChangePercent, enabled) {
+  if (!enabled) return currentPrice;
+  return Math.max(0.01, currentPrice * (1 + annualChangePercent / 100));
+}
+
+function readSimulationInputs() {
+  const stockAllocation = clampNumber(Math.round(readNumber(el.simStockAllocationNumber, 80)), 0, 100);
+  return {
+    monthlyDeposit: Math.max(0, readNumber(el.simMonthlyDeposit, 1100000)),
+    stockAllocation,
+    rdpuAllocation: 100 - stockAllocation,
+    bmriPrice: Math.max(1, readNumber(el.simBmriPrice, 4130)),
+    icbpPrice: Math.max(1, readNumber(el.simIcbpPrice, 6875)),
+    rdpuReturnAnnual: Math.max(0, readNumber(el.simRdpuReturn, 4.14)),
+    dividendGrowthAnnual: Math.max(0, readNumber(el.simDividendGrowth, 5)),
+    bmriYieldInitial: Math.max(0, readNumber(el.simBmriYield, 5)),
+    icbpYieldInitial: Math.max(0, readNumber(el.simIcbpYield, 4)),
+    priceChangeEnabled: el.simEnablePriceChange.checked,
+    bmriPriceChangeAnnual: clampNumber(readNumber(el.simBmriPriceChange, 5), -99, 1000),
+    icbpPriceChangeAnnual: clampNumber(readNumber(el.simIcbpPriceChange, 5), -99, 1000),
+  };
+}
+
+function simulateInvestment(inputs) {
+  let bmriLots = 0;
+  let icbpLots = 0;
+  let rdpuBalance = 0;
+  let totalDividends = 0;
+  let annualDividends = 0;
+  let currentBmriPrice = inputs.bmriPrice;
+  let currentIcbpPrice = inputs.icbpPrice;
+  const yearlyRows = [];
+  const chartYears = [];
+  const chartContributions = [];
+  const chartAssets = [];
+  const monthlyRdpuRate = inputs.rdpuReturnAnnual / 12 / 100;
+  const monthlyStockBudget = (inputs.monthlyDeposit * inputs.stockAllocation) / 100;
+  const monthlyRdpuBudget = (inputs.monthlyDeposit * inputs.rdpuAllocation) / 100;
+
+  for (let month = 1; month <= SIMULATION_MONTHS; month += 1) {
+    const year = Math.ceil(month / 12);
+    const isOddMonth = month % 2 === 1;
+    const isBmriDividendMonth = month % 12 === 11;
+    const isIcbpDividendMonth = month % 12 === 0;
+
+    if (month > 1 && (month - 1) % 12 === 0) {
+      currentBmriPrice = applyAnnualPriceChange(currentBmriPrice, inputs.bmriPriceChangeAnnual, inputs.priceChangeEnabled);
+      currentIcbpPrice = applyAnnualPriceChange(currentIcbpPrice, inputs.icbpPriceChangeAnnual, inputs.priceChangeEnabled);
+    }
+
+    const bmriLotPrice = currentBmriPrice * LOT_SIZE;
+    const icbpLotPrice = currentIcbpPrice * LOT_SIZE;
+    let dividendThisMonth = 0;
+    let leftoverStockCash = 0;
+
+    if (isOddMonth) {
+      const bmriDividend = isBmriDividendMonth
+        ? bmriLots * LOT_SIZE * dividendPerShare(inputs.bmriPrice, inputs.bmriYieldInitial, inputs.dividendGrowthAnnual, year)
+        : 0;
+      const stockCash = monthlyStockBudget + bmriDividend;
+      const boughtLots = Math.floor(stockCash / bmriLotPrice);
+      bmriLots += boughtLots;
+      leftoverStockCash = stockCash - boughtLots * bmriLotPrice;
+      dividendThisMonth = bmriDividend;
+    } else {
+      const icbpDividend = isIcbpDividendMonth
+        ? icbpLots * LOT_SIZE * dividendPerShare(inputs.icbpPrice, inputs.icbpYieldInitial, inputs.dividendGrowthAnnual, year)
+        : 0;
+      const stockCash = monthlyStockBudget + icbpDividend;
+      const boughtLots = Math.floor(stockCash / icbpLotPrice);
+      icbpLots += boughtLots;
+      leftoverStockCash = stockCash - boughtLots * icbpLotPrice;
+      dividendThisMonth = icbpDividend;
+    }
+
+    totalDividends += dividendThisMonth;
+    annualDividends += dividendThisMonth;
+    rdpuBalance = (rdpuBalance + monthlyRdpuBudget + leftoverStockCash) * (1 + monthlyRdpuRate);
+
+    if (month % 12 === 0) {
+      const totalContribution = inputs.monthlyDeposit * month;
+      const bmriValue = bmriLots * LOT_SIZE * currentBmriPrice;
+      const icbpValue = icbpLots * LOT_SIZE * currentIcbpPrice;
+      const portfolioValue = bmriValue + icbpValue + rdpuBalance;
+
+      yearlyRows.push({
+        year,
+        totalContribution,
+        bmriLots,
+        icbpLots,
+        annualDividends,
+        rdpuBalance,
+        portfolioValue,
+      });
+
+      chartYears.push(`Tahun ${year}`);
+      chartContributions.push(Math.round(totalContribution));
+      chartAssets.push(Math.round(portfolioValue));
+      annualDividends = 0;
+    }
+  }
+
+  const bmriValue = bmriLots * LOT_SIZE * currentBmriPrice;
+  const icbpValue = icbpLots * LOT_SIZE * currentIcbpPrice;
+  const stockValue = bmriValue + icbpValue;
+  const finalAsset = stockValue + rdpuBalance;
+  const totalContribution = inputs.monthlyDeposit * SIMULATION_MONTHS;
+  const sellingFee = stockValue * SELLING_FEE_RATE;
+  const netProfit = finalAsset - sellingFee - totalContribution;
+  const passiveIncomeYear10 =
+    bmriLots * LOT_SIZE * dividendPerShare(inputs.bmriPrice, inputs.bmriYieldInitial, inputs.dividendGrowthAnnual, 10) +
+    icbpLots * LOT_SIZE * dividendPerShare(inputs.icbpPrice, inputs.icbpYieldInitial, inputs.dividendGrowthAnnual, 10);
+
+  return {
+    totalContribution,
+    finalAsset,
+    netProfit,
+    passiveIncomeYear10,
+    sellingFee,
+    totalDividends,
+    bmriLots,
+    icbpLots,
+    bmriValue,
+    icbpValue,
+    rdpuBalance,
+    yearlyRows,
+    chartYears,
+    chartContributions,
+    chartAssets,
+  };
+}
+
+function initInvestmentCharts() {
+  if (!window.Chart) return;
+
+  investmentGrowthChart = new Chart(el.investmentGrowthChart, {
+    type: "line",
+    data: {
+      labels: [],
+      datasets: [
+        {
+          label: "Total Modal",
+          data: [],
+          borderColor: "#dc2626",
+          backgroundColor: "rgba(220, 38, 38, 0.10)",
+          borderWidth: 3,
+          pointRadius: 3,
+          tension: 0.28,
+        },
+        {
+          label: "Pertumbuhan Total Aset",
+          data: [],
+          borderColor: "#0f9f6e",
+          backgroundColor: "rgba(15, 159, 110, 0.12)",
+          borderWidth: 3,
+          pointRadius: 3,
+          tension: 0.28,
+          fill: true,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { intersect: false, mode: "index" },
+      plugins: {
+        legend: { labels: { boxWidth: 12, boxHeight: 12, color: "#172033", font: { weight: "bold" } } },
+        tooltip: {
+          callbacks: {
+            label(context) {
+              return `${context.dataset.label}: ${formatMoney(context.raw)}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: "#64748b" } },
+        y: {
+          ticks: { color: "#64748b", callback: compactMoney },
+          grid: { color: "rgba(15, 23, 42, 0.08)" },
+        },
+      },
+    },
+  });
+
+  investmentStockChart = new Chart(el.investmentStockChart, {
+    type: "line",
+    data: {
+      labels: [],
+      datasets: [
+        {
+          label: "Harga / Lot",
+          data: [],
+          borderColor: "#dc2626",
+          backgroundColor: "rgba(220, 38, 38, 0.10)",
+          borderWidth: 3,
+          pointRadius: 3,
+          pointHoverRadius: 6,
+          tension: 0.28,
+          yAxisID: "y",
+        },
+        {
+          label: "Jumlah Lot",
+          data: [],
+          borderColor: "#0f9f6e",
+          backgroundColor: "rgba(15, 159, 110, 0.12)",
+          borderWidth: 3,
+          pointRadius: 3,
+          pointHoverRadius: 6,
+          tension: 0.28,
+          fill: true,
+          yAxisID: "y1",
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { intersect: false, mode: "index" },
+      plugins: {
+        legend: { labels: { boxWidth: 12, boxHeight: 12, color: "#172033", font: { weight: "bold" } } },
+        tooltip: {
+          callbacks: {
+            title(items) {
+              const purchase = investmentStockChartPurchases[items[0]?.dataIndex];
+              return purchase ? `${purchase.ticker} - ${formatInvestmentDate(purchase)}` : "";
+            },
+            label(context) {
+              const purchase = investmentStockChartPurchases[context.dataIndex];
+              if (!purchase) return "";
+              if (context.dataset.label === "Harga / Lot") return `Harga / lot: ${formatMoney(purchase.lotPrice)}`;
+              return `Jumlah lot: ${purchase.lots.toLocaleString("id-ID")} lot`;
+            },
+            afterBody(items) {
+              const purchase = investmentStockChartPurchases[items[0]?.dataIndex];
+              return purchase ? `Nominal: ${formatMoney(investmentValue(purchase))}` : "";
+            },
+          },
+        },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: "#64748b", maxRotation: 0, autoSkip: true } },
+        y: {
+          beginAtZero: true,
+          ticks: { color: "#64748b", callback: compactMoney },
+          grid: { color: "rgba(15, 23, 42, 0.08)" },
+        },
+        y1: {
+          beginAtZero: true,
+          position: "right",
+          ticks: {
+            color: "#64748b",
+            precision: 0,
+            callback(value) {
+              return `${value} lot`;
+            },
+          },
+          grid: { drawOnChartArea: false },
+        },
+      },
+    },
+  });
+}
+
+function updateInvestmentSimulator() {
+  const inputs = readSimulationInputs();
+  el.simStockAllocation.value = String(inputs.stockAllocation);
+  el.simStockAllocationNumber.value = String(inputs.stockAllocation);
+  el.simRdpuAllocationLabel.textContent = `${inputs.rdpuAllocation}%`;
+  el.simBmriPriceChange.disabled = !inputs.priceChangeEnabled;
+  el.simIcbpPriceChange.disabled = !inputs.priceChangeEnabled;
+
+  const result = simulateInvestment(inputs);
+  el.simTotalContribution.textContent = formatMoney(result.totalContribution);
+  el.simFinalAsset.textContent = formatMoney(result.finalAsset);
+  el.simNetProfit.textContent = formatMoney(result.netProfit);
+  el.simNetProfit.classList.toggle("negative", result.netProfit < 0);
+  el.simNetProfit.classList.toggle("positive", result.netProfit >= 0);
+  el.simPassiveIncome.textContent = formatMoney(result.passiveIncomeYear10);
+  el.simSellingFee.textContent = formatMoney(result.sellingFee);
+  el.simTotalDividends.textContent = formatMoney(result.totalDividends);
+  el.simAssetMultiple.textContent = `${decimal.format(result.finalAsset / Math.max(result.totalContribution, 1))}x modal`;
+
+  const total = Math.max(result.finalAsset, 1);
+  const bmriPct = (result.bmriValue / total) * 100;
+  const icbpPct = (result.icbpValue / total) * 100;
+  const rdpuPct = (result.rdpuBalance / total) * 100;
+
+  el.simBmriLots.textContent = `${result.bmriLots.toLocaleString("id-ID")} lot`;
+  el.simIcbpLots.textContent = `${result.icbpLots.toLocaleString("id-ID")} lot`;
+  el.simBmriValue.textContent = formatMoney(result.bmriValue);
+  el.simIcbpValue.textContent = formatMoney(result.icbpValue);
+  el.simRdpuValue.textContent = formatMoney(result.rdpuBalance);
+  el.simRdpuShare.textContent = `${decimal.format(rdpuPct)}%`;
+  el.simBmriBar.style.width = `${Math.min(bmriPct, 100)}%`;
+  el.simIcbpBar.style.width = `${Math.min(icbpPct, 100)}%`;
+  el.simRdpuBar.style.width = `${Math.min(rdpuPct, 100)}%`;
+
+  el.simHistoryTable.innerHTML = result.yearlyRows
+    .map(
+      (row) => `
+        <tr>
+          <td><strong>${row.year}</strong></td>
+          <td>${formatMoney(row.totalContribution)}</td>
+          <td>${row.bmriLots.toLocaleString("id-ID")} lot</td>
+          <td>${row.icbpLots.toLocaleString("id-ID")} lot</td>
+          <td>${formatMoney(row.annualDividends)}</td>
+          <td>${formatMoney(row.rdpuBalance)}</td>
+          <td><strong>${formatMoney(row.portfolioValue)}</strong></td>
+        </tr>
+      `,
+    )
+    .join("");
+
+  if (investmentGrowthChart) {
+    investmentGrowthChart.data.labels = result.chartYears;
+    investmentGrowthChart.data.datasets[0].data = result.chartContributions;
+    investmentGrowthChart.data.datasets[1].data = result.chartAssets;
+    investmentGrowthChart.update();
+  }
+}
+
 function currentMonth() {
   return new Date().toISOString().slice(0, 7);
 }
@@ -1195,6 +1602,16 @@ function renderInvestmentOptions() {
     [{ value: "all", label: "Semua Tahun" }, ...yearOptions],
     el.investmentInfoYearFilter.value || "all",
   );
+  renderOptionList(
+    el.investmentStockChartTickerFilter,
+    [{ value: "all", label: "Semua Saham" }, ...state.investments.tickers.map((ticker) => ({ value: ticker, label: ticker }))],
+    el.investmentStockChartTickerFilter.value || "all",
+  );
+  renderOptionList(
+    el.investmentStockChartYearFilter,
+    [{ value: "all", label: "Semua Tahun" }, ...yearOptions],
+    el.investmentStockChartYearFilter.value || "all",
+  );
 }
 
 function renderInvestmentTickers() {
@@ -1350,13 +1767,36 @@ function updateInvestmentInfo() {
   el.investmentMaxRdpuMeta.textContent = maxRdpu ? formatInvestmentDate(maxRdpu) : "-";
 }
 
+function filteredInvestmentChartStocks() {
+  const ticker = el.investmentStockChartTickerFilter.value || "all";
+  const year = el.investmentStockChartYearFilter.value || "all";
+  return state.investments.stockPurchases
+    .filter((purchase) => ticker === "all" || purchase.ticker === ticker)
+    .filter((purchase) => year === "all" || purchase.year === Number(year))
+    .sort((a, b) => investmentTimestamp(a) - investmentTimestamp(b));
+}
+
+function updateInvestmentStockChart() {
+  const purchases = filteredInvestmentChartStocks();
+  investmentStockChartPurchases = purchases;
+  el.investmentStockChartEmpty.classList.toggle("hidden", purchases.length > 0);
+
+  if (!investmentStockChart) return;
+  investmentStockChart.data.labels = purchases.map((purchase) => `${purchase.ticker} - ${formatInvestmentDate(purchase)}`);
+  investmentStockChart.data.datasets[0].data = purchases.map((purchase) => purchase.lotPrice);
+  investmentStockChart.data.datasets[1].data = purchases.map((purchase) => purchase.lots);
+  investmentStockChart.update();
+}
+
 function renderInvestments() {
   state.investments = normalizeInvestments(state.investments);
+  updateInvestmentSimulator();
   renderInvestmentOptions();
   renderInvestmentTickers();
   renderInvestmentTables();
   renderInvestmentSummary();
   updateInvestmentInfo();
+  updateInvestmentStockChart();
   investmentsDirty = false;
 }
 
@@ -1454,6 +1894,25 @@ function initEvents() {
     el.transactionAmount.value = formatNumberInput(el.transactionAmount.value);
   });
 
+  el.investmentSimulatorForm.addEventListener("submit", (event) => event.preventDefault());
+  el.simStockAllocation.addEventListener("input", () => {
+    el.simStockAllocationNumber.value = el.simStockAllocation.value;
+    updateInvestmentSimulator();
+  });
+  el.simStockAllocationNumber.addEventListener("input", updateInvestmentSimulator);
+  el.investmentSimulatorForm.addEventListener("input", (event) => {
+    if (event.target !== el.simStockAllocation && event.target !== el.simStockAllocationNumber) {
+      updateInvestmentSimulator();
+    }
+  });
+  el.simEnablePriceChange.addEventListener("change", updateInvestmentSimulator);
+  [el.simBmriPriceChange, el.simIcbpPriceChange].forEach((input) => {
+    input.addEventListener("blur", () => {
+      input.value = String(clampNumber(readNumber(input, 5), -99, 1000));
+      updateInvestmentSimulator();
+    });
+  });
+
   el.investmentStockLotPrice.addEventListener("input", () => {
     el.investmentStockLotPrice.value = formatNumberInput(el.investmentStockLotPrice.value);
   });
@@ -1486,6 +1945,8 @@ function initEvents() {
 
   el.investmentInfoTickerFilter.addEventListener("change", updateInvestmentInfo);
   el.investmentInfoYearFilter.addEventListener("change", updateInvestmentInfo);
+  el.investmentStockChartTickerFilter.addEventListener("change", updateInvestmentStockChart);
+  el.investmentStockChartYearFilter.addEventListener("change", updateInvestmentStockChart);
 
   el.investmentTickerInput.addEventListener("input", () => {
     el.investmentTickerInput.value = sanitizeTicker(el.investmentTickerInput.value);
@@ -1812,6 +2273,7 @@ function initEvents() {
       if (remoteStore.enabled) {
         await remoteStore.client.from("categories").upsert(state.categories.map(toDbCategory));
         await remoteStore.client.from("transactions").upsert(state.transactions.map(toDbTransaction));
+        await syncInvestmentsToRemote();
       }
       renderAll();
       alert("Import berhasil.");
@@ -1841,5 +2303,6 @@ el.monthFilter.value = currentMonth();
 el.transactionDate.value = new Date().toISOString().slice(0, 10);
 el.allMonthsFilter.checked = true;
 initEvents();
+initInvestmentCharts();
 renderAll();
 initRemoteStore().then(renderAll);
