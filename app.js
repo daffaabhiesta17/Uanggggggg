@@ -142,6 +142,8 @@ const el = {
   simStockAllocation: document.querySelector("#simStockAllocation"),
   simStockAllocationNumber: document.querySelector("#simStockAllocationNumber"),
   simRdpuAllocationLabel: document.querySelector("#simRdpuAllocationLabel"),
+  simStockAllocationAmount: document.querySelector("#simStockAllocationAmount"),
+  simRdpuAllocationAmount: document.querySelector("#simRdpuAllocationAmount"),
   simBmriPrice: document.querySelector("#simBmriPrice"),
   simIcbpPrice: document.querySelector("#simIcbpPrice"),
   simEnablePriceChange: document.querySelector("#simEnablePriceChange"),
@@ -1064,6 +1066,8 @@ function updateInvestmentSimulator() {
   el.simStockAllocation.value = String(inputs.stockAllocation);
   el.simStockAllocationNumber.value = String(inputs.stockAllocation);
   el.simRdpuAllocationLabel.textContent = `${inputs.rdpuAllocation}%`;
+  el.simStockAllocationAmount.textContent = formatMoney((inputs.monthlyDeposit * inputs.stockAllocation) / 100);
+  el.simRdpuAllocationAmount.textContent = formatMoney((inputs.monthlyDeposit * inputs.rdpuAllocation) / 100);
   el.simBmriPriceChange.disabled = !inputs.priceChangeEnabled;
   el.simIcbpPriceChange.disabled = !inputs.priceChangeEnabled;
   el.simPriceChangePanel.classList.toggle("active", inputs.priceChangeEnabled);
