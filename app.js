@@ -145,6 +145,8 @@ const el = {
   simBmriPrice: document.querySelector("#simBmriPrice"),
   simIcbpPrice: document.querySelector("#simIcbpPrice"),
   simEnablePriceChange: document.querySelector("#simEnablePriceChange"),
+  simPriceChangeToggle: document.querySelector("#simPriceChangeToggle"),
+  simPriceChangeStatus: document.querySelector("#simPriceChangeStatus"),
   simBmriPriceChange: document.querySelector("#simBmriPriceChange"),
   simIcbpPriceChange: document.querySelector("#simIcbpPriceChange"),
   simRdpuReturn: document.querySelector("#simRdpuReturn"),
@@ -1062,6 +1064,10 @@ function updateInvestmentSimulator() {
   el.simRdpuAllocationLabel.textContent = `${inputs.rdpuAllocation}%`;
   el.simBmriPriceChange.disabled = !inputs.priceChangeEnabled;
   el.simIcbpPriceChange.disabled = !inputs.priceChangeEnabled;
+  el.simPriceChangeToggle.classList.toggle("active", inputs.priceChangeEnabled);
+  el.simPriceChangeStatus.textContent = inputs.priceChangeEnabled
+    ? "Aktif - persentase perubahan harga per tahun dipakai dalam simulasi."
+    : "Mati - harga saham tetap memakai harga awal.";
 
   const result = simulateInvestment(inputs);
   el.simTotalContribution.textContent = formatMoney(result.totalContribution);

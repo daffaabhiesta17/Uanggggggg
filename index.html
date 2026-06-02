@@ -311,12 +311,13 @@
                   </label>
                 </div>
 
-                <label class="checkbox-row">
-                  <input id="simEnablePriceChange" type="checkbox" />
+                <label class="switch-row" id="simPriceChangeToggle">
                   <span>
                     <strong>Aktifkan kenaikan / penurunan harga saham</strong>
-                    <small>Nilai positif menaikkan harga per tahun, nilai negatif menurunkan harga.</small>
+                    <small id="simPriceChangeStatus">Mati - harga saham tetap memakai harga awal.</small>
                   </span>
+                  <input id="simEnablePriceChange" type="checkbox" />
+                  <span class="switch-control" aria-hidden="true"></span>
                 </label>
 
                 <div class="input-pair">
