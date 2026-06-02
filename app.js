@@ -1745,31 +1745,43 @@ function findInvestmentByMetric(purchases, metric, direction) {
   }, purchases[0]);
 }
 
+function findInvestmentByValue(purchases, direction) {
+  if (!purchases.length) return null;
+  return purchases.reduce((selected, purchase) => {
+    const selectedValue = investmentValue(selected);
+    const purchaseValue = investmentValue(purchase);
+    if (direction === "min") return purchaseValue < selectedValue ? purchase : selected;
+    return purchaseValue > selectedValue ? purchase : selected;
+  }, purchases[0]);
+}
+
+function formatInvestmentPurchaseMeta(purchase) {
+  return purchase
+    ? `${purchase.ticker} - ${formatInvestmentDate(purchase)} - ${formatMoney(purchase.lotPrice)} / lot x ${purchase.lots.toLocaleString("id-ID")} lot`
+    : "-";
+}
+
 function updateInvestmentInfo() {
   const stockRows = filteredInvestmentInfoStocks();
   const rdpuRows = filteredInvestmentInfoRdpu();
-  const minPrice = findInvestmentByMetric(stockRows, "lotPrice", "min");
-  const maxPrice = findInvestmentByMetric(stockRows, "lotPrice", "max");
+  const minPrice = findInvestmentByValue(stockRows, "min");
+  const maxPrice = findInvestmentByValue(stockRows, "max");
   const minLots = findInvestmentByMetric(stockRows, "lots", "min");
   const maxLots = findInvestmentByMetric(stockRows, "lots", "max");
   const minRdpu = findInvestmentByMetric(rdpuRows, "amount", "min");
   const maxRdpu = findInvestmentByMetric(rdpuRows, "amount", "max");
 
-  el.investmentMinPrice.textContent = minPrice ? formatMoney(minPrice.lotPrice) : "-";
-  el.investmentMinPriceMeta.textContent = minPrice
-    ? `${minPrice.ticker} - ${formatInvestmentDate(minPrice)} - ${minPrice.lots.toLocaleString("id-ID")} lot`
-    : "-";
-  el.investmentMaxPrice.textContent = maxPrice ? formatMoney(maxPrice.lotPrice) : "-";
-  el.investmentMaxPriceMeta.textContent = maxPrice
-    ? `${maxPrice.ticker} - ${formatInvestmentDate(maxPrice)} - ${maxPrice.lots.toLocaleString("id-ID")} lot`
-    : "-";
+  el.investmentMinPrice.textContent = minPrice ? formatMoney(investmentValue(minPrice)) : "-";
+  el.investmentMinPriceMeta.textContent = formatInvestmentPurchaseMeta(minPrice);
+  el.investmentMaxPrice.textContent = maxPrice ? formatMoney(investmentValue(maxPrice)) : "-";
+  el.investmentMaxPriceMeta.textContent = formatInvestmentPurchaseMeta(maxPrice);
   el.investmentMinLots.textContent = minLots ? `${minLots.lots.toLocaleString("id-ID")} lot` : "-";
   el.investmentMinLotsMeta.textContent = minLots
-    ? `${minLots.ticker} - ${formatInvestmentDate(minLots)} - ${formatMoney(minLots.lotPrice)}`
+    ? `${minLots.ticker} - ${formatInvestmentDate(minLots)} - ${formatMoney(investmentValue(minLots))} total`
     : "-";
   el.investmentMaxLots.textContent = maxLots ? `${maxLots.lots.toLocaleString("id-ID")} lot` : "-";
   el.investmentMaxLotsMeta.textContent = maxLots
-    ? `${maxLots.ticker} - ${formatInvestmentDate(maxLots)} - ${formatMoney(maxLots.lotPrice)}`
+    ? `${maxLots.ticker} - ${formatInvestmentDate(maxLots)} - ${formatMoney(investmentValue(maxLots))} total`
     : "-";
   el.investmentMinRdpu.textContent = minRdpu ? formatMoney(minRdpu.amount) : "-";
   el.investmentMinRdpuMeta.textContent = minRdpu ? formatInvestmentDate(minRdpu) : "-";
