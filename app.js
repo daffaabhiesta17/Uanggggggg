@@ -205,6 +205,7 @@ const el = {
   monthlyStrategyDividendGate: document.querySelector("#monthlyStrategyDividendGate"),
   monthlyStrategyDividendPanel: document.querySelector("#monthlyStrategyDividendPanel"),
   monthlyStrategyDividendAmount: document.querySelector("#monthlyStrategyDividendAmount"),
+  monthlyStrategyDividendBasisResult: document.querySelector("#monthlyStrategyDividendBasisResult"),
   monthlyStrategyIndicatorResults: document.querySelectorAll(".monthly-indicator-result"),
   monthlyStrategyExtraResults: document.querySelectorAll(".monthly-extra-result"),
   monthlyStrategyBmriBaseResult: document.querySelector("#monthlyStrategyBmriBaseResult"),
@@ -1827,6 +1828,24 @@ function bmriExtraLotDecision(changePercent) {
   return "Belum perlu tambah lot";
 }
 
+function dividendRecommendationBasis(dividendAmount, icbpLotPrice, bmriLotPrice, icbpLots, bmriLots, leftover) {
+  if (dividendAmount <= 0) {
+    return "Isi nominal dividen cair. Urutan: ICBP 1 lot dulu, lalu BMRI 1 lot, sisanya RDPU.";
+  }
+
+  const lotSummary = `ICBP 1 lot ${formatMoney(icbpLotPrice)}, BMRI 1 lot ${formatMoney(bmriLotPrice)}.`;
+  if (icbpLots > 0 && bmriLots > 0) {
+    return `Dividen cukup untuk ICBP 1 lot, lalu sisa cukup untuk BMRI 1 lot. ${lotSummary} Sisa ${formatMoney(leftover)} masuk RDPU.`;
+  }
+  if (icbpLots > 0) {
+    return `Dividen cukup untuk prioritas ICBP 1 lot. ${lotSummary} Sisa ${formatMoney(leftover)} masuk RDPU.`;
+  }
+  if (bmriLots > 0) {
+    return `Dividen belum cukup untuk ICBP 1 lot, tapi cukup untuk BMRI 1 lot. ${lotSummary} Sisa ${formatMoney(leftover)} masuk RDPU.`;
+  }
+  return `Dividen belum cukup untuk 1 lot ICBP atau BMRI. ${lotSummary} Semua dividen masuk RDPU.`;
+}
+
 function updateSimulatorSyncUi(active, message = "Strategi bulanan sedang mengendalikan input simulator.") {
   el.investmentSimulatorForm.classList.toggle("simulator-linked", active);
   el.simulatorSyncBanner.classList.toggle("hidden", !active);
@@ -1924,6 +1943,14 @@ function updateMonthlyStrategyCalculator() {
   el.monthlyStrategyExtraPoolResult.textContent = formatMoney(dividendStockCost);
   el.monthlyStrategySuggestedLotsResult.textContent =
     `ICBP ${dividendIcbpLots.toLocaleString("id-ID")} lot + BMRI ${dividendBmriLots.toLocaleString("id-ID")} lot`;
+  el.monthlyStrategyDividendBasisResult.textContent = dividendRecommendationBasis(
+    dividendAmount,
+    icbpLotPrice,
+    bmriExtraLotPrice,
+    dividendIcbpLots,
+    dividendBmriLots,
+    dividendCash
+  );
   el.monthlyStrategyExtraLeftoverResult.textContent = formatMoney(extraLeftoverToRdpu);
   el.monthlyStrategyTotalRdpuResult.textContent = formatMoney(totalRdpuThisMonth);
   el.monthlyStrategyBmriDiscountResult.textContent = `${decimal.format(bmriChangePercent)}%`;
