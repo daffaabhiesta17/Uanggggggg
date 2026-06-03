@@ -607,15 +607,20 @@
                           <span>Keputusan Lot</span>
                           <strong id="monthlyStrategyBmriDecisionResult">Belum perlu tambah lot</strong>
                         </article>
-                        <label class="switch-row monthly-extra-toggle monthly-dividend-gate hidden" id="monthlyStrategyDividendGate">
-                          <span>
-                            <strong>Masukkan dividen cair</strong>
-                            <small>Muncul saat BMRI sudah turun minimal -5%. Dividen diprioritaskan ke ICBP 1 lot, lalu BMRI 1 lot, sisanya RDPU.</small>
-                          </span>
-                          <input id="monthlyStrategyUseDividend" type="checkbox" />
-                          <span class="switch-control" aria-hidden="true"></span>
-                        </label>
-                        <label class="monthly-dividend-panel hidden" id="monthlyStrategyDividendPanel">
+                      </div>
+                    </div>
+
+                    <div class="monthly-strategy-block">
+                      <label class="switch-row monthly-extra-toggle monthly-dividend-gate" id="monthlyStrategyDividendGate">
+                        <span>
+                          <strong>3. Ada dividen cair bulan ini</strong>
+                          <small>Opsional karena dividen biasanya hanya 1-2x setahun. Dividen diprioritaskan ke ICBP 1 lot, lalu BMRI 1 lot, sisanya RDPU.</small>
+                        </span>
+                        <input id="monthlyStrategyUseDividend" type="checkbox" />
+                        <span class="switch-control" aria-hidden="true"></span>
+                      </label>
+                      <div class="monthly-strategy-grid hidden" id="monthlyStrategyDividendPanel">
+                        <label>
                           Nominal Dividen Cair
                           <input id="monthlyStrategyDividendAmount" type="text" inputmode="numeric" value="0" />
                         </label>
@@ -625,8 +630,8 @@
                     <div class="monthly-strategy-block">
                       <label class="switch-row monthly-extra-toggle">
                         <span>
-                          <strong>3. Eksekusi ekstra BMRI</strong>
-                          <small>Masukkan nominal ekstra jika bulan ini benar-benar tambah BMRI.</small>
+                          <strong>4. Eksekusi ekstra BMRI saat minus</strong>
+                          <small>Gunakan sisa setoran yang biasanya masuk RDPU untuk tambah BMRI saat harga sudah menarik.</small>
                         </span>
                         <input id="monthlyStrategyUseExtra" type="checkbox" />
                         <span class="switch-control" aria-hidden="true"></span>
@@ -671,11 +676,11 @@
                         <strong id="monthlyStrategyBridgeResult">Rp0</strong>
                       </article>
                       <article class="monthly-extra-result hidden">
-                        <span>Dicairkan dari RDPU</span>
+                        <span>Sisa Setoran Dipakai</span>
                         <strong id="monthlyStrategyRdpuRedeemResult">Rp0</strong>
                       </article>
                       <article class="monthly-extra-result hidden">
-                        <span>Sisa RDPU Setelah Cair</span>
+                        <span>Sisa Setoran ke RDPU</span>
                         <strong id="monthlyStrategyNetRdpuResult">Rp0</strong>
                       </article>
                       <article class="monthly-extra-result hidden">
@@ -695,8 +700,12 @@
                         <strong id="monthlyStrategySuggestedLotsResult">0 lot</strong>
                       </article>
                       <article class="monthly-extra-result hidden">
-                        <span>Sisa Ekstra ke RDPU</span>
+                        <span>Sisa Dividen/Ekstra ke RDPU</span>
                         <strong id="monthlyStrategyExtraLeftoverResult">Rp0</strong>
+                      </article>
+                      <article>
+                        <span>Total RDPU Bulan Ini</span>
+                        <strong id="monthlyStrategyTotalRdpuResult">Rp0</strong>
                       </article>
                     </div>
                     <p class="monthly-strategy-note" id="monthlyStrategyNote">Beli base dulu, lalu sisa masuk RDPU.</p>
