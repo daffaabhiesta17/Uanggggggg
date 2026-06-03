@@ -198,9 +198,13 @@ const el = {
   monthlyStrategyBmriCurrentPrice: document.querySelector("#monthlyStrategyBmriCurrentPrice"),
   monthlyStrategyUseIndicator: document.querySelector("#monthlyStrategyUseIndicator"),
   monthlyStrategyUseExtra: document.querySelector("#monthlyStrategyUseExtra"),
+  monthlyStrategyUseDividend: document.querySelector("#monthlyStrategyUseDividend"),
   monthlyStrategySyncSimulator: document.querySelector("#monthlyStrategySyncSimulator"),
   monthlyStrategyIndicatorPanel: document.querySelector("#monthlyStrategyIndicatorPanel"),
   monthlyStrategyExtraPanel: document.querySelector("#monthlyStrategyExtraPanel"),
+  monthlyStrategyDividendGate: document.querySelector("#monthlyStrategyDividendGate"),
+  monthlyStrategyDividendPanel: document.querySelector("#monthlyStrategyDividendPanel"),
+  monthlyStrategyDividendAmount: document.querySelector("#monthlyStrategyDividendAmount"),
   monthlyStrategyIndicatorResults: document.querySelectorAll(".monthly-indicator-result"),
   monthlyStrategyExtraResults: document.querySelectorAll(".monthly-extra-result"),
   monthlyStrategyBmriBaseResult: document.querySelector("#monthlyStrategyBmriBaseResult"),
@@ -212,6 +216,10 @@ const el = {
   monthlyStrategyNetRdpuResult: document.querySelector("#monthlyStrategyNetRdpuResult"),
   monthlyStrategyBridgeResult: document.querySelector("#monthlyStrategyBridgeResult"),
   monthlyStrategyTotalStockResult: document.querySelector("#monthlyStrategyTotalStockResult"),
+  monthlyStrategyDividendResult: document.querySelector("#monthlyStrategyDividendResult"),
+  monthlyStrategyExtraPoolResult: document.querySelector("#monthlyStrategyExtraPoolResult"),
+  monthlyStrategySuggestedLotsResult: document.querySelector("#monthlyStrategySuggestedLotsResult"),
+  monthlyStrategyExtraLeftoverResult: document.querySelector("#monthlyStrategyExtraLeftoverResult"),
   monthlyStrategyBmriDiscountResult: document.querySelector("#monthlyStrategyBmriDiscountResult"),
   monthlyStrategyBmriFormulaResult: document.querySelector("#monthlyStrategyBmriFormulaResult"),
   monthlyStrategyBmriDecisionResult: document.querySelector("#monthlyStrategyBmriDecisionResult"),
@@ -1804,8 +1812,10 @@ function readMonthlyStrategyInputs() {
     bmriExtraAmount: parseNumberInput(el.monthlyStrategyBmriExtraAmount.value),
     bmriAveragePrice: parseNumberInput(el.monthlyStrategyBmriAveragePrice.value),
     bmriCurrentPrice: parseNumberInput(el.monthlyStrategyBmriCurrentPrice.value),
+    dividendAmount: parseNumberInput(el.monthlyStrategyDividendAmount.value),
     useIndicator: el.monthlyStrategyUseIndicator.checked,
     useExtra: el.monthlyStrategyUseExtra.checked,
+    useDividend: el.monthlyStrategyUseDividend.checked,
     syncSimulator: el.monthlyStrategySyncSimulator.checked,
   };
 }
@@ -1865,13 +1875,24 @@ function updateMonthlyStrategyCalculator() {
   const netRdpu = grossRdpu - rdpuRedeemAmount;
   const bridgeAmount = baseShortfall + extraAmount;
   const unreimbursedBridge = Math.max(0, extraAmount - rdpuRedeemAmount);
-  const totalStockAmount = baseStockAmount + extraAmount;
+  let totalStockAmount = baseStockAmount + extraAmount;
   const bmriChangePercent =
     inputs.bmriAveragePrice > 0 ? ((inputs.bmriCurrentPrice - inputs.bmriAveragePrice) / inputs.bmriAveragePrice) * 100 : 0;
   const bmriFormula =
     inputs.bmriAveragePrice > 0
       ? `(${inputs.bmriCurrentPrice.toLocaleString("id-ID")} - ${inputs.bmriAveragePrice.toLocaleString("id-ID")}) / ${inputs.bmriAveragePrice.toLocaleString("id-ID")} x 100%`
       : "Isi avg price BMRI";
+  const canUseDividend = inputs.useIndicator && bmriChangePercent <= -5;
+  const dividendAmount = canUseDividend && inputs.useDividend ? inputs.dividendAmount : 0;
+  const extraAvailableCash = extraAmount + dividendAmount;
+  const extraLotPrice = inputs.useIndicator && inputs.bmriCurrentPrice > 0 ? inputs.bmriCurrentPrice * LOT_SIZE : bmriLotPrice;
+  const suggestedExtraLots = extraLotPrice > 0 ? Math.floor(extraAvailableCash / extraLotPrice) : 0;
+  const suggestedExtraCost = suggestedExtraLots * extraLotPrice;
+  const extraLeftoverToRdpu = Math.max(0, extraAvailableCash - suggestedExtraCost);
+  totalStockAmount = baseStockAmount + suggestedExtraCost;
+
+  el.monthlyStrategyDividendGate.classList.toggle("hidden", !canUseDividend);
+  el.monthlyStrategyDividendPanel.classList.toggle("hidden", !canUseDividend || !inputs.useDividend);
 
   el.monthlyStrategyBmriBaseResult.textContent = formatLotPurchase(inputs.bmriBaseLots, bmriBaseAmount);
   el.monthlyStrategyIcbpBaseResult.textContent = formatLotPurchase(inputs.icbpBaseLots, icbpBaseAmount);
@@ -1882,6 +1903,10 @@ function updateMonthlyStrategyCalculator() {
   el.monthlyStrategyNetRdpuResult.textContent = formatMoney(netRdpu);
   el.monthlyStrategyBridgeResult.textContent = formatMoney(bridgeAmount);
   el.monthlyStrategyTotalStockResult.textContent = formatMoney(totalStockAmount);
+  el.monthlyStrategyDividendResult.textContent = formatMoney(dividendAmount);
+  el.monthlyStrategyExtraPoolResult.textContent = formatMoney(extraAvailableCash);
+  el.monthlyStrategySuggestedLotsResult.textContent = `${suggestedExtraLots.toLocaleString("id-ID")} lot`;
+  el.monthlyStrategyExtraLeftoverResult.textContent = formatMoney(extraLeftoverToRdpu);
   el.monthlyStrategyBmriDiscountResult.textContent = `${decimal.format(bmriChangePercent)}%`;
   el.monthlyStrategyBmriFormulaResult.textContent = bmriFormula;
   el.monthlyStrategyBmriDecisionResult.textContent = bmriExtraLotDecision(bmriChangePercent);
@@ -1897,8 +1922,15 @@ function updateMonthlyStrategyCalculator() {
     el.monthlyStrategyNote.textContent = `Setoran kurang ${formatMoney(baseShortfall)} untuk beli base. Kurangi lot atau pakai cash/RDPU lama.`;
   } else if (!inputs.useExtra) {
     el.monthlyStrategyNote.textContent = `Beli base, lalu sisa ${formatMoney(grossRdpu)} masuk RDPU.`;
+  } else if (suggestedExtraLots > 0) {
+    el.monthlyStrategyNote.textContent =
+      `Silakan tambah ${suggestedExtraLots.toLocaleString("id-ID")} lot BMRI. ` +
+      `Sisa dana ekstra ${formatMoney(extraLeftoverToRdpu)} masuk RDPU. ` +
+      `RDPU setelah base yang dicairkan untuk ganti talangan: ${formatMoney(rdpuRedeemAmount)}.`;
   } else if (unreimbursedBridge > 0) {
-    el.monthlyStrategyNote.textContent = `Talangan dana pribadi ${formatMoney(bridgeAmount)}. Cairkan RDPU ${formatMoney(rdpuRedeemAmount)}, sisa talangan belum terganti ${formatMoney(unreimbursedBridge)}.`;
+    el.monthlyStrategyNote.textContent =
+      `Dana ekstra tersedia belum cukup untuk 1 lot BMRI. ` +
+      `Masukkan ${formatMoney(extraAvailableCash)} ke RDPU atau tambah nominal ekstra.`;
   } else {
     el.monthlyStrategyNote.textContent = `Talangan dana pribadi ${formatMoney(bridgeAmount)} diganti dari RDPU ${formatMoney(rdpuRedeemAmount)}. Sisa RDPU setelah cair ${formatMoney(netRdpu)}.`;
   }
@@ -2222,6 +2254,7 @@ function initEvents() {
     el.monthlyStrategyBmriPrice,
     el.monthlyStrategyIcbpPrice,
     el.monthlyStrategyBmriExtraAmount,
+    el.monthlyStrategyDividendAmount,
     el.monthlyStrategyBmriAveragePrice,
     el.monthlyStrategyBmriCurrentPrice,
   ].forEach((input) => {
@@ -2239,6 +2272,7 @@ function initEvents() {
   });
   el.monthlyStrategyUseExtra.addEventListener("change", updateMonthlyStrategyCalculator);
   el.monthlyStrategyUseIndicator.addEventListener("change", updateMonthlyStrategyCalculator);
+  el.monthlyStrategyUseDividend.addEventListener("change", updateMonthlyStrategyCalculator);
   el.monthlyStrategySyncSimulator.addEventListener("change", updateMonthlyStrategyCalculator);
 
   el.investmentHorizon.addEventListener("change", async () => {

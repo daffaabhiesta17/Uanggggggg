@@ -607,6 +607,18 @@
                           <span>Keputusan Lot</span>
                           <strong id="monthlyStrategyBmriDecisionResult">Belum perlu tambah lot</strong>
                         </article>
+                        <label class="switch-row monthly-extra-toggle monthly-dividend-gate hidden" id="monthlyStrategyDividendGate">
+                          <span>
+                            <strong>Masukkan dividen cair</strong>
+                            <small>Muncul saat BMRI sudah turun minimal -5%. Dividen ikut dihitung sebagai dana ekstra bulan ini.</small>
+                          </span>
+                          <input id="monthlyStrategyUseDividend" type="checkbox" />
+                          <span class="switch-control" aria-hidden="true"></span>
+                        </label>
+                        <label class="monthly-dividend-panel hidden" id="monthlyStrategyDividendPanel">
+                          Nominal Dividen Cair
+                          <input id="monthlyStrategyDividendAmount" type="text" inputmode="numeric" value="0" />
+                        </label>
                       </div>
                     </div>
 
@@ -669,6 +681,22 @@
                       <article class="monthly-extra-result hidden">
                         <span>Total Saham Bulan Ini</span>
                         <strong id="monthlyStrategyTotalStockResult">Rp0</strong>
+                      </article>
+                      <article class="monthly-extra-result hidden">
+                        <span>Dividen Cair Dipakai</span>
+                        <strong id="monthlyStrategyDividendResult">Rp0</strong>
+                      </article>
+                      <article class="monthly-extra-result hidden">
+                        <span>Dana Ekstra Tersedia</span>
+                        <strong id="monthlyStrategyExtraPoolResult">Rp0</strong>
+                      </article>
+                      <article class="monthly-extra-result hidden">
+                        <span>Rekomendasi Tambah Lot</span>
+                        <strong id="monthlyStrategySuggestedLotsResult">0 lot</strong>
+                      </article>
+                      <article class="monthly-extra-result hidden">
+                        <span>Sisa Ekstra ke RDPU</span>
+                        <strong id="monthlyStrategyExtraLeftoverResult">Rp0</strong>
                       </article>
                     </div>
                     <p class="monthly-strategy-note" id="monthlyStrategyNote">Beli base dulu, lalu sisa masuk RDPU.</p>
