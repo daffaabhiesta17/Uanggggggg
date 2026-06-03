@@ -1858,15 +1858,42 @@ function updateSimulatorSyncUi(active, message = "Strategi bulanan sedang mengen
   }
 }
 
-function applyMonthlyStrategyToSimulator(inputs, extraBmriLots = 0) {
+function disconnectMonthlyStrategySync(message = "Sync dimatikan karena input strategi di simulator diubah langsung.") {
+  if (!el.monthlyStrategySyncSimulator.checked) return;
+  el.monthlyStrategySyncSimulator.checked = false;
+  updateSimulatorSyncUi(false);
+  el.monthlyStrategySyncStatus.textContent = message;
+}
+
+function isSimulatorStrategyInput(target) {
+  return [
+    el.simMonthlyDeposit,
+    el.simStockAllocation,
+    el.simStockAllocationNumber,
+    el.simPurchaseMode,
+    el.simBmriMonthlyLots,
+    el.simIcbpMonthlyLots,
+    el.simBmriPrice,
+    el.simIcbpPrice,
+  ].includes(target);
+}
+
+function maybeDisconnectMonthlyStrategySync(target) {
+  if (isSimulatorStrategyInput(target)) {
+    disconnectMonthlyStrategySync();
+  }
+}
+
+function applyMonthlyStrategyToSimulator(inputs, extraBmriLots = 0, bmriSimulatorPrice = inputs.bmriPrice) {
   const bmriSimulatorLots = inputs.bmriBaseLots + extraBmriLots;
   const icbpSimulatorLots = inputs.icbpBaseLots;
   const syncMessage =
     `Setoran ${formatMoney(inputs.deposit)}, BMRI ${bmriSimulatorLots.toLocaleString("id-ID")} lot/bulan, ` +
-    `ICBP ${icbpSimulatorLots.toLocaleString("id-ID")} lot/bulan.`;
+    `ICBP ${icbpSimulatorLots.toLocaleString("id-ID")} lot/bulan. ` +
+    `Harga BMRI efektif ${formatMoney(bmriSimulatorPrice)}.`;
 
   el.simMonthlyDeposit.value = String(inputs.deposit);
-  el.simBmriPrice.value = String(inputs.bmriPrice);
+  el.simBmriPrice.value = String(bmriSimulatorPrice);
   el.simIcbpPrice.value = String(inputs.icbpPrice);
   el.simPurchaseMode.value = "custom";
   el.simBmriMonthlyLots.value = String(bmriSimulatorLots);
@@ -1876,6 +1903,7 @@ function applyMonthlyStrategyToSimulator(inputs, extraBmriLots = 0) {
 
   el.monthlyStrategySyncStatus.textContent =
     `Aktif: simulator memakai BMRI ${bmriSimulatorLots.toLocaleString("id-ID")} lot/bulan dan ICBP ${icbpSimulatorLots.toLocaleString("id-ID")} lot/bulan. ` +
+    `Harga BMRI efektif ${formatMoney(bmriSimulatorPrice)}. ` +
     `Dividen cair tidak dikirim ke simulator karena hanya terjadi pada bulan tertentu dan nominalnya berubah.`;
 }
 
@@ -1887,7 +1915,8 @@ function updateMonthlyStrategyCalculator() {
   el.monthlyStrategyExtraResults.forEach((item) => item.classList.toggle("hidden", !inputs.useExtra));
   el.monthlyStrategyDividendResults.forEach((item) => item.classList.toggle("hidden", !inputs.useDividend));
 
-  const bmriLotPrice = inputs.bmriPrice * LOT_SIZE;
+  const effectiveBmriPrice = inputs.useIndicator && inputs.bmriCurrentPrice > 0 ? inputs.bmriCurrentPrice : inputs.bmriPrice;
+  const bmriLotPrice = effectiveBmriPrice * LOT_SIZE;
   const icbpLotPrice = inputs.icbpPrice * LOT_SIZE;
   const bmriBaseAmount = inputs.bmriBaseLots * bmriLotPrice;
   const icbpBaseAmount = inputs.icbpBaseLots * icbpLotPrice;
@@ -1903,11 +1932,10 @@ function updateMonthlyStrategyCalculator() {
       ? `(${inputs.bmriCurrentPrice.toLocaleString("id-ID")} - ${inputs.bmriAveragePrice.toLocaleString("id-ID")}) / ${inputs.bmriAveragePrice.toLocaleString("id-ID")} x 100%`
       : "Isi avg price BMRI";
   const dividendAmount = inputs.useDividend ? inputs.dividendAmount : 0;
-  const bmriExtraLotPrice = inputs.useIndicator && inputs.bmriCurrentPrice > 0 ? inputs.bmriCurrentPrice * LOT_SIZE : bmriLotPrice;
+  const bmriExtraLotPrice = bmriLotPrice;
   const extraBmriLots = inputs.useExtra && bmriExtraLotPrice > 0 ? Math.floor(extraAmount / bmriExtraLotPrice) : 0;
   const extraBmriCost = extraBmriLots * bmriExtraLotPrice;
   const bridgeAmount = inputs.useExtra ? extraBmriCost : 0;
-  const extraUnusedCash = Math.max(0, extraAmount - extraBmriCost);
   const rdpuRedeemAmount = Math.min(grossRdpu, extraBmriCost);
   const netRdpu = grossRdpu - rdpuRedeemAmount;
   const unreimbursedBridge = Math.max(0, extraBmriCost - grossRdpu);
@@ -1928,7 +1956,7 @@ function updateMonthlyStrategyCalculator() {
   }
 
   const dividendStockCost = dividendIcbpLots * icbpLotPrice + dividendBmriLots * bmriExtraLotPrice;
-  const extraLeftoverToRdpu = Math.max(0, dividendCash + extraUnusedCash);
+  const extraLeftoverToRdpu = Math.max(0, dividendCash);
   const totalRdpuThisMonth = netRdpu + extraLeftoverToRdpu;
   const totalBmriLots = inputs.bmriBaseLots + extraBmriLots + dividendBmriLots;
   const totalIcbpLots = inputs.icbpBaseLots + dividendIcbpLots;
@@ -1966,7 +1994,7 @@ function updateMonthlyStrategyCalculator() {
   el.monthlyStrategyBmriDecisionResult.textContent = bmriExtraLotDecision(bmriChangePercent);
 
   if (inputs.syncSimulator) {
-    applyMonthlyStrategyToSimulator(inputs, extraBmriLots);
+    applyMonthlyStrategyToSimulator(inputs, extraBmriLots, effectiveBmriPrice);
   } else {
     updateSimulatorSyncUi(false);
     el.monthlyStrategySyncStatus.textContent = "Strategi belum dikirim ke simulator.";
@@ -1982,7 +2010,7 @@ function updateMonthlyStrategyCalculator() {
   } else if (extraBmriLots + dividendBmriLots + dividendIcbpLots > 0) {
     el.monthlyStrategyNote.textContent =
       `Silakan tambah BMRI ${(extraBmriLots + dividendBmriLots).toLocaleString("id-ID")} lot dan ICBP ${dividendIcbpLots.toLocaleString("id-ID")} lot. ` +
-      `Total RDPU bulan ini ${formatMoney(totalRdpuThisMonth)} dari sisa setoran dan sisa dividen/ekstra.`;
+      `Total RDPU bulan ini ${formatMoney(totalRdpuThisMonth)} dari sisa setoran dan sisa dividen.`;
   } else if (!inputs.useExtra && dividendAmount <= 0) {
     el.monthlyStrategyNote.textContent = `Beli base, lalu sisa ${formatMoney(grossRdpu)} masuk RDPU.`;
   } else if (unreimbursedBridge > 0) {
@@ -2275,13 +2303,21 @@ function initEvents() {
 
   el.investmentSimulatorForm.addEventListener("submit", (event) => event.preventDefault());
   el.simStockAllocation.addEventListener("input", () => {
+    maybeDisconnectMonthlyStrategySync(el.simStockAllocation);
     el.simStockAllocationNumber.value = el.simStockAllocation.value;
     updateInvestmentSimulator();
   });
-  el.simStockAllocationNumber.addEventListener("input", updateInvestmentSimulator);
-  el.simPurchaseMode.addEventListener("change", updateInvestmentSimulator);
+  el.simStockAllocationNumber.addEventListener("input", () => {
+    maybeDisconnectMonthlyStrategySync(el.simStockAllocationNumber);
+    updateInvestmentSimulator();
+  });
+  el.simPurchaseMode.addEventListener("change", () => {
+    maybeDisconnectMonthlyStrategySync(el.simPurchaseMode);
+    updateInvestmentSimulator();
+  });
   el.investmentSimulatorForm.addEventListener("input", (event) => {
     if (event.target !== el.simStockAllocation && event.target !== el.simStockAllocationNumber) {
+      maybeDisconnectMonthlyStrategySync(event.target);
       updateInvestmentSimulator();
     }
   });
@@ -2294,6 +2330,7 @@ function initEvents() {
   });
   [el.simBmriMonthlyLots, el.simIcbpMonthlyLots].forEach((input) => {
     input.addEventListener("blur", () => {
+      maybeDisconnectMonthlyStrategySync(input);
       input.value = String(readWholeLots(input, 0));
       updateInvestmentSimulator();
     });
