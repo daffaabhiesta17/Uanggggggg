@@ -1320,6 +1320,11 @@ input:disabled {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
   gap: 18px;
+  align-items: start;
+}
+
+.investment-grid .investment-records-section {
+  align-content: start;
 }
 
 .ticker-list {
@@ -1369,13 +1374,25 @@ input:disabled {
 }
 
 .investment-table-scroll {
-  margin-top: 16px;
-  max-height: 340px;
+  margin-top: 6px;
+  max-height: 336px;
   overflow: auto;
+  border-bottom: 1px solid var(--line);
 }
 
-.investment-table-scroll table {
+.investment-stock-scroll table {
   min-width: 720px;
+}
+
+.investment-rdpu-scroll table {
+  min-width: 100%;
+}
+
+.investment-table-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fff;
 }
 
 .sim-history-table {
