@@ -1322,6 +1322,10 @@ input:disabled {
   min-width: 720px;
 }
 
+.sim-history-table {
+  min-width: 980px;
+}
+
 .investment-info-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);

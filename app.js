@@ -1020,7 +1020,9 @@ function simulateInvestment(inputs) {
       yearlyRows.push({
         year,
         totalContribution,
+        bmriPrice: currentBmriPrice,
         bmriLots,
+        icbpPrice: currentIcbpPrice,
         icbpLots,
         annualDividends,
         rdpuBalance,
@@ -1257,7 +1259,9 @@ function updateInvestmentSimulator() {
         <tr>
           <td><strong>${row.year}</strong></td>
           <td>${formatMoney(row.totalContribution)}</td>
+          <td>${formatMoney(row.bmriPrice)}</td>
           <td>${row.bmriLots.toLocaleString("id-ID")} lot</td>
+          <td>${formatMoney(row.icbpPrice)}</td>
           <td>${row.icbpLots.toLocaleString("id-ID")} lot</td>
           <td>${formatMoney(row.annualDividends)}</td>
           <td>${formatMoney(row.rdpuBalance)}</td>
