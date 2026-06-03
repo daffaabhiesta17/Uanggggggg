@@ -1087,7 +1087,8 @@ input:disabled {
   gap: 10px;
 }
 
-.monthly-strategy-results article {
+.monthly-strategy-results article,
+.monthly-strategy-inline-result {
   display: grid;
   gap: 5px;
   padding: 10px;
@@ -1096,7 +1097,8 @@ input:disabled {
   background: #fff;
 }
 
-.monthly-strategy-results span {
+.monthly-strategy-results span,
+.monthly-strategy-inline-result span {
   color: var(--muted);
   font-size: 0.72rem;
   font-weight: 750;
@@ -1104,7 +1106,8 @@ input:disabled {
   letter-spacing: 0.05em;
 }
 
-.monthly-strategy-results strong {
+.monthly-strategy-results strong,
+.monthly-strategy-inline-result strong {
   color: var(--text);
   font-size: 0.92rem;
 }
