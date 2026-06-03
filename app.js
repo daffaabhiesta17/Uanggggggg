@@ -138,6 +138,8 @@ const el = {
   syncStatus: document.querySelector("#syncStatus"),
   storageHint: document.querySelector("#storageHint"),
   investmentSimulatorForm: document.querySelector("#investmentSimulatorForm"),
+  simulatorSyncBanner: document.querySelector("#simulatorSyncBanner"),
+  simulatorSyncBannerText: document.querySelector("#simulatorSyncBannerText"),
   simMonthlyDeposit: document.querySelector("#simMonthlyDeposit"),
   simStockAllocation: document.querySelector("#simStockAllocation"),
   simStockAllocationNumber: document.querySelector("#simStockAllocationNumber"),
@@ -1810,9 +1812,21 @@ function bmriExtraLotDecision(changePercent) {
   return "Belum perlu tambah lot";
 }
 
+function updateSimulatorSyncUi(active, message = "Strategi bulanan sedang mengendalikan input simulator.") {
+  el.investmentSimulatorForm.classList.toggle("simulator-linked", active);
+  el.simulatorSyncBanner.classList.toggle("hidden", !active);
+  el.monthlyStrategySyncStatus.classList.toggle("active", active);
+  if (active) {
+    el.simulatorSyncBannerText.textContent = message;
+  }
+}
+
 function applyMonthlyStrategyToSimulator(inputs, bmriLotPrice, extraAmount) {
   const extraLotsForSimulator = inputs.useExtra && bmriLotPrice > 0 ? Math.floor(extraAmount / bmriLotPrice) : 0;
   const bmriSimulatorLots = inputs.bmriBaseLots + extraLotsForSimulator;
+  const syncMessage =
+    `Setoran ${formatMoney(inputs.deposit)}, BMRI ${bmriSimulatorLots.toLocaleString("id-ID")} lot/bulan, ` +
+    `ICBP ${inputs.icbpBaseLots.toLocaleString("id-ID")} lot/bulan.`;
 
   el.simMonthlyDeposit.value = String(inputs.deposit);
   el.simBmriPrice.value = String(inputs.bmriPrice);
@@ -1821,6 +1835,7 @@ function applyMonthlyStrategyToSimulator(inputs, bmriLotPrice, extraAmount) {
   el.simBmriMonthlyLots.value = String(bmriSimulatorLots);
   el.simIcbpMonthlyLots.value = String(inputs.icbpBaseLots);
   updateInvestmentSimulator();
+  updateSimulatorSyncUi(true, syncMessage);
 
   el.monthlyStrategySyncStatus.textContent =
     `Aktif: simulator memakai BMRI ${bmriSimulatorLots.toLocaleString("id-ID")} lot/bulan dan ICBP ${inputs.icbpBaseLots.toLocaleString("id-ID")} lot/bulan. ` +
@@ -1870,6 +1885,7 @@ function updateMonthlyStrategyCalculator() {
   if (inputs.syncSimulator) {
     applyMonthlyStrategyToSimulator(inputs, bmriLotPrice, extraAmount);
   } else {
+    updateSimulatorSyncUi(false);
     el.monthlyStrategySyncStatus.textContent = "Strategi belum dikirim ke simulator.";
   }
 

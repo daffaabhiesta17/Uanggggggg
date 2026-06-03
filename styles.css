@@ -706,6 +706,29 @@ th {
   gap: 14px;
 }
 
+.investment-simulator-form.simulator-linked {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.simulator-sync-banner {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.simulator-sync-banner strong {
+  color: #1e3a8a;
+}
+
+.simulator-sync-banner span {
+  line-height: 1.5;
+}
+
 .investment-simulator-results {
   display: grid;
   gap: 18px;
@@ -1126,6 +1149,13 @@ input:disabled {
   background: #fff;
   color: var(--muted);
   line-height: 1.5;
+}
+
+.monthly-simulator-sync-status.active {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 750;
 }
 
 .investment-grid {
