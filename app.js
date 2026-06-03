@@ -222,6 +222,8 @@ const el = {
   monthlyStrategyExtraPoolResult: document.querySelector("#monthlyStrategyExtraPoolResult"),
   monthlyStrategySuggestedLotsResult: document.querySelector("#monthlyStrategySuggestedLotsResult"),
   monthlyStrategyExtraLeftoverResult: document.querySelector("#monthlyStrategyExtraLeftoverResult"),
+  monthlyStrategyTotalBmriLotsResult: document.querySelector("#monthlyStrategyTotalBmriLotsResult"),
+  monthlyStrategyTotalIcbpLotsResult: document.querySelector("#monthlyStrategyTotalIcbpLotsResult"),
   monthlyStrategyTotalRdpuResult: document.querySelector("#monthlyStrategyTotalRdpuResult"),
   monthlyStrategyBmriDiscountResult: document.querySelector("#monthlyStrategyBmriDiscountResult"),
   monthlyStrategyBmriFormulaResult: document.querySelector("#monthlyStrategyBmriFormulaResult"),
@@ -1928,6 +1930,8 @@ function updateMonthlyStrategyCalculator() {
   const dividendStockCost = dividendIcbpLots * icbpLotPrice + dividendBmriLots * bmriExtraLotPrice;
   const extraLeftoverToRdpu = Math.max(0, dividendCash + extraUnusedCash);
   const totalRdpuThisMonth = netRdpu + extraLeftoverToRdpu;
+  const totalBmriLots = inputs.bmriBaseLots + extraBmriLots + dividendBmriLots;
+  const totalIcbpLots = inputs.icbpBaseLots + dividendIcbpLots;
   totalStockAmount = baseStockAmount + extraBmriCost + dividendStockCost;
 
   el.monthlyStrategyDividendPanel.classList.toggle("hidden", !inputs.useDividend);
@@ -1954,6 +1958,8 @@ function updateMonthlyStrategyCalculator() {
     dividendCash
   );
   el.monthlyStrategyExtraLeftoverResult.textContent = formatMoney(extraLeftoverToRdpu);
+  el.monthlyStrategyTotalBmriLotsResult.textContent = `${totalBmriLots.toLocaleString("id-ID")} lot`;
+  el.monthlyStrategyTotalIcbpLotsResult.textContent = `${totalIcbpLots.toLocaleString("id-ID")} lot`;
   el.monthlyStrategyTotalRdpuResult.textContent = formatMoney(totalRdpuThisMonth);
   el.monthlyStrategyBmriDiscountResult.textContent = `${decimal.format(bmriChangePercent)}%`;
   el.monthlyStrategyBmriFormulaResult.textContent = bmriFormula;
