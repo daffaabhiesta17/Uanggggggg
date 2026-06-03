@@ -310,6 +310,31 @@
                   </div>
                 </div>
 
+                <label>
+                  Pola Pembelian Saham
+                  <select id="simPurchaseMode">
+                    <option value="alternating">Default selang-seling otomatis</option>
+                    <option value="custom">Custom lot bulanan</option>
+                  </select>
+                </label>
+
+                <div class="price-change-panel custom-lot-panel hidden" id="simCustomLotPanel">
+                  <div class="custom-lot-copy">
+                    <strong>Target lot per bulan</strong>
+                    <small>Seluruh setoran bulanan dipakai untuk target lot dulu, lalu sisa kas masuk RDPU. Jika kas bulan itu tidak cukup, simulator hanya membeli lot yang terjangkau.</small>
+                  </div>
+                  <div class="input-pair">
+                    <label>
+                      BMRI Lot / Bulan
+                      <input id="simBmriMonthlyLots" type="number" min="0" step="1" value="1" />
+                    </label>
+                    <label>
+                      ICBP Lot / Bulan
+                      <input id="simIcbpMonthlyLots" type="number" min="0" step="1" value="1" />
+                    </label>
+                  </div>
+                </div>
+
                 <div class="input-pair">
                   <label>
                     Harga BMRI

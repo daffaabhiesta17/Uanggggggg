@@ -801,6 +801,20 @@ th {
   background: #f0fdf4;
 }
 
+.custom-lot-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.custom-lot-copy strong {
+  color: var(--text);
+}
+
+.custom-lot-copy small {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .switch-row {
   position: relative;
   display: grid;

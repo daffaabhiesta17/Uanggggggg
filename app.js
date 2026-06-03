@@ -144,6 +144,10 @@ const el = {
   simRdpuAllocationLabel: document.querySelector("#simRdpuAllocationLabel"),
   simStockAllocationAmount: document.querySelector("#simStockAllocationAmount"),
   simRdpuAllocationAmount: document.querySelector("#simRdpuAllocationAmount"),
+  simPurchaseMode: document.querySelector("#simPurchaseMode"),
+  simCustomLotPanel: document.querySelector("#simCustomLotPanel"),
+  simBmriMonthlyLots: document.querySelector("#simBmriMonthlyLots"),
+  simIcbpMonthlyLots: document.querySelector("#simIcbpMonthlyLots"),
   simBmriPrice: document.querySelector("#simBmriPrice"),
   simIcbpPrice: document.querySelector("#simIcbpPrice"),
   simEnablePriceChange: document.querySelector("#simEnablePriceChange"),
@@ -802,12 +806,53 @@ function applyAnnualPriceChange(currentPrice, annualChangePercent, enabled) {
   return Math.max(0.01, currentPrice * (1 + annualChangePercent / 100));
 }
 
+function readWholeLots(input, fallback = 0) {
+  return Math.max(0, Math.floor(readNumber(input, fallback)));
+}
+
+function buildMonthlyLotPlan(bmriTarget, icbpTarget) {
+  const plan = [];
+  const maxTarget = Math.max(bmriTarget, icbpTarget);
+  for (let index = 0; index < maxTarget; index += 1) {
+    if (index < bmriTarget) plan.push("BMRI");
+    if (index < icbpTarget) plan.push("ICBP");
+  }
+  return plan;
+}
+
+function buyAffordableCustomLots(availableCash, bmriLotPrice, icbpLotPrice, bmriTarget, icbpTarget) {
+  let cash = availableCash;
+  let bmriBought = 0;
+  let icbpBought = 0;
+
+  buildMonthlyLotPlan(bmriTarget, icbpTarget).forEach((ticker) => {
+    const lotPrice = ticker === "BMRI" ? bmriLotPrice : icbpLotPrice;
+    if (cash < lotPrice) return;
+
+    cash -= lotPrice;
+    if (ticker === "BMRI") {
+      bmriBought += 1;
+    } else {
+      icbpBought += 1;
+    }
+  });
+
+  return {
+    bmriBought,
+    icbpBought,
+    leftoverCash: cash,
+  };
+}
+
 function readSimulationInputs() {
   const stockAllocation = clampNumber(Math.round(readNumber(el.simStockAllocationNumber, 80)), 0, 100);
   return {
     monthlyDeposit: Math.max(0, readNumber(el.simMonthlyDeposit, 1100000)),
     stockAllocation,
     rdpuAllocation: 100 - stockAllocation,
+    purchaseMode: el.simPurchaseMode.value === "custom" ? "custom" : "alternating",
+    bmriMonthlyLots: readWholeLots(el.simBmriMonthlyLots, 1),
+    icbpMonthlyLots: readWholeLots(el.simIcbpMonthlyLots, 1),
     bmriPrice: Math.max(1, readNumber(el.simBmriPrice, 4130)),
     icbpPrice: Math.max(1, readNumber(el.simIcbpPrice, 6875)),
     rdpuReturnAnnual: Math.max(0, readNumber(el.simRdpuReturn, 4.14)),
@@ -850,16 +895,36 @@ function simulateInvestment(inputs) {
     const bmriLotPrice = currentBmriPrice * LOT_SIZE;
     const icbpLotPrice = currentIcbpPrice * LOT_SIZE;
     let dividendThisMonth = 0;
-    let leftoverStockCash = 0;
+    let rdpuContribution = monthlyRdpuBudget;
 
-    if (isOddMonth) {
+    if (inputs.purchaseMode === "custom") {
+      const bmriDividend = isBmriDividendMonth
+        ? bmriLots * LOT_SIZE * dividendPerShare(inputs.bmriPrice, inputs.bmriYieldInitial, inputs.dividendGrowthAnnual, year)
+        : 0;
+      const icbpDividend = isIcbpDividendMonth
+        ? icbpLots * LOT_SIZE * dividendPerShare(inputs.icbpPrice, inputs.icbpYieldInitial, inputs.dividendGrowthAnnual, year)
+        : 0;
+      dividendThisMonth = bmriDividend + icbpDividend;
+
+      const purchase = buyAffordableCustomLots(
+        inputs.monthlyDeposit + dividendThisMonth,
+        bmriLotPrice,
+        icbpLotPrice,
+        inputs.bmriMonthlyLots,
+        inputs.icbpMonthlyLots,
+      );
+
+      bmriLots += purchase.bmriBought;
+      icbpLots += purchase.icbpBought;
+      rdpuContribution = purchase.leftoverCash;
+    } else if (isOddMonth) {
       const bmriDividend = isBmriDividendMonth
         ? bmriLots * LOT_SIZE * dividendPerShare(inputs.bmriPrice, inputs.bmriYieldInitial, inputs.dividendGrowthAnnual, year)
         : 0;
       const stockCash = monthlyStockBudget + bmriDividend;
       const boughtLots = Math.floor(stockCash / bmriLotPrice);
       bmriLots += boughtLots;
-      leftoverStockCash = stockCash - boughtLots * bmriLotPrice;
+      rdpuContribution += stockCash - boughtLots * bmriLotPrice;
       dividendThisMonth = bmriDividend;
     } else {
       const icbpDividend = isIcbpDividendMonth
@@ -868,13 +933,13 @@ function simulateInvestment(inputs) {
       const stockCash = monthlyStockBudget + icbpDividend;
       const boughtLots = Math.floor(stockCash / icbpLotPrice);
       icbpLots += boughtLots;
-      leftoverStockCash = stockCash - boughtLots * icbpLotPrice;
+      rdpuContribution += stockCash - boughtLots * icbpLotPrice;
       dividendThisMonth = icbpDividend;
     }
 
     totalDividends += dividendThisMonth;
     annualDividends += dividendThisMonth;
-    rdpuBalance = (rdpuBalance + monthlyRdpuBudget + leftoverStockCash) * (1 + monthlyRdpuRate);
+    rdpuBalance = (rdpuBalance + rdpuContribution) * (1 + monthlyRdpuRate);
 
     if (month % 12 === 0) {
       const totalContribution = inputs.monthlyDeposit * month;
@@ -1063,11 +1128,21 @@ function initInvestmentCharts() {
 
 function updateInvestmentSimulator() {
   const inputs = readSimulationInputs();
+  const isCustomPurchase = inputs.purchaseMode === "custom";
   el.simStockAllocation.value = String(inputs.stockAllocation);
   el.simStockAllocationNumber.value = String(inputs.stockAllocation);
-  el.simRdpuAllocationLabel.textContent = `${inputs.rdpuAllocation}%`;
-  el.simStockAllocationAmount.textContent = formatMoney((inputs.monthlyDeposit * inputs.stockAllocation) / 100);
-  el.simRdpuAllocationAmount.textContent = formatMoney((inputs.monthlyDeposit * inputs.rdpuAllocation) / 100);
+  el.simStockAllocation.disabled = isCustomPurchase;
+  el.simStockAllocationNumber.disabled = isCustomPurchase;
+  el.simCustomLotPanel.classList.toggle("hidden", !isCustomPurchase);
+  el.simBmriMonthlyLots.disabled = !isCustomPurchase;
+  el.simIcbpMonthlyLots.disabled = !isCustomPurchase;
+  el.simRdpuAllocationLabel.textContent = isCustomPurchase ? "Sisa kas" : `${inputs.rdpuAllocation}%`;
+  el.simStockAllocationAmount.textContent = isCustomPurchase
+    ? `${inputs.bmriMonthlyLots.toLocaleString("id-ID")} lot BMRI + ${inputs.icbpMonthlyLots.toLocaleString("id-ID")} lot ICBP`
+    : formatMoney((inputs.monthlyDeposit * inputs.stockAllocation) / 100);
+  el.simRdpuAllocationAmount.textContent = isCustomPurchase
+    ? "Sisa setelah beli saham"
+    : formatMoney((inputs.monthlyDeposit * inputs.rdpuAllocation) / 100);
   el.simBmriPriceChange.disabled = !inputs.priceChangeEnabled;
   el.simIcbpPriceChange.disabled = !inputs.priceChangeEnabled;
   el.simPriceChangePanel.classList.toggle("active", inputs.priceChangeEnabled);
@@ -1926,6 +2001,7 @@ function initEvents() {
     updateInvestmentSimulator();
   });
   el.simStockAllocationNumber.addEventListener("input", updateInvestmentSimulator);
+  el.simPurchaseMode.addEventListener("change", updateInvestmentSimulator);
   el.investmentSimulatorForm.addEventListener("input", (event) => {
     if (event.target !== el.simStockAllocation && event.target !== el.simStockAllocationNumber) {
       updateInvestmentSimulator();
@@ -1935,6 +2011,12 @@ function initEvents() {
   [el.simBmriPriceChange, el.simIcbpPriceChange].forEach((input) => {
     input.addEventListener("blur", () => {
       input.value = String(clampNumber(readNumber(input, 5), -99, 1000));
+      updateInvestmentSimulator();
+    });
+  });
+  [el.simBmriMonthlyLots, el.simIcbpMonthlyLots].forEach((input) => {
+    input.addEventListener("blur", () => {
+      input.value = String(readWholeLots(input, 0));
       updateInvestmentSimulator();
     });
   });
