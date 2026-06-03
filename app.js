@@ -148,6 +148,11 @@ const el = {
   simCustomLotPanel: document.querySelector("#simCustomLotPanel"),
   simBmriMonthlyLots: document.querySelector("#simBmriMonthlyLots"),
   simIcbpMonthlyLots: document.querySelector("#simIcbpMonthlyLots"),
+  simCustomBmriPurchase: document.querySelector("#simCustomBmriPurchase"),
+  simCustomIcbpPurchase: document.querySelector("#simCustomIcbpPurchase"),
+  simCustomStockPurchase: document.querySelector("#simCustomStockPurchase"),
+  simCustomRdpuPurchase: document.querySelector("#simCustomRdpuPurchase"),
+  simCustomLotStatus: document.querySelector("#simCustomLotStatus"),
   simBmriPrice: document.querySelector("#simBmriPrice"),
   simIcbpPrice: document.querySelector("#simIcbpPrice"),
   simEnablePriceChange: document.querySelector("#simEnablePriceChange"),
@@ -844,6 +849,40 @@ function buyAffordableCustomLots(availableCash, bmriLotPrice, icbpLotPrice, bmri
   };
 }
 
+function formatLotPurchase(lots, amount) {
+  return `${lots.toLocaleString("id-ID")} lot - ${formatMoney(amount)}`;
+}
+
+function updateCustomLotSummary(inputs) {
+  const bmriLotPrice = inputs.bmriPrice * LOT_SIZE;
+  const icbpLotPrice = inputs.icbpPrice * LOT_SIZE;
+  const purchase = buyAffordableCustomLots(
+    inputs.monthlyDeposit,
+    bmriLotPrice,
+    icbpLotPrice,
+    inputs.bmriMonthlyLots,
+    inputs.icbpMonthlyLots,
+  );
+  const bmriAmount = purchase.bmriBought * bmriLotPrice;
+  const icbpAmount = purchase.icbpBought * icbpLotPrice;
+  const stockAmount = bmriAmount + icbpAmount;
+  const targetAmount = inputs.bmriMonthlyLots * bmriLotPrice + inputs.icbpMonthlyLots * icbpLotPrice;
+  const targetReached = purchase.bmriBought === inputs.bmriMonthlyLots && purchase.icbpBought === inputs.icbpMonthlyLots;
+
+  el.simCustomBmriPurchase.textContent = formatLotPurchase(purchase.bmriBought, bmriAmount);
+  el.simCustomIcbpPurchase.textContent = formatLotPurchase(purchase.icbpBought, icbpAmount);
+  el.simCustomStockPurchase.textContent = formatMoney(stockAmount);
+  el.simCustomRdpuPurchase.textContent = formatMoney(purchase.leftoverCash);
+
+  if (targetAmount <= 0) {
+    el.simCustomLotStatus.textContent = "Tidak ada target saham, seluruh setoran bulan normal masuk RDPU.";
+  } else if (targetReached) {
+    el.simCustomLotStatus.textContent = `Target penuh. Kebutuhan saham ${formatMoney(targetAmount)}, sisa masuk RDPU ${formatMoney(purchase.leftoverCash)}.`;
+  } else {
+    el.simCustomLotStatus.textContent = `Kas belum cukup untuk target ${formatMoney(targetAmount)}. Simulator membeli lot yang terjangkau, lalu sisa masuk RDPU.`;
+  }
+}
+
 function readSimulationInputs() {
   const stockAllocation = clampNumber(Math.round(readNumber(el.simStockAllocationNumber, 80)), 0, 100);
   return {
@@ -1143,6 +1182,9 @@ function updateInvestmentSimulator() {
   el.simRdpuAllocationAmount.textContent = isCustomPurchase
     ? "Sisa setelah beli saham"
     : formatMoney((inputs.monthlyDeposit * inputs.rdpuAllocation) / 100);
+  if (isCustomPurchase) {
+    updateCustomLotSummary(inputs);
+  }
   el.simBmriPriceChange.disabled = !inputs.priceChangeEnabled;
   el.simIcbpPriceChange.disabled = !inputs.priceChangeEnabled;
   el.simPriceChangePanel.classList.toggle("active", inputs.priceChangeEnabled);

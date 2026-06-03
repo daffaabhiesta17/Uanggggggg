@@ -815,6 +815,39 @@ th {
   line-height: 1.5;
 }
 
+.custom-lot-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.custom-lot-summary article {
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.custom-lot-summary span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.custom-lot-summary strong {
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.custom-lot-status {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .switch-row {
   position: relative;
   display: grid;
