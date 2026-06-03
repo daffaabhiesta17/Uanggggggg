@@ -208,6 +208,7 @@ const el = {
   monthlyStrategyDividendBasisResult: document.querySelector("#monthlyStrategyDividendBasisResult"),
   monthlyStrategyIndicatorResults: document.querySelectorAll(".monthly-indicator-result"),
   monthlyStrategyExtraResults: document.querySelectorAll(".monthly-extra-result"),
+  monthlyStrategyDividendResults: document.querySelectorAll(".monthly-dividend-result"),
   monthlyStrategyBmriBaseResult: document.querySelector("#monthlyStrategyBmriBaseResult"),
   monthlyStrategyIcbpBaseResult: document.querySelector("#monthlyStrategyIcbpBaseResult"),
   monthlyStrategyBaseStockResult: document.querySelector("#monthlyStrategyBaseStockResult"),
@@ -1882,6 +1883,7 @@ function updateMonthlyStrategyCalculator() {
   el.monthlyStrategyExtraPanel.classList.toggle("hidden", !inputs.useExtra);
   el.monthlyStrategyIndicatorResults.forEach((item) => item.classList.toggle("hidden", !inputs.useIndicator));
   el.monthlyStrategyExtraResults.forEach((item) => item.classList.toggle("hidden", !inputs.useExtra));
+  el.monthlyStrategyDividendResults.forEach((item) => item.classList.toggle("hidden", !inputs.useDividend));
 
   const bmriLotPrice = inputs.bmriPrice * LOT_SIZE;
   const icbpLotPrice = inputs.icbpPrice * LOT_SIZE;

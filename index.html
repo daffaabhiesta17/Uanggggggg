@@ -654,63 +654,98 @@
                       <strong>Ringkasan bulan ini</strong>
                       <small>Angka yang perlu dicatat atau dipakai untuk simulator.</small>
                     </div>
-                    <div class="monthly-strategy-results">
-                      <article>
-                        <span>BMRI Base</span>
-                        <strong id="monthlyStrategyBmriBaseResult">0 lot - Rp0</strong>
-                      </article>
-                      <article>
-                        <span>ICBP Base</span>
-                        <strong id="monthlyStrategyIcbpBaseResult">0 lot - Rp0</strong>
-                      </article>
-                      <article>
-                        <span>Total Saham Base</span>
-                        <strong id="monthlyStrategyBaseStockResult">Rp0</strong>
-                      </article>
-                      <article>
-                        <span>RDPU Setelah Base</span>
-                        <strong id="monthlyStrategyGrossRdpuResult">Rp0</strong>
-                      </article>
-                      <article class="monthly-extra-result hidden">
-                        <span>Ekstra BMRI</span>
-                        <strong id="monthlyStrategyExtraBmriResult">Rp0</strong>
-                      </article>
-                      <article class="monthly-extra-result hidden">
-                        <span>Talangan Dana Pribadi</span>
-                        <strong id="monthlyStrategyBridgeResult">Rp0</strong>
-                      </article>
-                      <article class="monthly-extra-result hidden">
-                        <span>Sisa Setoran Dipakai</span>
-                        <strong id="monthlyStrategyRdpuRedeemResult">Rp0</strong>
-                      </article>
-                      <article class="monthly-extra-result hidden">
-                        <span>Sisa Setoran ke RDPU</span>
-                        <strong id="monthlyStrategyNetRdpuResult">Rp0</strong>
-                      </article>
-                      <article class="monthly-extra-result hidden">
-                        <span>Total Saham Bulan Ini</span>
-                        <strong id="monthlyStrategyTotalStockResult">Rp0</strong>
-                      </article>
-                      <article class="monthly-extra-result hidden">
-                        <span>Dividen Cair Dipakai</span>
-                        <strong id="monthlyStrategyDividendResult">Rp0</strong>
-                      </article>
-                      <article class="monthly-extra-result hidden">
-                        <span>Pembelian Dari Dividen</span>
-                        <strong id="monthlyStrategyExtraPoolResult">Rp0</strong>
-                      </article>
-                      <article class="monthly-extra-result hidden">
-                        <span>Tambah Lot Dividen</span>
-                        <strong id="monthlyStrategySuggestedLotsResult">0 lot</strong>
-                      </article>
-                      <article class="monthly-extra-result hidden">
-                        <span>Sisa Dividen/Ekstra ke RDPU</span>
-                        <strong id="monthlyStrategyExtraLeftoverResult">Rp0</strong>
-                      </article>
-                      <article>
-                        <span>Total RDPU Bulan Ini</span>
-                        <strong id="monthlyStrategyTotalRdpuResult">Rp0</strong>
-                      </article>
+                    <div class="monthly-summary-stack">
+                      <section class="monthly-summary-group">
+                        <div class="monthly-summary-group-head">
+                          <strong>Base Bulanan</strong>
+                          <small>Pembelian rutin dari setoran bulanan.</small>
+                        </div>
+                        <div class="monthly-strategy-results">
+                          <article>
+                            <span>BMRI Base</span>
+                            <strong id="monthlyStrategyBmriBaseResult">0 lot - Rp0</strong>
+                          </article>
+                          <article>
+                            <span>ICBP Base</span>
+                            <strong id="monthlyStrategyIcbpBaseResult">0 lot - Rp0</strong>
+                          </article>
+                          <article>
+                            <span>Total Saham Base</span>
+                            <strong id="monthlyStrategyBaseStockResult">Rp0</strong>
+                          </article>
+                          <article>
+                            <span>RDPU Setelah Base</span>
+                            <strong id="monthlyStrategyGrossRdpuResult">Rp0</strong>
+                          </article>
+                        </div>
+                      </section>
+
+                      <section class="monthly-summary-group monthly-extra-result hidden">
+                        <div class="monthly-summary-group-head">
+                          <strong>Ekstra BMRI</strong>
+                          <small>Aktif hanya saat switch ekstra BMRI menyala.</small>
+                        </div>
+                        <div class="monthly-strategy-results">
+                          <article>
+                            <span>Ekstra BMRI</span>
+                            <strong id="monthlyStrategyExtraBmriResult">Rp0</strong>
+                          </article>
+                          <article>
+                            <span>Sisa Setoran Dipakai</span>
+                            <strong id="monthlyStrategyRdpuRedeemResult">Rp0</strong>
+                          </article>
+                          <article>
+                            <span>Sisa Setoran ke RDPU</span>
+                            <strong id="monthlyStrategyNetRdpuResult">Rp0</strong>
+                          </article>
+                          <article>
+                            <span>Talangan Dana Pribadi</span>
+                            <strong id="monthlyStrategyBridgeResult">Rp0</strong>
+                          </article>
+                        </div>
+                      </section>
+
+                      <section class="monthly-summary-group monthly-dividend-result hidden">
+                        <div class="monthly-summary-group-head">
+                          <strong>Dividen Cair</strong>
+                          <small>Aktif hanya pada bulan yang ada dividen cair.</small>
+                        </div>
+                        <div class="monthly-strategy-results">
+                          <article>
+                            <span>Dividen Cair Dipakai</span>
+                            <strong id="monthlyStrategyDividendResult">Rp0</strong>
+                          </article>
+                          <article>
+                            <span>Pembelian Dari Dividen</span>
+                            <strong id="monthlyStrategyExtraPoolResult">Rp0</strong>
+                          </article>
+                          <article class="monthly-summary-wide">
+                            <span>Tambah Lot Dividen</span>
+                            <strong id="monthlyStrategySuggestedLotsResult">0 lot</strong>
+                          </article>
+                        </div>
+                      </section>
+
+                      <section class="monthly-summary-group monthly-summary-final">
+                        <div class="monthly-summary-group-head">
+                          <strong>Final Bulan Ini</strong>
+                          <small>Total yang dicatat setelah base, ekstra, dan dividen.</small>
+                        </div>
+                        <div class="monthly-strategy-results">
+                          <article>
+                            <span>Total Saham Bulan Ini</span>
+                            <strong id="monthlyStrategyTotalStockResult">Rp0</strong>
+                          </article>
+                          <article>
+                            <span>Sisa Dividen/Ekstra ke RDPU</span>
+                            <strong id="monthlyStrategyExtraLeftoverResult">Rp0</strong>
+                          </article>
+                          <article class="monthly-summary-total">
+                            <span>Total RDPU Bulan Ini</span>
+                            <strong id="monthlyStrategyTotalRdpuResult">Rp0</strong>
+                          </article>
+                        </div>
+                      </section>
                     </div>
                     <p class="monthly-strategy-note" id="monthlyStrategyNote">Beli base dulu, lalu sisa masuk RDPU.</p>
                   </aside>
