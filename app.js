@@ -897,6 +897,11 @@ function formatLotPurchase(lots, amount) {
   return `${lots.toLocaleString("id-ID")} lot - ${formatMoney(amount)}`;
 }
 
+function formatSimulatorPriceInput(value) {
+  const rounded = Math.round(value * 10000) / 10000;
+  return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+}
+
 function updateCustomLotSummary(inputs) {
   const bmriLotPrice = inputs.bmriPrice * LOT_SIZE;
   const icbpLotPrice = inputs.icbpPrice * LOT_SIZE;
@@ -1814,7 +1819,7 @@ function readMonthlyStrategyInputs() {
     icbpPrice: parseNumberInput(el.monthlyStrategyIcbpPrice.value),
     bmriBaseLots: readWholeLots(el.monthlyStrategyBmriBaseLots, 2),
     icbpBaseLots: readWholeLots(el.monthlyStrategyIcbpBaseLots, 1),
-    bmriExtraAmount: parseNumberInput(el.monthlyStrategyBmriExtraAmount.value),
+    bmriExtraLotPrice: parseNumberInput(el.monthlyStrategyBmriExtraAmount.value),
     bmriAveragePrice: parseNumberInput(el.monthlyStrategyBmriAveragePrice.value),
     bmriCurrentPrice: parseNumberInput(el.monthlyStrategyBmriCurrentPrice.value),
     dividendAmount: parseNumberInput(el.monthlyStrategyDividendAmount.value),
@@ -1884,16 +1889,16 @@ function maybeDisconnectMonthlyStrategySync(target) {
   }
 }
 
-function applyMonthlyStrategyToSimulator(inputs, extraBmriLots = 0, bmriSimulatorPrice = inputs.bmriPrice) {
+function applyMonthlyStrategyToSimulator(inputs, extraBmriLots = 0, bmriSimulatorPrice = inputs.bmriPrice, priceMode = "harga base") {
   const bmriSimulatorLots = inputs.bmriBaseLots + extraBmriLots;
   const icbpSimulatorLots = inputs.icbpBaseLots;
   const syncMessage =
     `Setoran ${formatMoney(inputs.deposit)}, BMRI ${bmriSimulatorLots.toLocaleString("id-ID")} lot/bulan, ` +
     `ICBP ${icbpSimulatorLots.toLocaleString("id-ID")} lot/bulan. ` +
-    `Harga BMRI efektif ${formatMoney(bmriSimulatorPrice)}.`;
+    `Harga BMRI simulator ${formatMoney(bmriSimulatorPrice)} (${priceMode}).`;
 
   el.simMonthlyDeposit.value = String(inputs.deposit);
-  el.simBmriPrice.value = String(bmriSimulatorPrice);
+  el.simBmriPrice.value = formatSimulatorPriceInput(bmriSimulatorPrice);
   el.simIcbpPrice.value = String(inputs.icbpPrice);
   el.simPurchaseMode.value = "custom";
   el.simBmriMonthlyLots.value = String(bmriSimulatorLots);
@@ -1903,7 +1908,7 @@ function applyMonthlyStrategyToSimulator(inputs, extraBmriLots = 0, bmriSimulato
 
   el.monthlyStrategySyncStatus.textContent =
     `Aktif: simulator memakai BMRI ${bmriSimulatorLots.toLocaleString("id-ID")} lot/bulan dan ICBP ${icbpSimulatorLots.toLocaleString("id-ID")} lot/bulan. ` +
-    `Harga BMRI efektif ${formatMoney(bmriSimulatorPrice)}. ` +
+    `Harga BMRI simulator ${formatMoney(bmriSimulatorPrice)} (${priceMode}). ` +
     `Dividen cair tidak dikirim ke simulator karena hanya terjadi pada bulan tertentu dan nominalnya berubah.`;
 }
 
@@ -1915,16 +1920,14 @@ function updateMonthlyStrategyCalculator() {
   el.monthlyStrategyExtraResults.forEach((item) => item.classList.toggle("hidden", !inputs.useExtra));
   el.monthlyStrategyDividendResults.forEach((item) => item.classList.toggle("hidden", !inputs.useDividend));
 
-  const effectiveBmriPrice = inputs.useIndicator && inputs.bmriCurrentPrice > 0 ? inputs.bmriCurrentPrice : inputs.bmriPrice;
-  const bmriLotPrice = effectiveBmriPrice * LOT_SIZE;
+  const bmriBaseLotPrice = inputs.bmriPrice * LOT_SIZE;
   const icbpLotPrice = inputs.icbpPrice * LOT_SIZE;
-  const bmriBaseAmount = inputs.bmriBaseLots * bmriLotPrice;
+  const bmriBaseAmount = inputs.bmriBaseLots * bmriBaseLotPrice;
   const icbpBaseAmount = inputs.icbpBaseLots * icbpLotPrice;
   const baseStockAmount = bmriBaseAmount + icbpBaseAmount;
   const grossRdpu = Math.max(0, inputs.deposit - baseStockAmount);
   const baseShortfall = Math.max(0, baseStockAmount - inputs.deposit);
-  const extraAmount = inputs.useExtra ? inputs.bmriExtraAmount : 0;
-  let totalStockAmount = baseStockAmount + extraAmount;
+  let totalStockAmount = baseStockAmount;
   const bmriChangePercent =
     inputs.bmriAveragePrice > 0 ? ((inputs.bmriCurrentPrice - inputs.bmriAveragePrice) / inputs.bmriAveragePrice) * 100 : 0;
   const bmriFormula =
@@ -1932,8 +1935,9 @@ function updateMonthlyStrategyCalculator() {
       ? `(${inputs.bmriCurrentPrice.toLocaleString("id-ID")} - ${inputs.bmriAveragePrice.toLocaleString("id-ID")}) / ${inputs.bmriAveragePrice.toLocaleString("id-ID")} x 100%`
       : "Isi avg price BMRI";
   const dividendAmount = inputs.useDividend ? inputs.dividendAmount : 0;
-  const bmriExtraLotPrice = bmriLotPrice;
-  const extraBmriLots = inputs.useExtra && bmriExtraLotPrice > 0 ? Math.floor(extraAmount / bmriExtraLotPrice) : 0;
+  const bmriSignalLotPrice = inputs.useIndicator && inputs.bmriCurrentPrice > 0 ? inputs.bmriCurrentPrice * LOT_SIZE : bmriBaseLotPrice;
+  const bmriExtraLotPrice = inputs.useExtra && inputs.bmriExtraLotPrice > 0 ? inputs.bmriExtraLotPrice : bmriSignalLotPrice;
+  const extraBmriLots = inputs.useExtra && inputs.bmriExtraLotPrice > 0 ? 1 : 0;
   const extraBmriCost = extraBmriLots * bmriExtraLotPrice;
   const bridgeAmount = inputs.useExtra ? extraBmriCost : 0;
   const rdpuRedeemAmount = Math.min(grossRdpu, extraBmriCost);
@@ -1994,7 +1998,11 @@ function updateMonthlyStrategyCalculator() {
   el.monthlyStrategyBmriDecisionResult.textContent = bmriExtraLotDecision(bmriChangePercent);
 
   if (inputs.syncSimulator) {
-    applyMonthlyStrategyToSimulator(inputs, extraBmriLots, effectiveBmriPrice);
+    const recurringBmriLots = inputs.bmriBaseLots + extraBmriLots;
+    const recurringBmriCost = bmriBaseAmount + extraBmriCost;
+    const bmriSimulatorPrice = recurringBmriLots > 0 ? recurringBmriCost / (recurringBmriLots * LOT_SIZE) : inputs.bmriPrice;
+    const bmriPriceMode = extraBmriLots > 0 ? "rata-rata base + ekstra" : "harga base";
+    applyMonthlyStrategyToSimulator(inputs, extraBmriLots, bmriSimulatorPrice, bmriPriceMode);
   } else {
     updateSimulatorSyncUi(false);
     el.monthlyStrategySyncStatus.textContent = "Strategi belum dikirim ke simulator.";
