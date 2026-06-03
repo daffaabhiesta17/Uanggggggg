@@ -1893,7 +1893,6 @@ function updateMonthlyStrategyCalculator() {
   const grossRdpu = Math.max(0, inputs.deposit - baseStockAmount);
   const baseShortfall = Math.max(0, baseStockAmount - inputs.deposit);
   const extraAmount = inputs.useExtra ? inputs.bmriExtraAmount : 0;
-  const bridgeAmount = baseShortfall;
   let totalStockAmount = baseStockAmount + extraAmount;
   const bmriChangePercent =
     inputs.bmriAveragePrice > 0 ? ((inputs.bmriCurrentPrice - inputs.bmriAveragePrice) / inputs.bmriAveragePrice) * 100 : 0;
@@ -1905,6 +1904,7 @@ function updateMonthlyStrategyCalculator() {
   const bmriExtraLotPrice = inputs.useIndicator && inputs.bmriCurrentPrice > 0 ? inputs.bmriCurrentPrice * LOT_SIZE : bmriLotPrice;
   const extraBmriLots = inputs.useExtra && bmriExtraLotPrice > 0 ? Math.floor(extraAmount / bmriExtraLotPrice) : 0;
   const extraBmriCost = extraBmriLots * bmriExtraLotPrice;
+  const bridgeAmount = inputs.useExtra ? extraBmriCost : 0;
   const extraUnusedCash = Math.max(0, extraAmount - extraBmriCost);
   const rdpuRedeemAmount = Math.min(grossRdpu, extraBmriCost);
   const netRdpu = grossRdpu - rdpuRedeemAmount;
@@ -1968,6 +1968,11 @@ function updateMonthlyStrategyCalculator() {
 
   if (baseShortfall > 0) {
     el.monthlyStrategyNote.textContent = `Setoran kurang ${formatMoney(baseShortfall)} untuk beli base. Kurangi lot atau pakai cash/RDPU lama.`;
+  } else if (extraBmriCost > 0) {
+    const bridgeTail = unreimbursedBridge > 0 ? ` Ada ${formatMoney(unreimbursedBridge)} talangan yang belum terganti dari RDPU.` : "";
+    el.monthlyStrategyNote.textContent =
+      `Talangi ekstra BMRI ${formatMoney(bridgeAmount)}, cairkan RDPU ${formatMoney(rdpuRedeemAmount)}, ` +
+      `sisa RDPU setelah cair ${formatMoney(netRdpu)}.${bridgeTail}`;
   } else if (extraBmriLots + dividendBmriLots + dividendIcbpLots > 0) {
     el.monthlyStrategyNote.textContent =
       `Silakan tambah BMRI ${(extraBmriLots + dividendBmriLots).toLocaleString("id-ID")} lot dan ICBP ${dividendIcbpLots.toLocaleString("id-ID")} lot. ` +
