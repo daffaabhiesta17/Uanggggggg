@@ -186,6 +186,22 @@ const el = {
   investmentGrowthChart: document.querySelector("#investmentGrowthChart"),
   investmentHorizon: document.querySelector("#investmentHorizon"),
   addInvestmentYearButton: document.querySelector("#addInvestmentYearButton"),
+  monthlyStrategyDeposit: document.querySelector("#monthlyStrategyDeposit"),
+  monthlyStrategyBmriPrice: document.querySelector("#monthlyStrategyBmriPrice"),
+  monthlyStrategyIcbpPrice: document.querySelector("#monthlyStrategyIcbpPrice"),
+  monthlyStrategyBmriBaseLots: document.querySelector("#monthlyStrategyBmriBaseLots"),
+  monthlyStrategyIcbpBaseLots: document.querySelector("#monthlyStrategyIcbpBaseLots"),
+  monthlyStrategyBmriExtraLots: document.querySelector("#monthlyStrategyBmriExtraLots"),
+  monthlyStrategyUseExtra: document.querySelector("#monthlyStrategyUseExtra"),
+  monthlyStrategyBmriBaseResult: document.querySelector("#monthlyStrategyBmriBaseResult"),
+  monthlyStrategyIcbpBaseResult: document.querySelector("#monthlyStrategyIcbpBaseResult"),
+  monthlyStrategyBaseStockResult: document.querySelector("#monthlyStrategyBaseStockResult"),
+  monthlyStrategyGrossRdpuResult: document.querySelector("#monthlyStrategyGrossRdpuResult"),
+  monthlyStrategyExtraBmriResult: document.querySelector("#monthlyStrategyExtraBmriResult"),
+  monthlyStrategyNetRdpuResult: document.querySelector("#monthlyStrategyNetRdpuResult"),
+  monthlyStrategyBridgeResult: document.querySelector("#monthlyStrategyBridgeResult"),
+  monthlyStrategyTotalStockResult: document.querySelector("#monthlyStrategyTotalStockResult"),
+  monthlyStrategyNote: document.querySelector("#monthlyStrategyNote"),
   investmentStockTotal: document.querySelector("#investmentStockTotal"),
   investmentLotTotal: document.querySelector("#investmentLotTotal"),
   investmentRdpuTotal: document.querySelector("#investmentRdpuTotal"),
@@ -1759,6 +1775,53 @@ function renderInvestmentTickers() {
     .join("");
 }
 
+function readMonthlyStrategyInputs() {
+  return {
+    deposit: parseNumberInput(el.monthlyStrategyDeposit.value),
+    bmriPrice: parseNumberInput(el.monthlyStrategyBmriPrice.value),
+    icbpPrice: parseNumberInput(el.monthlyStrategyIcbpPrice.value),
+    bmriBaseLots: readWholeLots(el.monthlyStrategyBmriBaseLots, 2),
+    icbpBaseLots: readWholeLots(el.monthlyStrategyIcbpBaseLots, 1),
+    bmriExtraLots: readWholeLots(el.monthlyStrategyBmriExtraLots, 1),
+    useExtra: el.monthlyStrategyUseExtra.checked,
+  };
+}
+
+function updateMonthlyStrategyCalculator() {
+  const inputs = readMonthlyStrategyInputs();
+  const bmriLotPrice = inputs.bmriPrice * LOT_SIZE;
+  const icbpLotPrice = inputs.icbpPrice * LOT_SIZE;
+  const bmriBaseAmount = inputs.bmriBaseLots * bmriLotPrice;
+  const icbpBaseAmount = inputs.icbpBaseLots * icbpLotPrice;
+  const baseStockAmount = bmriBaseAmount + icbpBaseAmount;
+  const grossRdpu = Math.max(0, inputs.deposit - baseStockAmount);
+  const baseShortfall = Math.max(0, baseStockAmount - inputs.deposit);
+  const extraLots = inputs.useExtra ? inputs.bmriExtraLots : 0;
+  const extraAmount = extraLots * bmriLotPrice;
+  const netRdpu = Math.max(0, grossRdpu - extraAmount);
+  const bridgeAmount = baseShortfall + Math.max(0, extraAmount - grossRdpu);
+  const totalStockAmount = baseStockAmount + extraAmount;
+
+  el.monthlyStrategyBmriBaseResult.textContent = formatLotPurchase(inputs.bmriBaseLots, bmriBaseAmount);
+  el.monthlyStrategyIcbpBaseResult.textContent = formatLotPurchase(inputs.icbpBaseLots, icbpBaseAmount);
+  el.monthlyStrategyBaseStockResult.textContent = formatMoney(baseStockAmount);
+  el.monthlyStrategyGrossRdpuResult.textContent = formatMoney(grossRdpu);
+  el.monthlyStrategyExtraBmriResult.textContent = formatLotPurchase(extraLots, extraAmount);
+  el.monthlyStrategyNetRdpuResult.textContent = formatMoney(netRdpu);
+  el.monthlyStrategyBridgeResult.textContent = formatMoney(bridgeAmount);
+  el.monthlyStrategyTotalStockResult.textContent = formatMoney(totalStockAmount);
+
+  if (baseShortfall > 0) {
+    el.monthlyStrategyNote.textContent = `Setoran kurang ${formatMoney(baseShortfall)} untuk beli base. Kurangi lot atau pakai cash/RDPU lama.`;
+  } else if (!inputs.useExtra) {
+    el.monthlyStrategyNote.textContent = `Beli base, lalu sisa ${formatMoney(grossRdpu)} masuk RDPU.`;
+  } else if (bridgeAmount > 0) {
+    el.monthlyStrategyNote.textContent = `Ekstra BMRI butuh talangan ${formatMoney(bridgeAmount)}. Setelah RDPU cair, dana ini bisa diganti.`;
+  } else {
+    el.monthlyStrategyNote.textContent = `Beli base + ekstra BMRI, RDPU bersih bulan ini ${formatMoney(netRdpu)}.`;
+  }
+}
+
 function calculateInvestmentSummary() {
   const stockTotal = state.investments.stockPurchases.reduce((total, purchase) => total + investmentValue(purchase), 0);
   const lotTotal = state.investments.stockPurchases.reduce((total, purchase) => total + purchase.lots, 0);
@@ -1936,6 +1999,7 @@ function renderInvestments() {
   updateInvestmentSimulator();
   renderInvestmentOptions();
   renderInvestmentTickers();
+  updateMonthlyStrategyCalculator();
   renderInvestmentTables();
   renderInvestmentSummary();
   updateInvestmentInfo();
@@ -2070,6 +2134,21 @@ function initEvents() {
   el.investmentRdpuAmount.addEventListener("input", () => {
     el.investmentRdpuAmount.value = formatNumberInput(el.investmentRdpuAmount.value);
   });
+
+  [el.monthlyStrategyDeposit, el.monthlyStrategyBmriPrice, el.monthlyStrategyIcbpPrice].forEach((input) => {
+    input.addEventListener("input", () => {
+      input.value = formatNumberInput(input.value);
+      updateMonthlyStrategyCalculator();
+    });
+  });
+  [el.monthlyStrategyBmriBaseLots, el.monthlyStrategyIcbpBaseLots, el.monthlyStrategyBmriExtraLots].forEach((input) => {
+    input.addEventListener("input", updateMonthlyStrategyCalculator);
+    input.addEventListener("blur", () => {
+      input.value = String(readWholeLots(input, 0));
+      updateMonthlyStrategyCalculator();
+    });
+  });
+  el.monthlyStrategyUseExtra.addEventListener("change", updateMonthlyStrategyCalculator);
 
   el.investmentHorizon.addEventListener("change", async () => {
     state.investments.horizonYears = clampNumber(Math.round(Number(el.investmentHorizon.value) || 11), 1, 50);
