@@ -525,48 +525,72 @@
                   <h3>Penghitung Strategi Bulanan</h3>
                   <p>Hitung base BMRI/ICBP, ekstra BMRI, talangan, dan RDPU bersih sebelum dicatat.</p>
                 </div>
-                <div class="monthly-strategy-grid">
-                  <label>
-                    Setoran Bulanan
-                    <input id="monthlyStrategyDeposit" type="text" inputmode="numeric" value="2.000.000" />
-                  </label>
-                  <label>
-                    Harga BMRI / Lembar
-                    <input id="monthlyStrategyBmriPrice" type="text" inputmode="numeric" value="4.130" />
-                  </label>
-                  <label>
-                    Harga ICBP / Lembar
-                    <input id="monthlyStrategyIcbpPrice" type="text" inputmode="numeric" value="6.875" />
-                  </label>
-                  <label>
-                    BMRI Base Lot
-                    <input id="monthlyStrategyBmriBaseLots" type="number" min="0" step="1" value="2" />
-                  </label>
-                  <label>
-                    ICBP Base Lot
-                    <input id="monthlyStrategyIcbpBaseLots" type="number" min="0" step="1" value="1" />
-                  </label>
-                  <label>
-                    Nominal Ekstra BMRI
-                    <input id="monthlyStrategyBmriExtraAmount" type="text" inputmode="numeric" value="413.000" />
-                  </label>
-                  <label>
-                    Avg Price BMRI
-                    <input id="monthlyStrategyBmriAveragePrice" type="text" inputmode="numeric" value="4.130" />
-                  </label>
-                  <label>
-                    Current Price BMRI
-                    <input id="monthlyStrategyBmriCurrentPrice" type="text" inputmode="numeric" value="3.900" />
-                  </label>
+                <div class="monthly-strategy-block">
+                  <div class="monthly-strategy-title">
+                    <strong>Base bulanan</strong>
+                    <small>Bagian wajib untuk hitung BMRI 2 lot, ICBP 1 lot, dan sisa RDPU.</small>
+                  </div>
+                  <div class="monthly-strategy-grid">
+                    <label>
+                      Setoran Bulanan
+                      <input id="monthlyStrategyDeposit" type="text" inputmode="numeric" value="2.000.000" />
+                    </label>
+                    <label>
+                      Harga BMRI / Lembar
+                      <input id="monthlyStrategyBmriPrice" type="text" inputmode="numeric" value="4.130" />
+                    </label>
+                    <label>
+                      Harga ICBP / Lembar
+                      <input id="monthlyStrategyIcbpPrice" type="text" inputmode="numeric" value="6.875" />
+                    </label>
+                    <label>
+                      BMRI Base Lot
+                      <input id="monthlyStrategyBmriBaseLots" type="number" min="0" step="1" value="2" />
+                    </label>
+                    <label>
+                      ICBP Base Lot
+                      <input id="monthlyStrategyIcbpBaseLots" type="number" min="0" step="1" value="1" />
+                    </label>
+                  </div>
                 </div>
-                <label class="switch-row monthly-extra-toggle">
-                  <span>
-                    <strong>Aktifkan ekstra BMRI bulan ini</strong>
-                    <small>Jika aktif, nominal ekstra dianggap ditalangi dulu dari dana pribadi lalu diganti dari sisa RDPU setelah base.</small>
-                  </span>
-                  <input id="monthlyStrategyUseExtra" type="checkbox" />
-                  <span class="switch-control" aria-hidden="true"></span>
-                </label>
+
+                <div class="monthly-strategy-block">
+                  <label class="switch-row monthly-extra-toggle">
+                    <span>
+                      <strong>Aktifkan indikator tambah lot BMRI</strong>
+                      <small>Bandingkan avg price dengan current price untuk melihat apakah ekstra BMRI sudah layak.</small>
+                    </span>
+                    <input id="monthlyStrategyUseIndicator" type="checkbox" checked />
+                    <span class="switch-control" aria-hidden="true"></span>
+                  </label>
+                  <div class="monthly-strategy-grid" id="monthlyStrategyIndicatorPanel">
+                    <label>
+                      Avg Price BMRI
+                      <input id="monthlyStrategyBmriAveragePrice" type="text" inputmode="numeric" value="4.130" />
+                    </label>
+                    <label>
+                      Current Price BMRI
+                      <input id="monthlyStrategyBmriCurrentPrice" type="text" inputmode="numeric" value="3.900" />
+                    </label>
+                  </div>
+                </div>
+
+                <div class="monthly-strategy-block">
+                  <label class="switch-row monthly-extra-toggle">
+                    <span>
+                      <strong>Aktifkan ekstra BMRI bulan ini</strong>
+                      <small>Jika aktif, nominal ekstra dianggap ditalangi dulu dari dana pribadi lalu diganti dari sisa RDPU setelah base.</small>
+                    </span>
+                    <input id="monthlyStrategyUseExtra" type="checkbox" />
+                    <span class="switch-control" aria-hidden="true"></span>
+                  </label>
+                  <div class="monthly-strategy-grid hidden" id="monthlyStrategyExtraPanel">
+                    <label>
+                      Nominal Ekstra BMRI
+                      <input id="monthlyStrategyBmriExtraAmount" type="text" inputmode="numeric" value="413.000" />
+                    </label>
+                  </div>
+                </div>
                 <div class="monthly-strategy-results">
                   <article>
                     <span>BMRI Base</span>
@@ -584,35 +608,35 @@
                     <span>RDPU Setelah Base</span>
                     <strong id="monthlyStrategyGrossRdpuResult">Rp0</strong>
                   </article>
-                  <article>
+                  <article class="monthly-extra-result hidden">
                     <span>Ekstra BMRI</span>
                     <strong id="monthlyStrategyExtraBmriResult">Rp0</strong>
                   </article>
-                  <article>
+                  <article class="monthly-extra-result hidden">
                     <span>Talangan Dana Pribadi</span>
                     <strong id="monthlyStrategyBridgeResult">Rp0</strong>
                   </article>
-                  <article>
+                  <article class="monthly-extra-result hidden">
                     <span>Dicairkan dari RDPU</span>
                     <strong id="monthlyStrategyRdpuRedeemResult">Rp0</strong>
                   </article>
-                  <article>
+                  <article class="monthly-extra-result hidden">
                     <span>Sisa RDPU Setelah Cair</span>
                     <strong id="monthlyStrategyNetRdpuResult">Rp0</strong>
                   </article>
-                  <article>
+                  <article class="monthly-extra-result hidden">
                     <span>Total Saham Bulan Ini</span>
                     <strong id="monthlyStrategyTotalStockResult">Rp0</strong>
                   </article>
-                  <article>
+                  <article class="monthly-indicator-result">
                     <span>Indikator BMRI</span>
                     <strong id="monthlyStrategyBmriDiscountResult">0,00%</strong>
                   </article>
-                  <article>
+                  <article class="monthly-indicator-result">
                     <span>Rumus Indikator</span>
                     <strong id="monthlyStrategyBmriFormulaResult">-</strong>
                   </article>
-                  <article>
+                  <article class="monthly-indicator-result">
                     <span>Keputusan Lot</span>
                     <strong id="monthlyStrategyBmriDecisionResult">Belum perlu tambah lot</strong>
                   </article>

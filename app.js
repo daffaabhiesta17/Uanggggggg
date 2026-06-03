@@ -194,7 +194,12 @@ const el = {
   monthlyStrategyBmriExtraAmount: document.querySelector("#monthlyStrategyBmriExtraAmount"),
   monthlyStrategyBmriAveragePrice: document.querySelector("#monthlyStrategyBmriAveragePrice"),
   monthlyStrategyBmriCurrentPrice: document.querySelector("#monthlyStrategyBmriCurrentPrice"),
+  monthlyStrategyUseIndicator: document.querySelector("#monthlyStrategyUseIndicator"),
   monthlyStrategyUseExtra: document.querySelector("#monthlyStrategyUseExtra"),
+  monthlyStrategyIndicatorPanel: document.querySelector("#monthlyStrategyIndicatorPanel"),
+  monthlyStrategyExtraPanel: document.querySelector("#monthlyStrategyExtraPanel"),
+  monthlyStrategyIndicatorResults: document.querySelectorAll(".monthly-indicator-result"),
+  monthlyStrategyExtraResults: document.querySelectorAll(".monthly-extra-result"),
   monthlyStrategyBmriBaseResult: document.querySelector("#monthlyStrategyBmriBaseResult"),
   monthlyStrategyIcbpBaseResult: document.querySelector("#monthlyStrategyIcbpBaseResult"),
   monthlyStrategyBaseStockResult: document.querySelector("#monthlyStrategyBaseStockResult"),
@@ -1791,6 +1796,7 @@ function readMonthlyStrategyInputs() {
     bmriExtraAmount: parseNumberInput(el.monthlyStrategyBmriExtraAmount.value),
     bmriAveragePrice: parseNumberInput(el.monthlyStrategyBmriAveragePrice.value),
     bmriCurrentPrice: parseNumberInput(el.monthlyStrategyBmriCurrentPrice.value),
+    useIndicator: el.monthlyStrategyUseIndicator.checked,
     useExtra: el.monthlyStrategyUseExtra.checked,
   };
 }
@@ -1803,6 +1809,11 @@ function bmriExtraLotDecision(changePercent) {
 
 function updateMonthlyStrategyCalculator() {
   const inputs = readMonthlyStrategyInputs();
+  el.monthlyStrategyIndicatorPanel.classList.toggle("hidden", !inputs.useIndicator);
+  el.monthlyStrategyExtraPanel.classList.toggle("hidden", !inputs.useExtra);
+  el.monthlyStrategyIndicatorResults.forEach((item) => item.classList.toggle("hidden", !inputs.useIndicator));
+  el.monthlyStrategyExtraResults.forEach((item) => item.classList.toggle("hidden", !inputs.useExtra));
+
   const bmriLotPrice = inputs.bmriPrice * LOT_SIZE;
   const icbpLotPrice = inputs.icbpPrice * LOT_SIZE;
   const bmriBaseAmount = inputs.bmriBaseLots * bmriLotPrice;
@@ -2181,6 +2192,7 @@ function initEvents() {
     });
   });
   el.monthlyStrategyUseExtra.addEventListener("change", updateMonthlyStrategyCalculator);
+  el.monthlyStrategyUseIndicator.addEventListener("change", updateMonthlyStrategyCalculator);
 
   el.investmentHorizon.addEventListener("change", async () => {
     state.investments.horizonYears = clampNumber(Math.round(Number(el.investmentHorizon.value) || 11), 1, 50);
