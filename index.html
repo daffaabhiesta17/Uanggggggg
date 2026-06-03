@@ -314,6 +314,17 @@
                   </div>
                 </div>
 
+                <div class="input-pair">
+                  <label>
+                    Harga BMRI
+                    <input id="simBmriPrice" type="number" min="1" step="1" value="4130" />
+                  </label>
+                  <label>
+                    Harga ICBP
+                    <input id="simIcbpPrice" type="number" min="1" step="1" value="6875" />
+                  </label>
+                </div>
+
                 <label>
                   Pola Pembelian Saham
                   <select id="simPurchaseMode">
@@ -356,17 +367,6 @@
                     </article>
                   </div>
                   <small class="custom-lot-status" id="simCustomLotStatus">Bulan normal tanpa dividen.</small>
-                </div>
-
-                <div class="input-pair">
-                  <label>
-                    Harga BMRI
-                    <input id="simBmriPrice" type="number" min="1" step="1" value="4130" />
-                  </label>
-                  <label>
-                    Harga ICBP
-                    <input id="simIcbpPrice" type="number" min="1" step="1" value="6875" />
-                  </label>
                 </div>
 
                 <div class="price-change-panel" id="simPriceChangePanel">
@@ -723,6 +723,10 @@
                             <span>Tambah Lot Dividen</span>
                             <strong id="monthlyStrategySuggestedLotsResult">0 lot</strong>
                           </article>
+                          <article class="monthly-summary-wide">
+                            <span>Sisa Dividen/Ekstra ke RDPU</span>
+                            <strong id="monthlyStrategyExtraLeftoverResult">Rp0</strong>
+                          </article>
                         </div>
                       </section>
 
@@ -735,10 +739,6 @@
                           <article>
                             <span>Total Saham Bulan Ini</span>
                             <strong id="monthlyStrategyTotalStockResult">Rp0</strong>
-                          </article>
-                          <article>
-                            <span>Sisa Dividen/Ekstra ke RDPU</span>
-                            <strong id="monthlyStrategyExtraLeftoverResult">Rp0</strong>
                           </article>
                           <article class="monthly-summary-total">
                             <span>Total RDPU Bulan Ini</span>
