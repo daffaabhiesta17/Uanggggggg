@@ -196,6 +196,7 @@ const el = {
   monthlyStrategyBmriCurrentPrice: document.querySelector("#monthlyStrategyBmriCurrentPrice"),
   monthlyStrategyUseIndicator: document.querySelector("#monthlyStrategyUseIndicator"),
   monthlyStrategyUseExtra: document.querySelector("#monthlyStrategyUseExtra"),
+  monthlyStrategySyncSimulator: document.querySelector("#monthlyStrategySyncSimulator"),
   monthlyStrategyIndicatorPanel: document.querySelector("#monthlyStrategyIndicatorPanel"),
   monthlyStrategyExtraPanel: document.querySelector("#monthlyStrategyExtraPanel"),
   monthlyStrategyIndicatorResults: document.querySelectorAll(".monthly-indicator-result"),
@@ -212,6 +213,7 @@ const el = {
   monthlyStrategyBmriDiscountResult: document.querySelector("#monthlyStrategyBmriDiscountResult"),
   monthlyStrategyBmriFormulaResult: document.querySelector("#monthlyStrategyBmriFormulaResult"),
   monthlyStrategyBmriDecisionResult: document.querySelector("#monthlyStrategyBmriDecisionResult"),
+  monthlyStrategySyncStatus: document.querySelector("#monthlyStrategySyncStatus"),
   monthlyStrategyNote: document.querySelector("#monthlyStrategyNote"),
   investmentStockTotal: document.querySelector("#investmentStockTotal"),
   investmentLotTotal: document.querySelector("#investmentLotTotal"),
@@ -1798,6 +1800,7 @@ function readMonthlyStrategyInputs() {
     bmriCurrentPrice: parseNumberInput(el.monthlyStrategyBmriCurrentPrice.value),
     useIndicator: el.monthlyStrategyUseIndicator.checked,
     useExtra: el.monthlyStrategyUseExtra.checked,
+    syncSimulator: el.monthlyStrategySyncSimulator.checked,
   };
 }
 
@@ -1805,6 +1808,23 @@ function bmriExtraLotDecision(changePercent) {
   if (changePercent <= -10) return "Lebih layak tambah 1 lot atau lebih";
   if (changePercent <= -5) return "Boleh pertimbangkan tambah 1 lot";
   return "Belum perlu tambah lot";
+}
+
+function applyMonthlyStrategyToSimulator(inputs, bmriLotPrice, extraAmount) {
+  const extraLotsForSimulator = inputs.useExtra && bmriLotPrice > 0 ? Math.floor(extraAmount / bmriLotPrice) : 0;
+  const bmriSimulatorLots = inputs.bmriBaseLots + extraLotsForSimulator;
+
+  el.simMonthlyDeposit.value = String(inputs.deposit);
+  el.simBmriPrice.value = String(inputs.bmriPrice);
+  el.simIcbpPrice.value = String(inputs.icbpPrice);
+  el.simPurchaseMode.value = "custom";
+  el.simBmriMonthlyLots.value = String(bmriSimulatorLots);
+  el.simIcbpMonthlyLots.value = String(inputs.icbpBaseLots);
+  updateInvestmentSimulator();
+
+  el.monthlyStrategySyncStatus.textContent =
+    `Aktif: simulator memakai BMRI ${bmriSimulatorLots.toLocaleString("id-ID")} lot/bulan dan ICBP ${inputs.icbpBaseLots.toLocaleString("id-ID")} lot/bulan. ` +
+    `Ekstra manual dikonversi menjadi ${extraLotsForSimulator.toLocaleString("id-ID")} lot BMRI.`;
 }
 
 function updateMonthlyStrategyCalculator() {
@@ -1846,6 +1866,12 @@ function updateMonthlyStrategyCalculator() {
   el.monthlyStrategyBmriDiscountResult.textContent = `${decimal.format(bmriChangePercent)}%`;
   el.monthlyStrategyBmriFormulaResult.textContent = bmriFormula;
   el.monthlyStrategyBmriDecisionResult.textContent = bmriExtraLotDecision(bmriChangePercent);
+
+  if (inputs.syncSimulator) {
+    applyMonthlyStrategyToSimulator(inputs, bmriLotPrice, extraAmount);
+  } else {
+    el.monthlyStrategySyncStatus.textContent = "Strategi belum dikirim ke simulator.";
+  }
 
   if (baseShortfall > 0) {
     el.monthlyStrategyNote.textContent = `Setoran kurang ${formatMoney(baseShortfall)} untuk beli base. Kurangi lot atau pakai cash/RDPU lama.`;
@@ -2193,6 +2219,7 @@ function initEvents() {
   });
   el.monthlyStrategyUseExtra.addEventListener("change", updateMonthlyStrategyCalculator);
   el.monthlyStrategyUseIndicator.addEventListener("change", updateMonthlyStrategyCalculator);
+  el.monthlyStrategySyncSimulator.addEventListener("change", updateMonthlyStrategyCalculator);
 
   el.investmentHorizon.addEventListener("change", async () => {
     state.investments.horizonYears = clampNumber(Math.round(Number(el.investmentHorizon.value) || 11), 1, 50);

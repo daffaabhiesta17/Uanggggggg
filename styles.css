@@ -1118,6 +1118,16 @@ input:disabled {
   line-height: 1.5;
 }
 
+.monthly-simulator-sync-status {
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .investment-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
