@@ -1043,9 +1043,6 @@ input:disabled {
 .monthly-strategy-calculator {
   display: grid;
   gap: 14px;
-  margin-top: 18px;
-  padding-top: 18px;
-  border-top: 1px solid var(--line);
 }
 
 .monthly-strategy-grid {
