@@ -547,14 +547,14 @@
                     <input id="monthlyStrategyIcbpBaseLots" type="number" min="0" step="1" value="1" />
                   </label>
                   <label>
-                    BMRI Ekstra Lot
-                    <input id="monthlyStrategyBmriExtraLots" type="number" min="0" step="1" value="1" />
+                    Nominal Ekstra BMRI
+                    <input id="monthlyStrategyBmriExtraAmount" type="text" inputmode="numeric" value="413.000" />
                   </label>
                 </div>
                 <label class="switch-row monthly-extra-toggle">
                   <span>
                     <strong>Aktifkan ekstra BMRI bulan ini</strong>
-                    <small>Jika aktif, biaya ekstra mengurangi RDPU bersih. Jika RDPU bulan ini kurang, sisanya dianggap talangan.</small>
+                    <small>Jika aktif, nominal ekstra dianggap ditalangi dulu dari dana pribadi lalu diganti dari sisa RDPU setelah base.</small>
                   </span>
                   <input id="monthlyStrategyUseExtra" type="checkbox" />
                   <span class="switch-control" aria-hidden="true"></span>
@@ -578,14 +578,18 @@
                   </article>
                   <article>
                     <span>Ekstra BMRI</span>
-                    <strong id="monthlyStrategyExtraBmriResult">0 lot - Rp0</strong>
+                    <strong id="monthlyStrategyExtraBmriResult">Rp0</strong>
                   </article>
                   <article>
-                    <span>RDPU Bersih</span>
+                    <span>Dicairkan dari RDPU</span>
+                    <strong id="monthlyStrategyRdpuRedeemResult">Rp0</strong>
+                  </article>
+                  <article>
+                    <span>Sisa RDPU Setelah Cair</span>
                     <strong id="monthlyStrategyNetRdpuResult">Rp0</strong>
                   </article>
                   <article>
-                    <span>Talangan Dibutuhkan</span>
+                    <span>Talangan Dana Pribadi</span>
                     <strong id="monthlyStrategyBridgeResult">Rp0</strong>
                   </article>
                   <article>
