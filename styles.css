@@ -1068,6 +1068,40 @@ input:disabled {
   gap: 14px;
 }
 
+.monthly-strategy-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  gap: 16px;
+  align-items: start;
+}
+
+.monthly-strategy-header h3,
+.monthly-strategy-header p {
+  margin: 0;
+}
+
+.monthly-strategy-header h3 {
+  color: var(--text);
+}
+
+.monthly-strategy-header p {
+  margin-top: 6px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.monthly-strategy-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.75fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.monthly-strategy-controls {
+  display: grid;
+  gap: 12px;
+}
+
 .monthly-strategy-block {
   display: grid;
   gap: 12px;
@@ -1078,8 +1112,21 @@ input:disabled {
 }
 
 .monthly-strategy-title {
-  display: grid;
+  display: flex;
+  align-items: flex-start;
   gap: 4px;
+}
+
+.monthly-strategy-title > span {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 900;
 }
 
 .monthly-strategy-title strong {
@@ -1104,9 +1151,52 @@ input:disabled {
   background: #fff;
 }
 
+.monthly-sync-toggle {
+  padding: 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+}
+
+.monthly-extra-toggle:has(input:checked),
+.monthly-sync-toggle:has(input:checked) {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.monthly-extra-toggle:has(input:checked) strong,
+.monthly-sync-toggle:has(input:checked) strong {
+  color: #166534;
+}
+
+.monthly-strategy-output {
+  position: sticky;
+  top: 12px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.monthly-strategy-output-head {
+  display: grid;
+  gap: 4px;
+}
+
+.monthly-strategy-output-head strong {
+  color: var(--text);
+}
+
+.monthly-strategy-output-head small {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .monthly-strategy-results {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -1262,6 +1352,8 @@ input:disabled {
   .workspace-grid,
   .tools-grid,
   .investment-simulator-grid,
+  .monthly-strategy-header,
+  .monthly-strategy-layout,
   .investment-grid,
   .investment-info-grid {
     grid-template-columns: 1fr;
@@ -1278,6 +1370,10 @@ input:disabled {
   .monthly-strategy-grid,
   .monthly-strategy-results {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .monthly-strategy-output {
+    position: static;
   }
 }
 
