@@ -1063,6 +1063,18 @@ input:disabled {
   margin-bottom: 0;
 }
 
+.investment-records-surface {
+  display: grid;
+  gap: 18px;
+}
+
+.investment-records-section {
+  display: grid;
+  gap: 14px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
 .monthly-strategy-calculator {
   display: grid;
   gap: 14px;
