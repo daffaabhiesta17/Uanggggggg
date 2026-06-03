@@ -192,6 +192,8 @@ const el = {
   monthlyStrategyBmriBaseLots: document.querySelector("#monthlyStrategyBmriBaseLots"),
   monthlyStrategyIcbpBaseLots: document.querySelector("#monthlyStrategyIcbpBaseLots"),
   monthlyStrategyBmriExtraAmount: document.querySelector("#monthlyStrategyBmriExtraAmount"),
+  monthlyStrategyBmriAveragePrice: document.querySelector("#monthlyStrategyBmriAveragePrice"),
+  monthlyStrategyBmriCurrentPrice: document.querySelector("#monthlyStrategyBmriCurrentPrice"),
   monthlyStrategyUseExtra: document.querySelector("#monthlyStrategyUseExtra"),
   monthlyStrategyBmriBaseResult: document.querySelector("#monthlyStrategyBmriBaseResult"),
   monthlyStrategyIcbpBaseResult: document.querySelector("#monthlyStrategyIcbpBaseResult"),
@@ -202,6 +204,9 @@ const el = {
   monthlyStrategyNetRdpuResult: document.querySelector("#monthlyStrategyNetRdpuResult"),
   monthlyStrategyBridgeResult: document.querySelector("#monthlyStrategyBridgeResult"),
   monthlyStrategyTotalStockResult: document.querySelector("#monthlyStrategyTotalStockResult"),
+  monthlyStrategyBmriDiscountResult: document.querySelector("#monthlyStrategyBmriDiscountResult"),
+  monthlyStrategyBmriFormulaResult: document.querySelector("#monthlyStrategyBmriFormulaResult"),
+  monthlyStrategyBmriDecisionResult: document.querySelector("#monthlyStrategyBmriDecisionResult"),
   monthlyStrategyNote: document.querySelector("#monthlyStrategyNote"),
   investmentStockTotal: document.querySelector("#investmentStockTotal"),
   investmentLotTotal: document.querySelector("#investmentLotTotal"),
@@ -1784,8 +1789,16 @@ function readMonthlyStrategyInputs() {
     bmriBaseLots: readWholeLots(el.monthlyStrategyBmriBaseLots, 2),
     icbpBaseLots: readWholeLots(el.monthlyStrategyIcbpBaseLots, 1),
     bmriExtraAmount: parseNumberInput(el.monthlyStrategyBmriExtraAmount.value),
+    bmriAveragePrice: parseNumberInput(el.monthlyStrategyBmriAveragePrice.value),
+    bmriCurrentPrice: parseNumberInput(el.monthlyStrategyBmriCurrentPrice.value),
     useExtra: el.monthlyStrategyUseExtra.checked,
   };
+}
+
+function bmriExtraLotDecision(changePercent) {
+  if (changePercent <= -10) return "Lebih layak tambah 1 lot atau lebih";
+  if (changePercent <= -5) return "Boleh pertimbangkan tambah 1 lot";
+  return "Belum perlu tambah lot";
 }
 
 function updateMonthlyStrategyCalculator() {
@@ -1803,6 +1816,12 @@ function updateMonthlyStrategyCalculator() {
   const bridgeAmount = baseShortfall + extraAmount;
   const unreimbursedBridge = Math.max(0, extraAmount - rdpuRedeemAmount);
   const totalStockAmount = baseStockAmount + extraAmount;
+  const bmriChangePercent =
+    inputs.bmriAveragePrice > 0 ? ((inputs.bmriCurrentPrice - inputs.bmriAveragePrice) / inputs.bmriAveragePrice) * 100 : 0;
+  const bmriFormula =
+    inputs.bmriAveragePrice > 0
+      ? `(${inputs.bmriCurrentPrice.toLocaleString("id-ID")} - ${inputs.bmriAveragePrice.toLocaleString("id-ID")}) / ${inputs.bmriAveragePrice.toLocaleString("id-ID")} x 100%`
+      : "Isi avg price BMRI";
 
   el.monthlyStrategyBmriBaseResult.textContent = formatLotPurchase(inputs.bmriBaseLots, bmriBaseAmount);
   el.monthlyStrategyIcbpBaseResult.textContent = formatLotPurchase(inputs.icbpBaseLots, icbpBaseAmount);
@@ -1813,6 +1832,9 @@ function updateMonthlyStrategyCalculator() {
   el.monthlyStrategyNetRdpuResult.textContent = formatMoney(netRdpu);
   el.monthlyStrategyBridgeResult.textContent = formatMoney(bridgeAmount);
   el.monthlyStrategyTotalStockResult.textContent = formatMoney(totalStockAmount);
+  el.monthlyStrategyBmriDiscountResult.textContent = `${decimal.format(bmriChangePercent)}%`;
+  el.monthlyStrategyBmriFormulaResult.textContent = bmriFormula;
+  el.monthlyStrategyBmriDecisionResult.textContent = bmriExtraLotDecision(bmriChangePercent);
 
   if (baseShortfall > 0) {
     el.monthlyStrategyNote.textContent = `Setoran kurang ${formatMoney(baseShortfall)} untuk beli base. Kurangi lot atau pakai cash/RDPU lama.`;
@@ -2138,7 +2160,14 @@ function initEvents() {
     el.investmentRdpuAmount.value = formatNumberInput(el.investmentRdpuAmount.value);
   });
 
-  [el.monthlyStrategyDeposit, el.monthlyStrategyBmriPrice, el.monthlyStrategyIcbpPrice, el.monthlyStrategyBmriExtraAmount].forEach((input) => {
+  [
+    el.monthlyStrategyDeposit,
+    el.monthlyStrategyBmriPrice,
+    el.monthlyStrategyIcbpPrice,
+    el.monthlyStrategyBmriExtraAmount,
+    el.monthlyStrategyBmriAveragePrice,
+    el.monthlyStrategyBmriCurrentPrice,
+  ].forEach((input) => {
     input.addEventListener("input", () => {
       input.value = formatNumberInput(input.value);
       updateMonthlyStrategyCalculator();
