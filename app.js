@@ -141,6 +141,8 @@ const el = {
   simulatorSyncBanner: document.querySelector("#simulatorSyncBanner"),
   simulatorSyncBannerText: document.querySelector("#simulatorSyncBannerText"),
   simMonthlyDeposit: document.querySelector("#simMonthlyDeposit"),
+  simStartMonth: document.querySelector("#simStartMonth"),
+  simStartYear: document.querySelector("#simStartYear"),
   simStockAllocation: document.querySelector("#simStockAllocation"),
   simStockAllocationNumber: document.querySelector("#simStockAllocationNumber"),
   simRdpuAllocationLabel: document.querySelector("#simRdpuAllocationLabel"),
@@ -902,6 +904,24 @@ function formatSimulatorPriceInput(value) {
   return Number.isInteger(rounded) ? String(rounded) : String(rounded);
 }
 
+function simulationCalendarMonth(inputs, monthIndex) {
+  return ((inputs.startMonth - 1 + monthIndex - 1) % 12) + 1;
+}
+
+function simulationCalendarYear(inputs, monthIndex) {
+  return inputs.startYear + Math.floor((inputs.startMonth - 1 + monthIndex - 1) / 12);
+}
+
+function simulationMonthYearLabel(inputs, monthIndex) {
+  const month = simulationCalendarMonth(inputs, monthIndex);
+  const year = simulationCalendarYear(inputs, monthIndex);
+  return `${investmentMonthLabel(month)} ${year}`;
+}
+
+function simulationPeriodLabel(inputs, startMonthIndex, endMonthIndex) {
+  return `${simulationMonthYearLabel(inputs, startMonthIndex)} - ${simulationMonthYearLabel(inputs, endMonthIndex)}`;
+}
+
 function updateCustomLotSummary(inputs) {
   const bmriLotPrice = inputs.bmriPrice * LOT_SIZE;
   const icbpLotPrice = inputs.icbpPrice * LOT_SIZE;
@@ -936,6 +956,8 @@ function readSimulationInputs() {
   const stockAllocation = clampNumber(Math.round(readNumber(el.simStockAllocationNumber, 80)), 0, 100);
   return {
     monthlyDeposit: Math.max(0, readNumber(el.simMonthlyDeposit, 1100000)),
+    startMonth: clampNumber(Math.round(readNumber(el.simStartMonth, 6)), 1, 12),
+    startYear: clampNumber(Math.round(readNumber(el.simStartYear, 2026)), 2000, 2100),
     stockAllocation,
     rdpuAllocation: 100 - stockAllocation,
     purchaseMode: el.simPurchaseMode.value === "custom" ? "custom" : "alternating",
@@ -972,8 +994,9 @@ function simulateInvestment(inputs) {
   for (let month = 1; month <= SIMULATION_MONTHS; month += 1) {
     const year = Math.ceil(month / 12);
     const isOddMonth = month % 2 === 1;
-    const isBmriDividendMonth = month % 12 === 11;
-    const isIcbpDividendMonth = month % 12 === 0;
+    const calendarMonth = simulationCalendarMonth(inputs, month);
+    const isBmriDividendMonth = calendarMonth === 11;
+    const isIcbpDividendMonth = calendarMonth === 12;
 
     if (month > 1 && (month - 1) % 12 === 0) {
       currentBmriPrice = applyAnnualPriceChange(currentBmriPrice, inputs.bmriPriceChangeAnnual, inputs.priceChangeEnabled);
@@ -982,18 +1005,16 @@ function simulateInvestment(inputs) {
 
     const bmriLotPrice = currentBmriPrice * LOT_SIZE;
     const icbpLotPrice = currentIcbpPrice * LOT_SIZE;
-    let dividendThisMonth = 0;
+    const bmriDividend = isBmriDividendMonth
+      ? bmriLots * LOT_SIZE * dividendPerShare(inputs.bmriPrice, inputs.bmriYieldInitial, inputs.dividendGrowthAnnual, year)
+      : 0;
+    const icbpDividend = isIcbpDividendMonth
+      ? icbpLots * LOT_SIZE * dividendPerShare(inputs.icbpPrice, inputs.icbpYieldInitial, inputs.dividendGrowthAnnual, year)
+      : 0;
+    const dividendThisMonth = bmriDividend + icbpDividend;
     let rdpuContribution = monthlyRdpuBudget;
 
     if (inputs.purchaseMode === "custom") {
-      const bmriDividend = isBmriDividendMonth
-        ? bmriLots * LOT_SIZE * dividendPerShare(inputs.bmriPrice, inputs.bmriYieldInitial, inputs.dividendGrowthAnnual, year)
-        : 0;
-      const icbpDividend = isIcbpDividendMonth
-        ? icbpLots * LOT_SIZE * dividendPerShare(inputs.icbpPrice, inputs.icbpYieldInitial, inputs.dividendGrowthAnnual, year)
-        : 0;
-      dividendThisMonth = bmriDividend + icbpDividend;
-
       const purchase = buyAffordableCustomLots(
         inputs.monthlyDeposit + dividendThisMonth,
         bmriLotPrice,
@@ -1006,23 +1027,15 @@ function simulateInvestment(inputs) {
       icbpLots += purchase.icbpBought;
       rdpuContribution = purchase.leftoverCash;
     } else if (isOddMonth) {
-      const bmriDividend = isBmriDividendMonth
-        ? bmriLots * LOT_SIZE * dividendPerShare(inputs.bmriPrice, inputs.bmriYieldInitial, inputs.dividendGrowthAnnual, year)
-        : 0;
-      const stockCash = monthlyStockBudget + bmriDividend;
+      const stockCash = monthlyStockBudget + dividendThisMonth;
       const boughtLots = Math.floor(stockCash / bmriLotPrice);
       bmriLots += boughtLots;
       rdpuContribution += stockCash - boughtLots * bmriLotPrice;
-      dividendThisMonth = bmriDividend;
     } else {
-      const icbpDividend = isIcbpDividendMonth
-        ? icbpLots * LOT_SIZE * dividendPerShare(inputs.icbpPrice, inputs.icbpYieldInitial, inputs.dividendGrowthAnnual, year)
-        : 0;
-      const stockCash = monthlyStockBudget + icbpDividend;
+      const stockCash = monthlyStockBudget + dividendThisMonth;
       const boughtLots = Math.floor(stockCash / icbpLotPrice);
       icbpLots += boughtLots;
       rdpuContribution += stockCash - boughtLots * icbpLotPrice;
-      dividendThisMonth = icbpDividend;
     }
 
     totalDividends += dividendThisMonth;
@@ -1037,6 +1050,7 @@ function simulateInvestment(inputs) {
 
       yearlyRows.push({
         year,
+        periodLabel: simulationPeriodLabel(inputs, month - 11, month),
         totalContribution,
         bmriPrice: currentBmriPrice,
         bmriLots,
@@ -1047,7 +1061,7 @@ function simulateInvestment(inputs) {
         portfolioValue,
       });
 
-      chartYears.push(`Tahun ${year}`);
+      chartYears.push(`T${year}: ${simulationPeriodLabel(inputs, month - 11, month)}`);
       chartContributions.push(Math.round(totalContribution));
       chartAssets.push(Math.round(portfolioValue));
       annualDividends = 0;
@@ -1275,7 +1289,7 @@ function updateInvestmentSimulator() {
     .map(
       (row) => `
         <tr>
-          <td><strong>${row.year}</strong></td>
+          <td><strong>Tahun ${row.year}</strong><br><small>${row.periodLabel}</small></td>
           <td>${formatMoney(row.totalContribution)}</td>
           <td>${formatMoney(row.bmriPrice)}</td>
           <td>${row.bmriLots.toLocaleString("id-ID")} lot</td>
@@ -2319,6 +2333,7 @@ function initEvents() {
     maybeDisconnectMonthlyStrategySync(el.simStockAllocationNumber);
     updateInvestmentSimulator();
   });
+  el.simStartMonth.addEventListener("change", updateInvestmentSimulator);
   el.simPurchaseMode.addEventListener("change", () => {
     maybeDisconnectMonthlyStrategySync(el.simPurchaseMode);
     updateInvestmentSimulator();
