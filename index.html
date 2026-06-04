@@ -607,10 +607,10 @@
                           <strong>2. Cek indikator BMRI</strong>
                           <small>Bandingkan avg price dengan current price untuk sinyal tambah lot.</small>
                         </span>
-                        <input id="monthlyStrategyUseIndicator" type="checkbox" checked />
+                        <input id="monthlyStrategyUseIndicator" type="checkbox" />
                         <span class="switch-control" aria-hidden="true"></span>
                       </label>
-                      <div class="monthly-strategy-grid" id="monthlyStrategyIndicatorPanel">
+                      <div class="monthly-strategy-grid hidden" id="monthlyStrategyIndicatorPanel">
                         <label>
                           Avg Price BMRI
                           <input id="monthlyStrategyBmriAveragePrice" type="text" inputmode="numeric" value="4.130" />
@@ -635,9 +635,26 @@
                     </div>
 
                     <div class="monthly-strategy-block">
+                      <label class="switch-row monthly-extra-toggle">
+                        <span>
+                          <strong>3. Eksekusi ekstra BMRI saat minus</strong>
+                          <small>Talangi beli ekstra BMRI dulu, lalu cairkan RDPU dari sisa setelah base untuk mengganti talangan.</small>
+                        </span>
+                        <input id="monthlyStrategyUseExtra" type="checkbox" />
+                        <span class="switch-control" aria-hidden="true"></span>
+                      </label>
+                      <div class="monthly-strategy-grid hidden" id="monthlyStrategyExtraPanel">
+                        <label>
+                          Harga Ekstra BMRI / Lot
+                          <input id="monthlyStrategyBmriExtraAmount" type="text" inputmode="numeric" value="413.000" />
+                        </label>
+                      </div>
+                    </div>
+
+                    <div class="monthly-strategy-block">
                       <label class="switch-row monthly-extra-toggle monthly-dividend-gate" id="monthlyStrategyDividendGate">
                         <span>
-                          <strong>3. Ada dividen cair bulan ini</strong>
+                          <strong>4. Ada dividen cair bulan ini</strong>
                           <small>Opsional karena dividen biasanya hanya 1-2x setahun. Rekomendasi mengikuti rasio lot bulan ini BMRI:ICBP = 2:1, sisanya RDPU.</small>
                         </span>
                         <input id="monthlyStrategyUseDividend" type="checkbox" />
@@ -652,23 +669,6 @@
                           <span>Dasar Rekomendasi Dividen</span>
                           <strong id="monthlyStrategyDividendBasisResult">-</strong>
                         </article>
-                      </div>
-                    </div>
-
-                    <div class="monthly-strategy-block">
-                      <label class="switch-row monthly-extra-toggle">
-                        <span>
-                          <strong>4. Eksekusi ekstra BMRI saat minus</strong>
-                          <small>Talangi beli ekstra BMRI dulu, lalu cairkan RDPU dari sisa setelah base untuk mengganti talangan.</small>
-                        </span>
-                        <input id="monthlyStrategyUseExtra" type="checkbox" />
-                        <span class="switch-control" aria-hidden="true"></span>
-                      </label>
-                      <div class="monthly-strategy-grid hidden" id="monthlyStrategyExtraPanel">
-                        <label>
-                          Harga Ekstra BMRI / Lot
-                          <input id="monthlyStrategyBmriExtraAmount" type="text" inputmode="numeric" value="413.000" />
-                        </label>
                       </div>
                     </div>
                   </div>

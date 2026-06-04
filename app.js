@@ -1896,18 +1896,18 @@ function dividendRecommendationBasis(
   icbpLotsBeforeDividend,
 ) {
   if (dividendAmount <= 0) {
-    return "Isi nominal dividen cair. Rekomendasi memakai rasio bulan ini BMRI:ICBP = 2:1.";
+    return "Isi dividen. Dasar: rasio bulan ini BMRI:ICBP = 2:1.";
   }
 
-  const lotSummary = `ICBP 1 lot ${formatMoney(icbpLotPrice)}, BMRI 1 lot ${formatMoney(bmriLotPrice)}.`;
-  const beforeRatio = `Lot sebelum dividen: BMRI ${bmriLotsBeforeDividend.toLocaleString("id-ID")} lot, ICBP ${icbpLotsBeforeDividend.toLocaleString("id-ID")} lot.`;
-  const purchaseSummary = `Rekomendasi: ICBP ${icbpLots.toLocaleString("id-ID")} lot + BMRI ${bmriLots.toLocaleString("id-ID")} lot.`;
+  const beforeRatio =
+    `Sebelum: BMRI ${bmriLotsBeforeDividend.toLocaleString("id-ID")} lot, ICBP ${icbpLotsBeforeDividend.toLocaleString("id-ID")} lot.`;
+  const purchaseSummary = `Beli: ICBP ${icbpLots.toLocaleString("id-ID")} lot + BMRI ${bmriLots.toLocaleString("id-ID")} lot.`;
 
   if (icbpLots + bmriLots > 0) {
-    return `${beforeRatio} Target rasio 2:1. ${purchaseSummary} ${lotSummary} Sisa ${formatMoney(leftover)} masuk RDPU.`;
+    return `${beforeRatio} Target 2:1. ${purchaseSummary} Sisa ${formatMoney(leftover)} ke RDPU.`;
   }
 
-  return `${beforeRatio} Dividen belum cukup membeli lot yang diperlukan berdasarkan rasio 2:1. ${lotSummary} Semua dividen masuk RDPU.`;
+  return `${beforeRatio} Belum cukup beli lot sesuai target 2:1. Semua dividen ke RDPU.`;
 }
 
 function updateSimulatorSyncUi(active, message = "Strategi bulanan sedang mengendalikan input simulator.") {
