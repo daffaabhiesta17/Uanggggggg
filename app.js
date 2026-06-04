@@ -1978,11 +1978,21 @@ function updateMonthlyStrategyCalculator() {
 
   const bmriBaseLotPrice = inputs.bmriPrice * LOT_SIZE;
   const icbpLotPrice = inputs.icbpPrice * LOT_SIZE;
-  const bmriBaseAmount = inputs.bmriBaseLots * bmriBaseLotPrice;
-  const icbpBaseAmount = inputs.icbpBaseLots * icbpLotPrice;
+  const basePurchase = buyAffordableCustomLots(
+    inputs.deposit,
+    bmriBaseLotPrice,
+    icbpLotPrice,
+    inputs.bmriBaseLots,
+    inputs.icbpBaseLots,
+  );
+  const boughtBmriBaseLots = basePurchase.bmriBought;
+  const boughtIcbpBaseLots = basePurchase.icbpBought;
+  const bmriBaseAmount = boughtBmriBaseLots * bmriBaseLotPrice;
+  const icbpBaseAmount = boughtIcbpBaseLots * icbpLotPrice;
   const baseStockAmount = bmriBaseAmount + icbpBaseAmount;
-  const grossRdpu = Math.max(0, inputs.deposit - baseStockAmount);
-  const baseShortfall = Math.max(0, baseStockAmount - inputs.deposit);
+  const targetBaseAmount = inputs.bmriBaseLots * bmriBaseLotPrice + inputs.icbpBaseLots * icbpLotPrice;
+  const grossRdpu = basePurchase.leftoverCash;
+  const baseTargetReached = boughtBmriBaseLots === inputs.bmriBaseLots && boughtIcbpBaseLots === inputs.icbpBaseLots;
   let totalStockAmount = baseStockAmount;
   const bmriChangePercent =
     inputs.bmriAveragePrice > 0 ? ((inputs.bmriCurrentPrice - inputs.bmriAveragePrice) / inputs.bmriAveragePrice) * 100 : 0;
@@ -1999,8 +2009,8 @@ function updateMonthlyStrategyCalculator() {
   const rdpuRedeemAmount = Math.min(grossRdpu, extraBmriCost);
   const netRdpu = grossRdpu - rdpuRedeemAmount;
   const unreimbursedBridge = Math.max(0, extraBmriCost - grossRdpu);
-  const bmriLotsBeforeDividend = inputs.bmriBaseLots + extraBmriLots;
-  const icbpLotsBeforeDividend = inputs.icbpBaseLots;
+  const bmriLotsBeforeDividend = boughtBmriBaseLots + extraBmriLots;
+  const icbpLotsBeforeDividend = boughtIcbpBaseLots;
   const dividendRecommendation = recommendDividendLots(
     dividendAmount,
     bmriLotsBeforeDividend,
@@ -2013,14 +2023,14 @@ function updateMonthlyStrategyCalculator() {
   const dividendStockCost = dividendRecommendation.stockCost;
   const extraLeftoverToRdpu = Math.max(0, dividendRecommendation.leftover);
   const totalRdpuThisMonth = netRdpu + extraLeftoverToRdpu;
-  const totalBmriLots = inputs.bmriBaseLots + extraBmriLots + dividendBmriLots;
-  const totalIcbpLots = inputs.icbpBaseLots + dividendIcbpLots;
+  const totalBmriLots = boughtBmriBaseLots + extraBmriLots + dividendBmriLots;
+  const totalIcbpLots = boughtIcbpBaseLots + dividendIcbpLots;
   totalStockAmount = baseStockAmount + extraBmriCost + dividendStockCost;
 
   el.monthlyStrategyDividendPanel.classList.toggle("hidden", !inputs.useDividend);
 
-  el.monthlyStrategyBmriBaseResult.textContent = formatLotPurchase(inputs.bmriBaseLots, bmriBaseAmount);
-  el.monthlyStrategyIcbpBaseResult.textContent = formatLotPurchase(inputs.icbpBaseLots, icbpBaseAmount);
+  el.monthlyStrategyBmriBaseResult.textContent = formatLotPurchase(boughtBmriBaseLots, bmriBaseAmount);
+  el.monthlyStrategyIcbpBaseResult.textContent = formatLotPurchase(boughtIcbpBaseLots, icbpBaseAmount);
   el.monthlyStrategyBaseStockResult.textContent = formatMoney(baseStockAmount);
   el.monthlyStrategyGrossRdpuResult.textContent = formatMoney(grossRdpu);
   el.monthlyStrategyExtraBmriResult.textContent = `${extraBmriLots.toLocaleString("id-ID")} lot - ${formatMoney(extraBmriCost)}`;
@@ -2051,18 +2061,20 @@ function updateMonthlyStrategyCalculator() {
   el.monthlyStrategyBmriDecisionResult.textContent = bmriExtraLotDecision(bmriChangePercent);
 
   if (inputs.syncSimulator) {
-    const recurringBmriLots = inputs.bmriBaseLots + extraBmriLots;
+    const recurringBmriLots = boughtBmriBaseLots + extraBmriLots;
     const recurringBmriCost = bmriBaseAmount + extraBmriCost;
     const bmriSimulatorPrice = recurringBmriLots > 0 ? recurringBmriCost / (recurringBmriLots * LOT_SIZE) : inputs.bmriPrice;
     const bmriPriceMode = extraBmriLots > 0 ? "rata-rata base + ekstra" : "harga base";
-    applyMonthlyStrategyToSimulator(inputs, extraBmriLots, bmriSimulatorPrice, bmriPriceMode);
+    applyMonthlyStrategyToSimulator({ ...inputs, bmriBaseLots: boughtBmriBaseLots, icbpBaseLots: boughtIcbpBaseLots }, extraBmriLots, bmriSimulatorPrice, bmriPriceMode);
   } else {
     updateSimulatorSyncUi(false);
     el.monthlyStrategySyncStatus.textContent = "Strategi belum dikirim ke simulator.";
   }
 
-  if (baseShortfall > 0) {
-    el.monthlyStrategyNote.textContent = `Setoran kurang ${formatMoney(baseShortfall)} untuk beli base. Kurangi lot atau pakai cash/RDPU lama.`;
+  if (!baseTargetReached) {
+    el.monthlyStrategyNote.textContent =
+      `Target base ${inputs.bmriBaseLots.toLocaleString("id-ID")} BMRI + ${inputs.icbpBaseLots.toLocaleString("id-ID")} ICBP butuh ${formatMoney(targetBaseAmount)}. ` +
+      `Setoran hanya cukup beli ${boughtBmriBaseLots.toLocaleString("id-ID")} BMRI + ${boughtIcbpBaseLots.toLocaleString("id-ID")} ICBP.`;
   } else if (extraBmriCost > 0) {
     const bridgeTail = unreimbursedBridge > 0 ? ` Ada ${formatMoney(unreimbursedBridge)} talangan yang belum terganti dari RDPU.` : "";
     el.monthlyStrategyNote.textContent =
