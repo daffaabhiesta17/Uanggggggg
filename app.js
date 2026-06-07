@@ -186,6 +186,8 @@ const el = {
   simRdpuBar: document.querySelector("#simRdpuBar"),
   simSellingFee: document.querySelector("#simSellingFee"),
   simTotalDividends: document.querySelector("#simTotalDividends"),
+  simTotalRdpuContributions: document.querySelector("#simTotalRdpuContributions"),
+  simRdpuReturnGain: document.querySelector("#simRdpuReturnGain"),
   simHistoryTable: document.querySelector("#simHistoryTable"),
   investmentGrowthChart: document.querySelector("#investmentGrowthChart"),
   investmentHorizon: document.querySelector("#investmentHorizon"),
@@ -979,6 +981,7 @@ function simulateInvestment(inputs) {
   let bmriLots = 0;
   let icbpLots = 0;
   let rdpuBalance = 0;
+  let totalRdpuContributions = 0;
   let totalDividends = 0;
   let annualDividends = 0;
   let currentBmriPrice = inputs.bmriPrice;
@@ -1040,6 +1043,7 @@ function simulateInvestment(inputs) {
 
     totalDividends += dividendThisMonth;
     annualDividends += dividendThisMonth;
+    totalRdpuContributions += rdpuContribution;
     rdpuBalance = (rdpuBalance + rdpuContribution) * (1 + monthlyRdpuRate);
 
     if (month % 12 === 0) {
@@ -1057,6 +1061,8 @@ function simulateInvestment(inputs) {
         icbpPrice: currentIcbpPrice,
         icbpLots,
         annualDividends,
+        rdpuContributions: totalRdpuContributions,
+        rdpuReturnGain: rdpuBalance - totalRdpuContributions,
         rdpuBalance,
         portfolioValue,
       });
@@ -1072,6 +1078,7 @@ function simulateInvestment(inputs) {
   const icbpValue = icbpLots * LOT_SIZE * currentIcbpPrice;
   const stockValue = bmriValue + icbpValue;
   const finalAsset = stockValue + rdpuBalance;
+  const rdpuReturnGain = rdpuBalance - totalRdpuContributions;
   const totalContribution = inputs.monthlyDeposit * SIMULATION_MONTHS;
   const sellingFee = stockValue * SELLING_FEE_RATE;
   const netProfit = finalAsset - sellingFee - totalContribution;
@@ -1086,6 +1093,8 @@ function simulateInvestment(inputs) {
     passiveIncomeYear10,
     sellingFee,
     totalDividends,
+    totalRdpuContributions,
+    rdpuReturnGain,
     bmriLots,
     icbpLots,
     bmriValue,
@@ -1268,6 +1277,8 @@ function updateInvestmentSimulator() {
   el.simPassiveIncome.textContent = formatMoney(result.passiveIncomeYear10);
   el.simSellingFee.textContent = formatMoney(result.sellingFee);
   el.simTotalDividends.textContent = formatMoney(result.totalDividends);
+  el.simTotalRdpuContributions.textContent = formatMoney(result.totalRdpuContributions);
+  el.simRdpuReturnGain.textContent = formatMoney(result.rdpuReturnGain);
   el.simAssetMultiple.textContent = `${decimal.format(result.finalAsset / Math.max(result.totalContribution, 1))}x modal`;
 
   const total = Math.max(result.finalAsset, 1);
@@ -1296,6 +1307,8 @@ function updateInvestmentSimulator() {
           <td>${formatMoney(row.icbpPrice)}</td>
           <td>${row.icbpLots.toLocaleString("id-ID")} lot</td>
           <td>${formatMoney(row.annualDividends)}</td>
+          <td>${formatMoney(row.rdpuContributions)}</td>
+          <td>${formatMoney(row.rdpuReturnGain)}</td>
           <td>${formatMoney(row.rdpuBalance)}</td>
           <td><strong>${formatMoney(row.portfolioValue)}</strong></td>
         </tr>
