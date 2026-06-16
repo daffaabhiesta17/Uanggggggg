@@ -284,157 +284,199 @@
                   <span id="simulatorSyncBannerText">Strategi bulanan sedang mengendalikan input simulator.</span>
                 </div>
 
-                <label>
-                  Total Setoran Bulanan
-                  <input id="simMonthlyDeposit" type="number" min="0" step="10000" value="1100000" />
-                </label>
-
-                <div class="input-pair">
-                  <label>
-                    Bulan Mulai Simulasi
-                    <select id="simStartMonth">
-                      <option value="1">Januari</option>
-                      <option value="2">Februari</option>
-                      <option value="3">Maret</option>
-                      <option value="4">April</option>
-                      <option value="5">Mei</option>
-                      <option value="6" selected>Juni</option>
-                      <option value="7">Juli</option>
-                      <option value="8">Agustus</option>
-                      <option value="9">September</option>
-                      <option value="10">Oktober</option>
-                      <option value="11">November</option>
-                      <option value="12">Desember</option>
-                    </select>
-                  </label>
-                  <label>
-                    Tahun Mulai Simulasi
-                    <input id="simStartYear" type="number" min="2000" max="2100" step="1" value="2026" />
-                  </label>
-                </div>
-
-                <div class="allocation-control">
-                  <div class="row-between">
-                    <label for="simStockAllocation">Alokasi Saham</label>
-                    <div class="allocation-number">
-                      <input id="simStockAllocationNumber" type="number" min="0" max="100" step="1" value="80" />
-                      <span>%</span>
-                    </div>
+                <div class="simulator-setting-group">
+                  <div class="simulator-setting-head">
+                    <strong>1. Periode & Modal</strong>
+                    <small>Tentukan kapan simulasi dimulai dan besar setoran rutin.</small>
                   </div>
-                  <input id="simStockAllocation" type="range" min="0" max="100" step="1" value="80" />
-                  <div class="row-between allocation-meta">
-                    <span>RDPU otomatis</span>
-                    <strong id="simRdpuAllocationLabel">20%</strong>
-                  </div>
-                  <div class="allocation-values">
-                    <article>
-                      <span>Nominal Saham</span>
-                      <strong id="simStockAllocationAmount">Rp0</strong>
-                    </article>
-                    <article>
-                      <span>Nominal RDPU</span>
-                      <strong id="simRdpuAllocationAmount">Rp0</strong>
-                    </article>
+                  <label>
+                    Total Setoran Bulanan
+                    <input id="simMonthlyDeposit" type="number" min="0" step="10000" value="1100000" />
+                  </label>
+                  <div class="input-pair">
+                    <label>
+                      Bulan Mulai Simulasi
+                      <select id="simStartMonth">
+                        <option value="1">Januari</option>
+                        <option value="2">Februari</option>
+                        <option value="3">Maret</option>
+                        <option value="4">April</option>
+                        <option value="5">Mei</option>
+                        <option value="6" selected>Juni</option>
+                        <option value="7">Juli</option>
+                        <option value="8">Agustus</option>
+                        <option value="9">September</option>
+                        <option value="10">Oktober</option>
+                        <option value="11">November</option>
+                        <option value="12">Desember</option>
+                      </select>
+                    </label>
+                    <label>
+                      Tahun Mulai Simulasi
+                      <input id="simStartYear" type="number" min="2000" max="2100" step="1" value="2026" />
+                    </label>
                   </div>
                 </div>
 
-                <div class="input-pair">
-                  <label>
-                    Harga BMRI
-                    <input id="simBmriPrice" type="number" min="1" step="0.01" value="4130" />
-                  </label>
-                  <label>
-                    Harga ICBP
-                    <input id="simIcbpPrice" type="number" min="1" step="0.01" value="6875" />
-                  </label>
-                </div>
-
-                <label>
-                  Pola Pembelian Saham
-                  <select id="simPurchaseMode">
-                    <option value="alternating">Default selang-seling otomatis</option>
-                    <option value="custom">Custom lot bulanan</option>
-                  </select>
-                </label>
-
-                <div class="price-change-panel custom-lot-panel hidden" id="simCustomLotPanel">
-                  <div class="custom-lot-copy">
-                    <strong>Target lot per bulan</strong>
-                    <small>Seluruh setoran bulanan dipakai untuk target lot dulu, lalu sisa kas masuk RDPU. Jika kas bulan itu tidak cukup, simulator hanya membeli lot yang terjangkau.</small>
+                <div class="simulator-setting-group">
+                  <div class="simulator-setting-head">
+                    <strong>2. Harga & Pola Beli</strong>
+                    <small>Atur harga awal, pola pembelian, dan target lot jika memakai custom.</small>
                   </div>
                   <div class="input-pair">
                     <label>
-                      BMRI Lot / Bulan
-                      <input id="simBmriMonthlyLots" type="number" min="0" step="1" value="1" />
+                      Harga BMRI
+                      <input id="simBmriPrice" type="number" min="1" step="0.01" value="4130" />
                     </label>
                     <label>
-                      ICBP Lot / Bulan
-                      <input id="simIcbpMonthlyLots" type="number" min="0" step="1" value="1" />
+                      Harga ICBP
+                      <input id="simIcbpPrice" type="number" min="1" step="0.01" value="6875" />
                     </label>
                   </div>
-                  <div class="custom-lot-summary" aria-live="polite">
-                    <article>
-                      <span>BMRI terbeli</span>
-                      <strong id="simCustomBmriPurchase">0 lot - Rp0</strong>
-                    </article>
-                    <article>
-                      <span>ICBP terbeli</span>
-                      <strong id="simCustomIcbpPurchase">0 lot - Rp0</strong>
-                    </article>
-                    <article>
-                      <span>Total saham</span>
-                      <strong id="simCustomStockPurchase">Rp0</strong>
-                    </article>
-                    <article>
-                      <span>Masuk RDPU</span>
-                      <strong id="simCustomRdpuPurchase">Rp0</strong>
-                    </article>
-                  </div>
-                  <small class="custom-lot-status" id="simCustomLotStatus">Bulan normal tanpa dividen.</small>
-                </div>
 
-                <div class="price-change-panel" id="simPriceChangePanel">
-                  <label class="switch-row" id="simPriceChangeToggle">
-                    <span>
-                      <strong>Aktifkan kenaikan / penurunan harga saham</strong>
-                      <small id="simPriceChangeStatus">Mati - harga saham tetap memakai harga awal.</small>
-                    </span>
-                    <input id="simEnablePriceChange" type="checkbox" />
-                    <span class="switch-control" aria-hidden="true"></span>
+                  <label>
+                    Pola Pembelian Saham
+                    <select id="simPurchaseMode">
+                      <option value="alternating">Default selang-seling otomatis</option>
+                      <option value="custom">Custom lot bulanan</option>
+                    </select>
                   </label>
 
-                  <div class="input-pair price-change-fields" id="simPriceChangeFields">
+                  <div class="simulator-dividend-note">
+                    <strong>Sistem dividen simulator</strong>
+                    <ul>
+                      <li>Selang-seling: dividen cair menambah kas untuk beli saham sesuai giliran bulan itu.</li>
+                      <li>Custom lot: dividen hanya membantu mencapai target lot bulanan; sisa masuk RDPU.</li>
+                      <li>Jika Program 2 tersambung, simulator memakai custom lot dari Program 2. Dividen manual Program 2 tidak dikirim agar tidak dobel hitung.</li>
+                    </ul>
+                  </div>
+
+                  <div class="price-change-panel custom-lot-panel hidden" id="simCustomLotPanel">
+                    <div class="custom-lot-copy">
+                      <strong>Target lot per bulan</strong>
+                      <small>Seluruh setoran bulanan dipakai untuk target lot dulu, lalu sisa kas masuk RDPU. Jika kas bulan itu tidak cukup, simulator hanya membeli lot yang terjangkau.</small>
+                    </div>
+                    <div class="custom-lot-presets" aria-label="Preset custom lot">
+                      <button type="button" data-sim-lot-preset="2-1">
+                        <strong>2 + 1</strong>
+                        <span>BMRI 2 lot, ICBP 1 lot</span>
+                      </button>
+                      <button type="button" data-sim-lot-preset="3-1">
+                        <strong>3 + 1</strong>
+                        <span>BMRI 3 lot, ICBP 1 lot</span>
+                      </button>
+                    </div>
+                    <div class="input-pair">
+                      <label>
+                        BMRI Lot / Bulan
+                        <input id="simBmriMonthlyLots" type="number" min="0" step="1" value="1" />
+                      </label>
+                      <label>
+                        ICBP Lot / Bulan
+                        <input id="simIcbpMonthlyLots" type="number" min="0" step="1" value="1" />
+                      </label>
+                    </div>
+                    <div class="custom-lot-summary" aria-live="polite">
+                      <article>
+                        <span>BMRI terbeli</span>
+                        <strong id="simCustomBmriPurchase">0 lot - Rp0</strong>
+                      </article>
+                      <article>
+                        <span>ICBP terbeli</span>
+                        <strong id="simCustomIcbpPurchase">0 lot - Rp0</strong>
+                      </article>
+                      <article>
+                        <span>Total saham</span>
+                        <strong id="simCustomStockPurchase">Rp0</strong>
+                      </article>
+                      <article>
+                        <span>Masuk RDPU</span>
+                        <strong id="simCustomRdpuPurchase">Rp0</strong>
+                      </article>
+                    </div>
+                    <small class="custom-lot-status" id="simCustomLotStatus">Bulan normal tanpa dividen.</small>
+                  </div>
+
+                  <div class="allocation-control">
+                    <div class="row-between">
+                      <label for="simStockAllocation">Alokasi Saham</label>
+                      <div class="allocation-number">
+                        <input id="simStockAllocationNumber" type="number" min="0" max="100" step="1" value="80" />
+                        <span>%</span>
+                      </div>
+                    </div>
+                    <input id="simStockAllocation" type="range" min="0" max="100" step="1" value="80" />
+                    <div class="row-between allocation-meta">
+                      <span>RDPU otomatis</span>
+                      <strong id="simRdpuAllocationLabel">20%</strong>
+                    </div>
+                    <div class="allocation-values">
+                      <article>
+                        <span>Nominal Saham</span>
+                        <strong id="simStockAllocationAmount">Rp0</strong>
+                      </article>
+                      <article>
+                        <span>Nominal RDPU</span>
+                        <strong id="simRdpuAllocationAmount">Rp0</strong>
+                      </article>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="simulator-setting-group">
+                  <div class="simulator-setting-head">
+                    <strong>3. Asumsi Harga</strong>
+                    <small>Aktifkan untuk membuat harga saham bergerak naik atau turun per tahun.</small>
+                  </div>
+                  <div class="price-change-panel" id="simPriceChangePanel">
+                    <label class="switch-row" id="simPriceChangeToggle">
+                      <span>
+                        <strong>Aktifkan kenaikan / penurunan harga saham</strong>
+                        <small id="simPriceChangeStatus">Mati - harga saham tetap memakai harga awal.</small>
+                      </span>
+                      <input id="simEnablePriceChange" type="checkbox" />
+                      <span class="switch-control" aria-hidden="true"></span>
+                    </label>
+
+                    <div class="input-pair price-change-fields" id="simPriceChangeFields">
+                      <label>
+                        BMRI % / Tahun
+                        <input id="simBmriPriceChange" type="number" step="0.1" value="5" disabled />
+                      </label>
+                      <label>
+                        ICBP % / Tahun
+                        <input id="simIcbpPriceChange" type="number" step="0.1" value="5" disabled />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="simulator-setting-group">
+                  <div class="simulator-setting-head">
+                    <strong>4. Return & Dividen</strong>
+                    <small>Input asumsi RDPU dan dividen tahunan untuk 120 bulan.</small>
+                  </div>
+                  <div class="input-pair">
                     <label>
-                      BMRI % / Tahun
-                      <input id="simBmriPriceChange" type="number" step="0.1" value="5" disabled />
+                      Return RDPU / Tahun
+                      <input id="simRdpuReturn" type="number" min="0" step="0.01" value="4.14" />
                     </label>
                     <label>
-                      ICBP % / Tahun
-                      <input id="simIcbpPriceChange" type="number" step="0.1" value="5" disabled />
+                      Growth Dividen / Tahun
+                      <input id="simDividendGrowth" type="number" min="0" step="0.1" value="5" />
                     </label>
                   </div>
-                </div>
 
-                <div class="input-pair">
-                  <label>
-                    Return RDPU / Tahun
-                    <input id="simRdpuReturn" type="number" min="0" step="0.01" value="4.14" />
-                  </label>
-                  <label>
-                    Growth Dividen / Tahun
-                    <input id="simDividendGrowth" type="number" min="0" step="0.1" value="5" />
-                  </label>
-                </div>
-
-                <div class="input-pair">
-                  <label>
-                    Yield Awal BMRI
-                    <input id="simBmriYield" type="number" min="0" step="0.1" value="5" />
-                  </label>
-                  <label>
-                    Yield Awal ICBP
-                    <input id="simIcbpYield" type="number" min="0" step="0.1" value="4" />
-                  </label>
+                  <div class="input-pair">
+                    <label>
+                      Yield Awal BMRI
+                      <input id="simBmriYield" type="number" min="0" step="0.1" value="5" />
+                    </label>
+                    <label>
+                      Yield Awal ICBP
+                      <input id="simIcbpYield" type="number" min="0" step="0.1" value="4" />
+                    </label>
+                  </div>
                 </div>
 
                 <p class="simulator-note">

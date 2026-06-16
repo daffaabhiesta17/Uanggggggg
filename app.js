@@ -2422,6 +2422,15 @@ function initEvents() {
       updateInvestmentSimulator();
     });
   });
+  document.querySelectorAll("[data-sim-lot-preset]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const [bmriLots, icbpLots] = button.dataset.simLotPreset.split("-").map((value) => Number(value));
+      maybeDisconnectMonthlyStrategySync(el.simBmriMonthlyLots);
+      el.simBmriMonthlyLots.value = String(bmriLots);
+      el.simIcbpMonthlyLots.value = String(icbpLots);
+      updateInvestmentSimulator();
+    });
+  });
 
   el.investmentStockLotPrice.addEventListener("input", () => {
     el.investmentStockLotPrice.value = formatNumberInput(el.investmentStockLotPrice.value);

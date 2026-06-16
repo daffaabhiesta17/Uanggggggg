@@ -706,6 +706,33 @@ th {
   gap: 14px;
 }
 
+.simulator-setting-group {
+  display: grid;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.simulator-setting-group:first-of-type {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.simulator-setting-head {
+  display: grid;
+  gap: 4px;
+}
+
+.simulator-setting-head strong {
+  color: var(--text);
+  font-size: 0.94rem;
+}
+
+.simulator-setting-head small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .investment-simulator-form.simulator-linked {
   border-color: #93c5fd;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
@@ -727,6 +754,31 @@ th {
 
 .simulator-sync-banner span {
   line-height: 1.5;
+}
+
+.simulator-dividend-note {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.simulator-dividend-note strong {
+  color: #1e3a8a;
+}
+
+.simulator-dividend-note ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.simulator-dividend-note li {
+  line-height: 1.45;
 }
 
 .investment-simulator-results {
@@ -836,6 +888,40 @@ th {
 .custom-lot-copy small {
   color: var(--muted);
   line-height: 1.5;
+}
+
+.custom-lot-presets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.custom-lot-presets button {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  text-align: left;
+  cursor: pointer;
+}
+
+.custom-lot-presets button:hover {
+  border-color: #93c5fd;
+  background: #dbeafe;
+}
+
+.custom-lot-presets strong {
+  color: #1e3a8a;
+  font-size: 0.94rem;
+}
+
+.custom-lot-presets span {
+  color: #1d4ed8;
+  font-size: 0.76rem;
+  line-height: 1.35;
 }
 
 .custom-lot-summary {
