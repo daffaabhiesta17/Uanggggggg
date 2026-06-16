@@ -957,6 +957,17 @@ th {
   line-height: 1.5;
 }
 
+.custom-dividend-toggle {
+  padding: 12px;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  background: #f0fdf4;
+}
+
+.custom-dividend-toggle strong {
+  color: #166534;
+}
+
 .switch-row {
   position: relative;
   display: grid;

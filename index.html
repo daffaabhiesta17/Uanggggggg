@@ -346,7 +346,7 @@
                     <strong>Sistem dividen simulator</strong>
                     <ul>
                       <li>Selang-seling: dividen cair menambah kas untuk beli saham sesuai giliran bulan itu.</li>
-                      <li>Custom lot: dividen hanya membantu mencapai target lot bulanan; sisa masuk RDPU.</li>
+                      <li>Custom lot: dividen membantu mencapai target lot bulanan. Jika reinvest ON, sisa dividen setelah target akan membeli lot tambahan.</li>
                       <li>Jika Program 2 tersambung, simulator memakai custom lot dari Program 2. Dividen manual Program 2 tidak dikirim agar tidak dobel hitung.</li>
                     </ul>
                   </div>
@@ -356,6 +356,14 @@
                       <strong>Target lot per bulan</strong>
                       <small>Seluruh setoran bulanan dipakai untuk target lot dulu, lalu sisa kas masuk RDPU. Jika kas bulan itu tidak cukup, simulator hanya membeli lot yang terjangkau.</small>
                     </div>
+                    <label class="switch-row custom-dividend-toggle">
+                      <span>
+                        <strong>Reinvest dividen setelah target terpenuhi</strong>
+                        <small>ON: dividen cair tetap dipakai membeli lot tambahan dengan pola target custom. OFF: sisa setelah target masuk RDPU.</small>
+                      </span>
+                      <input id="simReinvestCustomDividends" type="checkbox" />
+                      <span class="switch-control" aria-hidden="true"></span>
+                    </label>
                     <div class="custom-lot-presets" aria-label="Preset custom lot">
                       <button type="button" data-sim-lot-preset="2-1">
                         <strong>2 + 1</strong>

@@ -150,6 +150,7 @@ const el = {
   simRdpuAllocationAmount: document.querySelector("#simRdpuAllocationAmount"),
   simPurchaseMode: document.querySelector("#simPurchaseMode"),
   simCustomLotPanel: document.querySelector("#simCustomLotPanel"),
+  simReinvestCustomDividends: document.querySelector("#simReinvestCustomDividends"),
   simBmriMonthlyLots: document.querySelector("#simBmriMonthlyLots"),
   simIcbpMonthlyLots: document.querySelector("#simIcbpMonthlyLots"),
   simCustomBmriPurchase: document.querySelector("#simCustomBmriPurchase"),
@@ -897,6 +898,84 @@ function buyAffordableCustomLots(availableCash, bmriLotPrice, icbpLotPrice, bmri
   };
 }
 
+function buyRepeatingCustomLots(availableCash, bmriLotPrice, icbpLotPrice, bmriTarget, icbpTarget) {
+  const plan = buildMonthlyLotPlan(bmriTarget, icbpTarget);
+  let cash = availableCash;
+  let bmriBought = 0;
+  let icbpBought = 0;
+
+  if (!plan.length) {
+    return {
+      bmriBought,
+      icbpBought,
+      leftoverCash: cash,
+    };
+  }
+
+  while (cash >= Math.min(bmriLotPrice, icbpLotPrice)) {
+    let boughtThisRound = false;
+
+    plan.forEach((ticker) => {
+      const lotPrice = ticker === "BMRI" ? bmriLotPrice : icbpLotPrice;
+      if (cash < lotPrice) return;
+
+      cash -= lotPrice;
+      boughtThisRound = true;
+      if (ticker === "BMRI") {
+        bmriBought += 1;
+      } else {
+        icbpBought += 1;
+      }
+    });
+
+    if (!boughtThisRound) break;
+  }
+
+  return {
+    bmriBought,
+    icbpBought,
+    leftoverCash: cash,
+  };
+}
+
+function buyCustomLotsWithDividendPolicy(
+  monthlyDeposit,
+  dividendCash,
+  bmriLotPrice,
+  icbpLotPrice,
+  bmriTarget,
+  icbpTarget,
+  reinvestAfterTarget,
+) {
+  if (!reinvestAfterTarget) {
+    return buyAffordableCustomLots(monthlyDeposit + dividendCash, bmriLotPrice, icbpLotPrice, bmriTarget, icbpTarget);
+  }
+
+  const basePurchase = buyAffordableCustomLots(monthlyDeposit, bmriLotPrice, icbpLotPrice, bmriTarget, icbpTarget);
+  const missingBmriLots = Math.max(0, bmriTarget - basePurchase.bmriBought);
+  const missingIcbpLots = Math.max(0, icbpTarget - basePurchase.icbpBought);
+  const targetDividendPurchase = buyAffordableCustomLots(
+    dividendCash,
+    bmriLotPrice,
+    icbpLotPrice,
+    missingBmriLots,
+    missingIcbpLots,
+  );
+  const extraDividendPurchase = buyRepeatingCustomLots(
+    targetDividendPurchase.leftoverCash,
+    bmriLotPrice,
+    icbpLotPrice,
+    bmriTarget,
+    icbpTarget,
+  );
+
+  return {
+    bmriBought: basePurchase.bmriBought + targetDividendPurchase.bmriBought + extraDividendPurchase.bmriBought,
+    icbpBought: basePurchase.icbpBought + targetDividendPurchase.icbpBought + extraDividendPurchase.icbpBought,
+    leftoverCash: basePurchase.leftoverCash + extraDividendPurchase.leftoverCash,
+  };
+}
+
 function formatLotPurchase(lots, amount) {
   return `${lots.toLocaleString("id-ID")} lot - ${formatMoney(amount)}`;
 }
@@ -948,7 +1027,11 @@ function updateCustomLotSummary(inputs) {
   if (targetAmount <= 0) {
     el.simCustomLotStatus.textContent = "Tidak ada target saham, seluruh setoran bulan normal masuk RDPU.";
   } else if (targetReached) {
-    el.simCustomLotStatus.textContent = `Target penuh. Kebutuhan saham ${formatMoney(targetAmount)}, sisa masuk RDPU ${formatMoney(purchase.leftoverCash)}.`;
+    const dividendPolicy = inputs.reinvestCustomDividends
+      ? "Saat dividen cair, sisa dividen setelah target akan lanjut membeli lot tambahan."
+      : "Saat dividen cair, sisa setelah target masuk RDPU.";
+    el.simCustomLotStatus.textContent =
+      `Target penuh. Kebutuhan saham ${formatMoney(targetAmount)}, sisa bulan normal masuk RDPU ${formatMoney(purchase.leftoverCash)}. ${dividendPolicy}`;
   } else {
     el.simCustomLotStatus.textContent = `Kas belum cukup untuk target ${formatMoney(targetAmount)}. Simulator membeli lot yang terjangkau, lalu sisa masuk RDPU.`;
   }
@@ -963,6 +1046,7 @@ function readSimulationInputs() {
     stockAllocation,
     rdpuAllocation: 100 - stockAllocation,
     purchaseMode: el.simPurchaseMode.value === "custom" ? "custom" : "alternating",
+    reinvestCustomDividends: el.simReinvestCustomDividends.checked,
     bmriMonthlyLots: readWholeLots(el.simBmriMonthlyLots, 1),
     icbpMonthlyLots: readWholeLots(el.simIcbpMonthlyLots, 1),
     bmriPrice: Math.max(1, readNumber(el.simBmriPrice, 4130)),
@@ -1018,12 +1102,14 @@ function simulateInvestment(inputs) {
     let rdpuContribution = monthlyRdpuBudget;
 
     if (inputs.purchaseMode === "custom") {
-      const purchase = buyAffordableCustomLots(
-        inputs.monthlyDeposit + dividendThisMonth,
+      const purchase = buyCustomLotsWithDividendPolicy(
+        inputs.monthlyDeposit,
+        dividendThisMonth,
         bmriLotPrice,
         icbpLotPrice,
         inputs.bmriMonthlyLots,
         inputs.icbpMonthlyLots,
+        inputs.reinvestCustomDividends,
       );
 
       bmriLots += purchase.bmriBought;
@@ -1247,6 +1333,7 @@ function updateInvestmentSimulator() {
   el.simStockAllocation.disabled = isCustomPurchase;
   el.simStockAllocationNumber.disabled = isCustomPurchase;
   el.simCustomLotPanel.classList.toggle("hidden", !isCustomPurchase);
+  el.simReinvestCustomDividends.disabled = !isCustomPurchase;
   el.simBmriMonthlyLots.disabled = !isCustomPurchase;
   el.simIcbpMonthlyLots.disabled = !isCustomPurchase;
   el.simRdpuAllocationLabel.textContent = isCustomPurchase ? "Sisa kas" : `${inputs.rdpuAllocation}%`;
@@ -1945,6 +2032,7 @@ function isSimulatorStrategyInput(target) {
     el.simStockAllocation,
     el.simStockAllocationNumber,
     el.simPurchaseMode,
+    el.simReinvestCustomDividends,
     el.simBmriMonthlyLots,
     el.simIcbpMonthlyLots,
     el.simBmriPrice,
