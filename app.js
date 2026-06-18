@@ -56,6 +56,25 @@ const INVESTMENT_MONTHS = [
 const SIMULATION_MONTHS = 120;
 const LOT_SIZE = 100;
 const SELLING_FEE_RATE = 0.0035;
+const DEFAULT_SIMULATOR_CONFIG = {
+  monthlyDeposit: 1100000,
+  startMonth: 6,
+  startYear: 2026,
+  stockAllocation: 80,
+  purchaseMode: "alternating",
+  reinvestCustomDividends: false,
+  bmriMonthlyLots: 1,
+  icbpMonthlyLots: 1,
+  bmriPrice: 4130,
+  icbpPrice: 6875,
+  rdpuReturnAnnual: 4.14,
+  dividendGrowthAnnual: 5,
+  bmriYieldInitial: 5,
+  icbpYieldInitial: 4,
+  priceChangeEnabled: false,
+  bmriPriceChangeAnnual: 5,
+  icbpPriceChangeAnnual: 5,
+};
 
 const rupiah = new Intl.NumberFormat("id-ID", {
   style: "currency",
@@ -75,6 +94,7 @@ let transactionSelectionMode = false;
 let selectedTransactionIds = new Set();
 let chartBars = [];
 let investmentsDirty = true;
+let simulatorSettingsSaveTimer = null;
 let investmentGrowthChart = null;
 let investmentStockChart = null;
 let investmentStockChartPurchases = [];
@@ -190,6 +210,9 @@ const el = {
   simTotalRdpuContributions: document.querySelector("#simTotalRdpuContributions"),
   simRdpuReturnGain: document.querySelector("#simRdpuReturnGain"),
   simHistoryTable: document.querySelector("#simHistoryTable"),
+  simDividendPurchaseTableWrap: document.querySelector("#simDividendPurchaseTableWrap"),
+  simDividendPurchaseTable: document.querySelector("#simDividendPurchaseTable"),
+  simDividendPurchaseEmpty: document.querySelector("#simDividendPurchaseEmpty"),
   investmentGrowthChart: document.querySelector("#investmentGrowthChart"),
   investmentHorizon: document.querySelector("#investmentHorizon"),
   addInvestmentYearButton: document.querySelector("#addInvestmentYearButton"),
@@ -353,9 +376,45 @@ function normalizeInvestments(investments = {}) {
 
   return {
     horizonYears: clampNumber(Math.round(Number(investments.horizonYears) || 11), 1, 50),
+    simulatorConfig: normalizeSimulatorConfig(investments.simulatorConfig || investments.simulator_config),
     tickers: [...new Set(["BMRI", "ICBP", ...tickers, ...stockPurchases.map((purchase) => purchase.ticker)])],
     stockPurchases,
     rdpuPurchases,
+  };
+}
+
+function normalizeSimulatorConfig(config = {}) {
+  const numberOrDefault = (value, fallback) => {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : fallback;
+  };
+
+  return {
+    monthlyDeposit: Math.max(0, numberOrDefault(config.monthlyDeposit, DEFAULT_SIMULATOR_CONFIG.monthlyDeposit)),
+    startMonth: clampNumber(Math.round(numberOrDefault(config.startMonth, DEFAULT_SIMULATOR_CONFIG.startMonth)), 1, 12),
+    startYear: clampNumber(Math.round(numberOrDefault(config.startYear, DEFAULT_SIMULATOR_CONFIG.startYear)), 2000, 2100),
+    stockAllocation: clampNumber(Math.round(numberOrDefault(config.stockAllocation, DEFAULT_SIMULATOR_CONFIG.stockAllocation)), 0, 100),
+    purchaseMode: config.purchaseMode === "custom" ? "custom" : "alternating",
+    reinvestCustomDividends: Boolean(config.reinvestCustomDividends),
+    bmriMonthlyLots: Math.max(0, Math.floor(numberOrDefault(config.bmriMonthlyLots, DEFAULT_SIMULATOR_CONFIG.bmriMonthlyLots))),
+    icbpMonthlyLots: Math.max(0, Math.floor(numberOrDefault(config.icbpMonthlyLots, DEFAULT_SIMULATOR_CONFIG.icbpMonthlyLots))),
+    bmriPrice: Math.max(1, numberOrDefault(config.bmriPrice, DEFAULT_SIMULATOR_CONFIG.bmriPrice)),
+    icbpPrice: Math.max(1, numberOrDefault(config.icbpPrice, DEFAULT_SIMULATOR_CONFIG.icbpPrice)),
+    rdpuReturnAnnual: Math.max(0, numberOrDefault(config.rdpuReturnAnnual, DEFAULT_SIMULATOR_CONFIG.rdpuReturnAnnual)),
+    dividendGrowthAnnual: Math.max(0, numberOrDefault(config.dividendGrowthAnnual, DEFAULT_SIMULATOR_CONFIG.dividendGrowthAnnual)),
+    bmriYieldInitial: Math.max(0, numberOrDefault(config.bmriYieldInitial, DEFAULT_SIMULATOR_CONFIG.bmriYieldInitial)),
+    icbpYieldInitial: Math.max(0, numberOrDefault(config.icbpYieldInitial, DEFAULT_SIMULATOR_CONFIG.icbpYieldInitial)),
+    priceChangeEnabled: Boolean(config.priceChangeEnabled),
+    bmriPriceChangeAnnual: clampNumber(
+      numberOrDefault(config.bmriPriceChangeAnnual, DEFAULT_SIMULATOR_CONFIG.bmriPriceChangeAnnual),
+      -99,
+      1000,
+    ),
+    icbpPriceChangeAnnual: clampNumber(
+      numberOrDefault(config.icbpPriceChangeAnnual, DEFAULT_SIMULATOR_CONFIG.icbpPriceChangeAnnual),
+      -99,
+      1000,
+    ),
   };
 }
 
@@ -497,7 +556,8 @@ function fromDbRdpuPurchase(purchase) {
 function toDbInvestmentSettings(investments) {
   return {
     id: "default",
-    horizon_years: investments.horizonYears,
+    horizon_years: clampNumber(Math.round(Number(investments.horizonYears) || 11), 1, 50),
+    simulator_config: normalizeSimulatorConfig(investments.simulatorConfig),
   };
 }
 
@@ -602,6 +662,7 @@ async function loadRemoteInvestments(localInvestments = state.investments) {
     state.investments = remoteHasInvestmentData
       ? normalizeInvestments({
           horizonYears: Number(settingsResult.data?.horizon_years) || state.investments.horizonYears,
+          simulatorConfig: settingsResult.data?.simulator_config || state.investments.simulatorConfig,
           tickers: tickersResult.data.map(fromDbInvestmentTicker),
           stockPurchases: stockResult.data.map(fromDbStockPurchase),
           rdpuPurchases: rdpuResult.data.map(fromDbRdpuPurchase),
@@ -948,7 +1009,22 @@ function buyCustomLotsWithDividendPolicy(
   reinvestAfterTarget,
 ) {
   if (!reinvestAfterTarget) {
-    return buyAffordableCustomLots(monthlyDeposit + dividendCash, bmriLotPrice, icbpLotPrice, bmriTarget, icbpTarget);
+    const basePurchase = buyAffordableCustomLots(monthlyDeposit, bmriLotPrice, icbpLotPrice, bmriTarget, icbpTarget);
+    const combinedPurchase = buyAffordableCustomLots(
+      monthlyDeposit + dividendCash,
+      bmriLotPrice,
+      icbpLotPrice,
+      bmriTarget,
+      icbpTarget,
+    );
+    const stockCost = combinedPurchase.bmriBought * bmriLotPrice + combinedPurchase.icbpBought * icbpLotPrice;
+
+    return {
+      ...combinedPurchase,
+      dividendBmriBought: Math.max(0, combinedPurchase.bmriBought - basePurchase.bmriBought),
+      dividendIcbpBought: Math.max(0, combinedPurchase.icbpBought - basePurchase.icbpBought),
+      dividendStockCashUsed: Math.min(dividendCash, Math.max(0, stockCost - monthlyDeposit)),
+    };
   }
 
   const basePurchase = buyAffordableCustomLots(monthlyDeposit, bmriLotPrice, icbpLotPrice, bmriTarget, icbpTarget);
@@ -972,8 +1048,25 @@ function buyCustomLotsWithDividendPolicy(
   return {
     bmriBought: basePurchase.bmriBought + targetDividendPurchase.bmriBought + extraDividendPurchase.bmriBought,
     icbpBought: basePurchase.icbpBought + targetDividendPurchase.icbpBought + extraDividendPurchase.icbpBought,
+    dividendBmriBought: targetDividendPurchase.bmriBought + extraDividendPurchase.bmriBought,
+    dividendIcbpBought: targetDividendPurchase.icbpBought + extraDividendPurchase.icbpBought,
+    dividendStockCashUsed:
+      targetDividendPurchase.bmriBought * bmriLotPrice +
+      targetDividendPurchase.icbpBought * icbpLotPrice +
+      extraDividendPurchase.bmriBought * bmriLotPrice +
+      extraDividendPurchase.icbpBought * icbpLotPrice,
     leftoverCash: basePurchase.leftoverCash + extraDividendPurchase.leftoverCash,
   };
+}
+
+function formatDividendStockPurchase(row) {
+  const totalLots = row.dividendBmriLots + row.dividendIcbpLots;
+  if (totalLots <= 0) return "-";
+
+  return (
+    `BMRI ${row.dividendBmriLots.toLocaleString("id-ID")} lot + ` +
+    `ICBP ${row.dividendIcbpLots.toLocaleString("id-ID")} lot`
+  );
 }
 
 function formatLotPurchase(lots, amount) {
@@ -1061,6 +1154,46 @@ function readSimulationInputs() {
   };
 }
 
+function applySimulatorConfigToForm(config) {
+  const normalized = normalizeSimulatorConfig(config);
+  el.simMonthlyDeposit.value = String(normalized.monthlyDeposit);
+  el.simStartMonth.value = String(normalized.startMonth);
+  el.simStartYear.value = String(normalized.startYear);
+  el.simStockAllocation.value = String(normalized.stockAllocation);
+  el.simStockAllocationNumber.value = String(normalized.stockAllocation);
+  el.simPurchaseMode.value = normalized.purchaseMode;
+  el.simReinvestCustomDividends.checked = normalized.reinvestCustomDividends;
+  el.simBmriMonthlyLots.value = String(normalized.bmriMonthlyLots);
+  el.simIcbpMonthlyLots.value = String(normalized.icbpMonthlyLots);
+  el.simBmriPrice.value = formatSimulatorPriceInput(normalized.bmriPrice);
+  el.simIcbpPrice.value = formatSimulatorPriceInput(normalized.icbpPrice);
+  el.simRdpuReturn.value = String(normalized.rdpuReturnAnnual);
+  el.simDividendGrowth.value = String(normalized.dividendGrowthAnnual);
+  el.simBmriYield.value = String(normalized.bmriYieldInitial);
+  el.simIcbpYield.value = String(normalized.icbpYieldInitial);
+  el.simEnablePriceChange.checked = normalized.priceChangeEnabled;
+  el.simBmriPriceChange.value = String(normalized.bmriPriceChangeAnnual);
+  el.simIcbpPriceChange.value = String(normalized.icbpPriceChangeAnnual);
+}
+
+function saveSimulatorConfigFromInputs() {
+  state.investments.simulatorConfig = normalizeSimulatorConfig(readSimulationInputs());
+  saveState();
+  schedulePersistInvestmentSettings();
+}
+
+function schedulePersistInvestmentSettings() {
+  window.clearTimeout(simulatorSettingsSaveTimer);
+  simulatorSettingsSaveTimer = window.setTimeout(async () => {
+    try {
+      await persistInvestmentSettings();
+    } catch (error) {
+      console.error(error);
+      setSyncStatus("Simpan konfigurasi simulator cloud gagal", "error");
+    }
+  }, 500);
+}
+
 function simulateInvestment(inputs) {
   let bmriLots = 0;
   let icbpLots = 0;
@@ -1068,6 +1201,9 @@ function simulateInvestment(inputs) {
   let totalRdpuContributions = 0;
   let totalDividends = 0;
   let annualDividends = 0;
+  let annualDividendBmriLots = 0;
+  let annualDividendIcbpLots = 0;
+  let annualDividendStockCashUsed = 0;
   let currentBmriPrice = inputs.bmriPrice;
   let currentIcbpPrice = inputs.icbpPrice;
   const yearlyRows = [];
@@ -1100,6 +1236,9 @@ function simulateInvestment(inputs) {
       : 0;
     const dividendThisMonth = bmriDividend + icbpDividend;
     let rdpuContribution = monthlyRdpuBudget;
+    let dividendBmriBought = 0;
+    let dividendIcbpBought = 0;
+    let dividendStockCashUsed = 0;
 
     if (inputs.purchaseMode === "custom") {
       const purchase = buyCustomLotsWithDividendPolicy(
@@ -1114,21 +1253,35 @@ function simulateInvestment(inputs) {
 
       bmriLots += purchase.bmriBought;
       icbpLots += purchase.icbpBought;
+      dividendBmriBought = purchase.dividendBmriBought || 0;
+      dividendIcbpBought = purchase.dividendIcbpBought || 0;
+      dividendStockCashUsed = purchase.dividendStockCashUsed || 0;
       rdpuContribution = purchase.leftoverCash;
     } else if (isOddMonth) {
       const stockCash = monthlyStockBudget + dividendThisMonth;
       const boughtLots = Math.floor(stockCash / bmriLotPrice);
+      const depositOnlyLots = Math.floor(monthlyStockBudget / bmriLotPrice);
+      const stockCost = boughtLots * bmriLotPrice;
+      dividendBmriBought = Math.max(0, boughtLots - depositOnlyLots);
+      dividendStockCashUsed = Math.min(dividendThisMonth, Math.max(0, stockCost - monthlyStockBudget));
       bmriLots += boughtLots;
       rdpuContribution += stockCash - boughtLots * bmriLotPrice;
     } else {
       const stockCash = monthlyStockBudget + dividendThisMonth;
       const boughtLots = Math.floor(stockCash / icbpLotPrice);
+      const depositOnlyLots = Math.floor(monthlyStockBudget / icbpLotPrice);
+      const stockCost = boughtLots * icbpLotPrice;
+      dividendIcbpBought = Math.max(0, boughtLots - depositOnlyLots);
+      dividendStockCashUsed = Math.min(dividendThisMonth, Math.max(0, stockCost - monthlyStockBudget));
       icbpLots += boughtLots;
       rdpuContribution += stockCash - boughtLots * icbpLotPrice;
     }
 
     totalDividends += dividendThisMonth;
     annualDividends += dividendThisMonth;
+    annualDividendBmriLots += dividendBmriBought;
+    annualDividendIcbpLots += dividendIcbpBought;
+    annualDividendStockCashUsed += dividendStockCashUsed;
     totalRdpuContributions += rdpuContribution;
     rdpuBalance = (rdpuBalance + rdpuContribution) * (1 + monthlyRdpuRate);
 
@@ -1147,6 +1300,10 @@ function simulateInvestment(inputs) {
         icbpPrice: currentIcbpPrice,
         icbpLots,
         annualDividends,
+        dividendBmriLots: annualDividendBmriLots,
+        dividendIcbpLots: annualDividendIcbpLots,
+        dividendStockCashUsed: annualDividendStockCashUsed,
+        dividendLeftoverToRdpu: Math.max(0, annualDividends - annualDividendStockCashUsed),
         rdpuContributions: totalRdpuContributions,
         rdpuReturnGain: rdpuBalance - totalRdpuContributions,
         rdpuBalance,
@@ -1157,6 +1314,9 @@ function simulateInvestment(inputs) {
       chartContributions.push(Math.round(totalContribution));
       chartAssets.push(Math.round(portfolioValue));
       annualDividends = 0;
+      annualDividendBmriLots = 0;
+      annualDividendIcbpLots = 0;
+      annualDividendStockCashUsed = 0;
     }
   }
 
@@ -1325,8 +1485,11 @@ function initInvestmentCharts() {
   });
 }
 
-function updateInvestmentSimulator() {
+function updateInvestmentSimulator({ persistConfig = true } = {}) {
   const inputs = readSimulationInputs();
+  if (persistConfig) {
+    saveSimulatorConfigFromInputs();
+  }
   const isCustomPurchase = inputs.purchaseMode === "custom";
   el.simStockAllocation.value = String(inputs.stockAllocation);
   el.simStockAllocationNumber.value = String(inputs.stockAllocation);
@@ -1398,6 +1561,23 @@ function updateInvestmentSimulator() {
           <td>${formatMoney(row.rdpuReturnGain)}</td>
           <td>${formatMoney(row.rdpuBalance)}</td>
           <td><strong>${formatMoney(row.portfolioValue)}</strong></td>
+        </tr>
+      `,
+    )
+    .join("");
+
+  const dividendPurchaseRows = result.yearlyRows.filter((row) => row.dividendBmriLots + row.dividendIcbpLots > 0);
+  el.simDividendPurchaseTableWrap.classList.toggle("hidden", dividendPurchaseRows.length === 0);
+  el.simDividendPurchaseEmpty.classList.toggle("hidden", dividendPurchaseRows.length > 0);
+  el.simDividendPurchaseTable.innerHTML = dividendPurchaseRows
+    .map(
+      (row) => `
+        <tr>
+          <td><strong>Tahun ${row.year}</strong><br><small>${row.periodLabel}</small></td>
+          <td>${formatMoney(row.annualDividends)}</td>
+          <td>${formatDividendStockPurchase(row)}</td>
+          <td>${formatMoney(row.dividendStockCashUsed)}</td>
+          <td>${formatMoney(row.dividendLeftoverToRdpu)}</td>
         </tr>
       `,
     )
@@ -2370,7 +2550,8 @@ function updateInvestmentStockChart() {
 
 function renderInvestments() {
   state.investments = normalizeInvestments(state.investments);
-  updateInvestmentSimulator();
+  applySimulatorConfigToForm(state.investments.simulatorConfig);
+  updateInvestmentSimulator({ persistConfig: false });
   renderInvestmentOptions();
   renderInvestmentTickers();
   updateMonthlyStrategyCalculator();

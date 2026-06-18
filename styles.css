@@ -1496,6 +1496,10 @@ input:disabled {
   min-width: 1160px;
 }
 
+.sim-dividend-purchase-table {
+  min-width: 820px;
+}
+
 .investment-info-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);

@@ -68,4 +68,15 @@ window.CATATAN_KAS_SUPABASE = {
 
 Kalau konfigurasi Supabase kosong, aplikasi otomatis kembali ke mode lokal.
 
+### Update Supabase untuk Save Config Simulator
+
+Jika project Supabase sudah pernah dibuat sebelum fitur save konfigurasi Simulator 120 Bulan, jalankan SQL ini sekali di **Supabase > SQL Editor**:
+
+```sql
+alter table public.investment_settings
+add column if not exists simulator_config jsonb not null default '{}'::jsonb;
+```
+
+Setelah itu refresh aplikasi. Input terakhir di Simulator 120 Bulan akan tersimpan otomatis di browser dan ikut tersinkron ke Supabase lewat kolom `simulator_config`.
+
 Catatan keamanan: schema ini dibuat untuk single-user/simple shared app. Siapa pun yang punya URL aplikasi dan anon key di frontend bisa membaca/ubah data. Untuk data pribadi yang serius, tahap berikutnya adalah menambahkan login Supabase Auth dan Row Level Security per user.

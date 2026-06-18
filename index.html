@@ -600,6 +600,30 @@
               </div>
             </section>
 
+            <section class="surface">
+              <div class="section-head compact">
+                <h3>Rincian Pembelian dari Dividen</h3>
+                <p>Menampilkan jumlah lot yang terbeli dari dividen cair. Sisa dividen yang tidak cukup membeli lot masuk ke RDPU.</p>
+              </div>
+              <div class="table-scroll" id="simDividendPurchaseTableWrap">
+                <table class="sim-dividend-purchase-table">
+                  <thead>
+                    <tr>
+                      <th>Periode</th>
+                      <th>Dividen Cair</th>
+                      <th>Saham Terbeli dari Dividen</th>
+                      <th>Dividen Dipakai</th>
+                      <th>Sisa ke RDPU</th>
+                    </tr>
+                  </thead>
+                  <tbody id="simDividendPurchaseTable"></tbody>
+                </table>
+              </div>
+              <div class="empty-state hidden" id="simDividendPurchaseEmpty">
+                Belum ada dividen yang cukup untuk membeli lot saham pada simulasi ini.
+              </div>
+            </section>
+
             <div class="investment-section-divider" aria-label="Pemisah program investasi">
               <span></span>
               <div>

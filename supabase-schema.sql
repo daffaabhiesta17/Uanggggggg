@@ -20,8 +20,12 @@ create table if not exists public.transactions (
 create table if not exists public.investment_settings (
   id text primary key default 'default',
   horizon_years integer not null default 11 check (horizon_years between 1 and 50),
+  simulator_config jsonb not null default '{}'::jsonb,
   updated_at timestamptz not null default now()
 );
+
+alter table public.investment_settings
+add column if not exists simulator_config jsonb not null default '{}'::jsonb;
 
 create table if not exists public.investment_tickers (
   symbol text primary key,
