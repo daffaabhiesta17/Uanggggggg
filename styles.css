@@ -803,6 +803,22 @@ th {
   margin-bottom: 3px;
 }
 
+.actual-sync-cell {
+  display: grid;
+  gap: 4px;
+  min-width: 190px;
+}
+
+.actual-sync-cell strong {
+  color: var(--text);
+}
+
+.actual-sync-cell span,
+.actual-sync-cell small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .source-badge {
   display: inline-flex;
   align-items: center;
@@ -1684,11 +1700,11 @@ input:disabled {
 }
 
 .sim-history-table {
-  min-width: 1160px;
+  min-width: 1360px;
 }
 
 .sim-dividend-purchase-table {
-  min-width: 820px;
+  min-width: 980px;
 }
 
 .investment-info-grid {

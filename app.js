@@ -1226,6 +1226,22 @@ function formatSimulationSourceBadge(actualMonths) {
   return `<span class="source-badge source-${status.key}">${status.label}</span>`;
 }
 
+function formatAnnualActualPurchase(row) {
+  if (!row.actualMonths) return "-";
+  const parts = [
+    `BMRI ${row.actualBmriLots.toLocaleString("id-ID")} lot`,
+    `ICBP ${row.actualIcbpLots.toLocaleString("id-ID")} lot`,
+    `RDPU ${formatMoney(row.actualRdpuContributions)}`,
+  ];
+  return `
+    <div class="actual-sync-cell">
+      <strong>${row.actualMonths.toLocaleString("id-ID")} bulan aktual</strong>
+      <span>${parts.join(" · ")}</span>
+      <small>Total ${formatMoney(row.actualContribution)}</small>
+    </div>
+  `;
+}
+
 function updateCustomLotSummary(inputs) {
   const bmriLotPrice = inputs.bmriPrice * LOT_SIZE;
   const icbpLotPrice = inputs.icbpPrice * LOT_SIZE;
@@ -1336,6 +1352,10 @@ function simulateInvestment(inputs) {
   let annualDividendIcbpLots = 0;
   let annualDividendStockCashUsed = 0;
   let annualActualRdpuContributions = 0;
+  let annualActualBmriLots = 0;
+  let annualActualIcbpLots = 0;
+  let annualActualStockAmount = 0;
+  let annualActualContribution = 0;
   let annualActualMonths = 0;
   let currentBmriPrice = inputs.bmriPrice;
   let currentIcbpPrice = inputs.icbpPrice;
@@ -1381,7 +1401,11 @@ function simulateInvestment(inputs) {
       icbpLots += actualInvestment.icbpLots;
       rdpuContribution = actualInvestment.rdpuAmount + dividendThisMonth;
       monthlyContribution = actualInvestment.contribution;
+      annualActualBmriLots += actualInvestment.bmriLots;
+      annualActualIcbpLots += actualInvestment.icbpLots;
+      annualActualStockAmount += actualInvestment.stockAmount;
       annualActualRdpuContributions += actualInvestment.rdpuAmount;
+      annualActualContribution += actualInvestment.contribution;
       annualActualMonths += 1;
     } else if (inputs.purchaseMode === "custom") {
       const purchase = buyCustomLotsWithDividendPolicy(
@@ -1438,6 +1462,10 @@ function simulateInvestment(inputs) {
         year,
         periodLabel: simulationPeriodLabel(inputs, month - 11, month),
         actualMonths: annualActualMonths,
+        actualBmriLots: annualActualBmriLots,
+        actualIcbpLots: annualActualIcbpLots,
+        actualStockAmount: annualActualStockAmount,
+        actualContribution: annualActualContribution,
         totalContribution,
         bmriPrice: currentBmriPrice,
         bmriLots,
@@ -1463,6 +1491,10 @@ function simulateInvestment(inputs) {
       annualDividendIcbpLots = 0;
       annualDividendStockCashUsed = 0;
       annualActualRdpuContributions = 0;
+      annualActualBmriLots = 0;
+      annualActualIcbpLots = 0;
+      annualActualStockAmount = 0;
+      annualActualContribution = 0;
       annualActualMonths = 0;
     }
   }
@@ -1707,6 +1739,7 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
             </div>
             <small>${row.periodLabel}${row.actualMonths ? ` - ${row.actualMonths} bulan aktual Program 2` : ""}</small>
           </td>
+          <td>${formatAnnualActualPurchase(row)}</td>
           <td>${formatMoney(row.totalContribution)}</td>
           <td>${formatMoney(row.bmriPrice)}</td>
           <td>${row.bmriLots.toLocaleString("id-ID")} lot</td>
@@ -1724,7 +1757,7 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
     .join("");
 
   const dividendPurchaseRows = result.yearlyRows.filter(
-    (row) => row.dividendBmriLots + row.dividendIcbpLots > 0 || row.actualRdpuContributions > 0,
+    (row) => row.dividendBmriLots + row.dividendIcbpLots > 0 || row.actualMonths > 0,
   );
   el.simDividendPurchaseTableWrap.classList.toggle("hidden", dividendPurchaseRows.length === 0);
   el.simDividendPurchaseEmpty.classList.toggle("hidden", dividendPurchaseRows.length > 0);
@@ -1745,7 +1778,7 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
           <td>${formatDividendStockPurchase(row)}</td>
           <td>${formatMoney(row.dividendStockCashUsed)}</td>
           <td>${formatMoney(row.dividendLeftoverToRdpu)}</td>
-          <td>${formatMoney(row.actualRdpuContributions)}</td>
+          <td>${formatAnnualActualPurchase(row)}</td>
         </tr>
       `;
       },
@@ -2782,10 +2815,6 @@ function setupInvestmentTabs() {
   const divider = stack.querySelector(".investment-section-divider");
   const strategySurface = document.querySelector(".monthly-strategy-calculator")?.closest(".surface");
   const recordsSurface = document.querySelector(".investment-records-surface");
-  const analysisSections = recordsSurface
-    ? Array.from(recordsSurface.children).filter((node) => node.classList?.contains("investment-records-section"))
-    : [];
-
   stack.insertBefore(tabs, stack.firstElementChild);
   stack.append(simulatorPanel, actualPanel, analysisPanel);
   simulatorPanel.append(actualSyncBanner);
@@ -2799,7 +2828,6 @@ function setupInvestmentTabs() {
   if (strategySurface) {
     analysisPanel.append(strategySurface);
   }
-  analysisSections.forEach((node) => analysisPanel.append(node));
 
   el.programActualSyncBanner = document.querySelector("#programActualSyncBanner");
   el.programActualSyncTitle = document.querySelector("#programActualSyncTitle");
@@ -2836,7 +2864,7 @@ function switchInvestmentTab(tab) {
     investmentGrowthChart.resize();
     investmentGrowthChart.update();
   }
-  if (activeInvestmentTab === "analysis") {
+  if (activeInvestmentTab === "actual") {
     if (investmentStockChart) {
       investmentStockChart.resize();
       investmentStockChart.update();
