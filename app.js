@@ -803,6 +803,7 @@ async function refreshFromRemote() {
   remoteStore.refreshing = true;
   try {
     await loadRemoteState();
+    markInvestmentsDirty();
     renderAll();
   } catch (error) {
     console.error(error);
@@ -1132,6 +1133,31 @@ function simulationPeriodLabel(inputs, startMonthIndex, endMonthIndex) {
   return `${simulationMonthYearLabel(inputs, startMonthIndex)} - ${simulationMonthYearLabel(inputs, endMonthIndex)}`;
 }
 
+function actualInvestmentForSimulationMonth(calendarMonth, calendarYear) {
+  const stockPurchases = state.investments.stockPurchases.filter(
+    (purchase) => purchase.month === calendarMonth && purchase.year === calendarYear,
+  );
+  const rdpuPurchases = state.investments.rdpuPurchases.filter(
+    (purchase) => purchase.month === calendarMonth && purchase.year === calendarYear,
+  );
+  const bmriPurchases = stockPurchases.filter((purchase) => purchase.ticker === "BMRI");
+  const icbpPurchases = stockPurchases.filter((purchase) => purchase.ticker === "ICBP");
+  const bmriLots = bmriPurchases.reduce((total, purchase) => total + purchase.lots, 0);
+  const icbpLots = icbpPurchases.reduce((total, purchase) => total + purchase.lots, 0);
+  const bmriAmount = bmriPurchases.reduce((total, purchase) => total + investmentValue(purchase), 0);
+  const icbpAmount = icbpPurchases.reduce((total, purchase) => total + investmentValue(purchase), 0);
+  const rdpuAmount = rdpuPurchases.reduce((total, purchase) => total + purchase.amount, 0);
+
+  return {
+    hasActual: bmriLots > 0 || icbpLots > 0 || rdpuAmount > 0,
+    bmriLots,
+    icbpLots,
+    stockAmount: bmriAmount + icbpAmount,
+    rdpuAmount,
+    contribution: bmriAmount + icbpAmount + rdpuAmount,
+  };
+}
+
 function updateCustomLotSummary(inputs) {
   const bmriLotPrice = inputs.bmriPrice * LOT_SIZE;
   const icbpLotPrice = inputs.icbpPrice * LOT_SIZE;
@@ -1236,10 +1262,13 @@ function simulateInvestment(inputs) {
   let rdpuBalance = 0;
   let totalRdpuContributions = 0;
   let totalDividends = 0;
+  let totalContribution = 0;
   let annualDividends = 0;
   let annualDividendBmriLots = 0;
   let annualDividendIcbpLots = 0;
   let annualDividendStockCashUsed = 0;
+  let annualActualRdpuContributions = 0;
+  let annualActualMonths = 0;
   let currentBmriPrice = inputs.bmriPrice;
   let currentIcbpPrice = inputs.icbpPrice;
   const yearlyRows = [];
@@ -1254,8 +1283,11 @@ function simulateInvestment(inputs) {
     const year = Math.ceil(month / 12);
     const isOddMonth = month % 2 === 1;
     const calendarMonth = simulationCalendarMonth(inputs, month);
+    const calendarYear = simulationCalendarYear(inputs, month);
+    const actualInvestment = actualInvestmentForSimulationMonth(calendarMonth, calendarYear);
     const isBmriDividendMonth = calendarMonth === 11;
     const isIcbpDividendMonth = calendarMonth === 12;
+    let monthlyContribution = inputs.monthlyDeposit;
 
     if (month > 1 && (month - 1) % 12 === 0) {
       currentBmriPrice = applyAnnualPriceChange(currentBmriPrice, inputs.bmriPriceChangeAnnual, inputs.priceChangeEnabled);
@@ -1276,7 +1308,14 @@ function simulateInvestment(inputs) {
     let dividendIcbpBought = 0;
     let dividendStockCashUsed = 0;
 
-    if (inputs.purchaseMode === "custom") {
+    if (actualInvestment.hasActual) {
+      bmriLots += actualInvestment.bmriLots;
+      icbpLots += actualInvestment.icbpLots;
+      rdpuContribution = actualInvestment.rdpuAmount + dividendThisMonth;
+      monthlyContribution = actualInvestment.contribution;
+      annualActualRdpuContributions += actualInvestment.rdpuAmount;
+      annualActualMonths += 1;
+    } else if (inputs.purchaseMode === "custom") {
       const purchase = buyCustomLotsWithDividendPolicy(
         inputs.monthlyDeposit,
         dividendThisMonth,
@@ -1314,6 +1353,7 @@ function simulateInvestment(inputs) {
     }
 
     totalDividends += dividendThisMonth;
+    totalContribution += monthlyContribution;
     annualDividends += dividendThisMonth;
     annualDividendBmriLots += dividendBmriBought;
     annualDividendIcbpLots += dividendIcbpBought;
@@ -1322,7 +1362,6 @@ function simulateInvestment(inputs) {
     rdpuBalance = (rdpuBalance + rdpuContribution) * (1 + monthlyRdpuRate);
 
     if (month % 12 === 0) {
-      const totalContribution = inputs.monthlyDeposit * month;
       const bmriValue = bmriLots * LOT_SIZE * currentBmriPrice;
       const icbpValue = icbpLots * LOT_SIZE * currentIcbpPrice;
       const portfolioValue = bmriValue + icbpValue + rdpuBalance;
@@ -1330,6 +1369,7 @@ function simulateInvestment(inputs) {
       yearlyRows.push({
         year,
         periodLabel: simulationPeriodLabel(inputs, month - 11, month),
+        actualMonths: annualActualMonths,
         totalContribution,
         bmriPrice: currentBmriPrice,
         bmriLots,
@@ -1340,6 +1380,7 @@ function simulateInvestment(inputs) {
         dividendIcbpLots: annualDividendIcbpLots,
         dividendStockCashUsed: annualDividendStockCashUsed,
         dividendLeftoverToRdpu: Math.max(0, annualDividends - annualDividendStockCashUsed),
+        actualRdpuContributions: annualActualRdpuContributions,
         rdpuContributions: totalRdpuContributions,
         rdpuReturnGain: rdpuBalance - totalRdpuContributions,
         rdpuBalance,
@@ -1353,6 +1394,8 @@ function simulateInvestment(inputs) {
       annualDividendBmriLots = 0;
       annualDividendIcbpLots = 0;
       annualDividendStockCashUsed = 0;
+      annualActualRdpuContributions = 0;
+      annualActualMonths = 0;
     }
   }
 
@@ -1361,7 +1404,6 @@ function simulateInvestment(inputs) {
   const stockValue = bmriValue + icbpValue;
   const finalAsset = stockValue + rdpuBalance;
   const rdpuReturnGain = rdpuBalance - totalRdpuContributions;
-  const totalContribution = inputs.monthlyDeposit * SIMULATION_MONTHS;
   const sellingFee = stockValue * SELLING_FEE_RATE;
   const netProfit = finalAsset - sellingFee - totalContribution;
   const passiveIncomeYear10 =
@@ -1586,7 +1628,10 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
     .map(
       (row) => `
         <tr>
-          <td><strong>Tahun ${row.year}</strong><br><small>${row.periodLabel}</small></td>
+          <td>
+            <strong>Tahun ${row.year}</strong><br>
+            <small>${row.periodLabel}${row.actualMonths ? ` - ${row.actualMonths} bulan aktual Program 2` : ""}</small>
+          </td>
           <td>${formatMoney(row.totalContribution)}</td>
           <td>${formatMoney(row.bmriPrice)}</td>
           <td>${row.bmriLots.toLocaleString("id-ID")} lot</td>
@@ -1602,18 +1647,24 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
     )
     .join("");
 
-  const dividendPurchaseRows = result.yearlyRows.filter((row) => row.dividendBmriLots + row.dividendIcbpLots > 0);
+  const dividendPurchaseRows = result.yearlyRows.filter(
+    (row) => row.dividendBmriLots + row.dividendIcbpLots > 0 || row.actualRdpuContributions > 0,
+  );
   el.simDividendPurchaseTableWrap.classList.toggle("hidden", dividendPurchaseRows.length === 0);
   el.simDividendPurchaseEmpty.classList.toggle("hidden", dividendPurchaseRows.length > 0);
   el.simDividendPurchaseTable.innerHTML = dividendPurchaseRows
     .map(
       (row) => `
         <tr>
-          <td><strong>Tahun ${row.year}</strong><br><small>${row.periodLabel}</small></td>
+          <td>
+            <strong>Tahun ${row.year}</strong><br>
+            <small>${row.periodLabel}${row.actualMonths ? ` - ${row.actualMonths} bulan aktual Program 2` : ""}</small>
+          </td>
           <td>${formatMoney(row.annualDividends)}</td>
           <td>${formatDividendStockPurchase(row)}</td>
           <td>${formatMoney(row.dividendStockCashUsed)}</td>
           <td>${formatMoney(row.dividendLeftoverToRdpu)}</td>
+          <td>${formatMoney(row.actualRdpuContributions)}</td>
         </tr>
       `,
     )
