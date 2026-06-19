@@ -69,8 +69,8 @@ const DEFAULT_SIMULATOR_CONFIG = {
   icbpPrice: 6875,
   rdpuReturnAnnual: 4.14,
   dividendGrowthAnnual: 5,
-  bmriYieldInitial: 5,
-  icbpYieldInitial: 4,
+  bmriDividendInitial: 206.5,
+  icbpDividendInitial: 275,
   priceChangeEnabled: false,
   bmriPriceChangeAnnual: 5,
   icbpPriceChangeAnnual: 5,
@@ -388,6 +388,17 @@ function normalizeSimulatorConfig(config = {}) {
     const numeric = Number(value);
     return Number.isFinite(numeric) ? numeric : fallback;
   };
+  const bmriPrice = Math.max(1, numberOrDefault(config.bmriPrice, DEFAULT_SIMULATOR_CONFIG.bmriPrice));
+  const icbpPrice = Math.max(1, numberOrDefault(config.icbpPrice, DEFAULT_SIMULATOR_CONFIG.icbpPrice));
+  const legacyDividendValue = (dividendValue, yieldValue, price, fallback) => {
+    if (dividendValue !== undefined && dividendValue !== null) {
+      return Math.max(0, numberOrDefault(dividendValue, fallback));
+    }
+    if (yieldValue !== undefined && yieldValue !== null) {
+      return Math.max(0, (numberOrDefault(yieldValue, 0) / 100) * price);
+    }
+    return fallback;
+  };
 
   return {
     monthlyDeposit: Math.max(0, numberOrDefault(config.monthlyDeposit, DEFAULT_SIMULATOR_CONFIG.monthlyDeposit)),
@@ -398,12 +409,22 @@ function normalizeSimulatorConfig(config = {}) {
     reinvestCustomDividends: Boolean(config.reinvestCustomDividends),
     bmriMonthlyLots: Math.max(0, Math.floor(numberOrDefault(config.bmriMonthlyLots, DEFAULT_SIMULATOR_CONFIG.bmriMonthlyLots))),
     icbpMonthlyLots: Math.max(0, Math.floor(numberOrDefault(config.icbpMonthlyLots, DEFAULT_SIMULATOR_CONFIG.icbpMonthlyLots))),
-    bmriPrice: Math.max(1, numberOrDefault(config.bmriPrice, DEFAULT_SIMULATOR_CONFIG.bmriPrice)),
-    icbpPrice: Math.max(1, numberOrDefault(config.icbpPrice, DEFAULT_SIMULATOR_CONFIG.icbpPrice)),
+    bmriPrice,
+    icbpPrice,
     rdpuReturnAnnual: Math.max(0, numberOrDefault(config.rdpuReturnAnnual, DEFAULT_SIMULATOR_CONFIG.rdpuReturnAnnual)),
     dividendGrowthAnnual: Math.max(0, numberOrDefault(config.dividendGrowthAnnual, DEFAULT_SIMULATOR_CONFIG.dividendGrowthAnnual)),
-    bmriYieldInitial: Math.max(0, numberOrDefault(config.bmriYieldInitial, DEFAULT_SIMULATOR_CONFIG.bmriYieldInitial)),
-    icbpYieldInitial: Math.max(0, numberOrDefault(config.icbpYieldInitial, DEFAULT_SIMULATOR_CONFIG.icbpYieldInitial)),
+    bmriDividendInitial: legacyDividendValue(
+      config.bmriDividendInitial,
+      config.bmriYieldInitial,
+      bmriPrice,
+      DEFAULT_SIMULATOR_CONFIG.bmriDividendInitial,
+    ),
+    icbpDividendInitial: legacyDividendValue(
+      config.icbpDividendInitial,
+      config.icbpYieldInitial,
+      icbpPrice,
+      DEFAULT_SIMULATOR_CONFIG.icbpDividendInitial,
+    ),
     priceChangeEnabled: Boolean(config.priceChangeEnabled),
     bmriPriceChangeAnnual: clampNumber(
       numberOrDefault(config.bmriPriceChangeAnnual, DEFAULT_SIMULATOR_CONFIG.bmriPriceChangeAnnual),
@@ -870,6 +891,22 @@ function parseNumberInput(value) {
   return Number(String(value).replace(/\D/g, "")) || 0;
 }
 
+function parseDecimalInput(value) {
+  const text = String(value || "").trim().replace(/\s/g, "");
+  if (!text) return 0;
+
+  const lastComma = text.lastIndexOf(",");
+  const lastDot = text.lastIndexOf(".");
+  const decimalIndex = Math.max(lastComma, lastDot);
+  if (decimalIndex >= 0) {
+    const integerPart = text.slice(0, decimalIndex).replace(/\D/g, "");
+    const decimalPart = text.slice(decimalIndex + 1).replace(/\D/g, "");
+    return Number(`${integerPart || "0"}.${decimalPart}`) || 0;
+  }
+
+  return Number(text.replace(/\D/g, "")) || 0;
+}
+
 function clampNumber(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
@@ -910,8 +947,7 @@ function compactMoney(value) {
   return formatMoney(value);
 }
 
-function dividendPerShare(price, initialYieldPercent, growthPercent, year) {
-  const initialDividend = price * (initialYieldPercent / 100);
+function dividendPerShare(initialDividend, growthPercent, year) {
   const growthMultiplier = Math.pow(1 + growthPercent / 100, year - 1);
   return initialDividend * growthMultiplier;
 }
@@ -1146,8 +1182,8 @@ function readSimulationInputs() {
     icbpPrice: Math.max(1, readNumber(el.simIcbpPrice, 6875)),
     rdpuReturnAnnual: Math.max(0, readNumber(el.simRdpuReturn, 4.14)),
     dividendGrowthAnnual: Math.max(0, readNumber(el.simDividendGrowth, 5)),
-    bmriYieldInitial: Math.max(0, readNumber(el.simBmriYield, 5)),
-    icbpYieldInitial: Math.max(0, readNumber(el.simIcbpYield, 4)),
+    bmriDividendInitial: Math.max(0, parseDecimalInput(el.simBmriYield.value)),
+    icbpDividendInitial: Math.max(0, parseDecimalInput(el.simIcbpYield.value)),
     priceChangeEnabled: el.simEnablePriceChange.checked,
     bmriPriceChangeAnnual: clampNumber(readNumber(el.simBmriPriceChange, 5), -99, 1000),
     icbpPriceChangeAnnual: clampNumber(readNumber(el.simIcbpPriceChange, 5), -99, 1000),
@@ -1169,8 +1205,8 @@ function applySimulatorConfigToForm(config) {
   el.simIcbpPrice.value = formatSimulatorPriceInput(normalized.icbpPrice);
   el.simRdpuReturn.value = String(normalized.rdpuReturnAnnual);
   el.simDividendGrowth.value = String(normalized.dividendGrowthAnnual);
-  el.simBmriYield.value = String(normalized.bmriYieldInitial);
-  el.simIcbpYield.value = String(normalized.icbpYieldInitial);
+  el.simBmriYield.value = formatSimulatorPriceInput(normalized.bmriDividendInitial);
+  el.simIcbpYield.value = formatSimulatorPriceInput(normalized.icbpDividendInitial);
   el.simEnablePriceChange.checked = normalized.priceChangeEnabled;
   el.simBmriPriceChange.value = String(normalized.bmriPriceChangeAnnual);
   el.simIcbpPriceChange.value = String(normalized.icbpPriceChangeAnnual);
@@ -1229,10 +1265,10 @@ function simulateInvestment(inputs) {
     const bmriLotPrice = currentBmriPrice * LOT_SIZE;
     const icbpLotPrice = currentIcbpPrice * LOT_SIZE;
     const bmriDividend = isBmriDividendMonth
-      ? bmriLots * LOT_SIZE * dividendPerShare(inputs.bmriPrice, inputs.bmriYieldInitial, inputs.dividendGrowthAnnual, year)
+      ? bmriLots * LOT_SIZE * dividendPerShare(inputs.bmriDividendInitial, inputs.dividendGrowthAnnual, year)
       : 0;
     const icbpDividend = isIcbpDividendMonth
-      ? icbpLots * LOT_SIZE * dividendPerShare(inputs.icbpPrice, inputs.icbpYieldInitial, inputs.dividendGrowthAnnual, year)
+      ? icbpLots * LOT_SIZE * dividendPerShare(inputs.icbpDividendInitial, inputs.dividendGrowthAnnual, year)
       : 0;
     const dividendThisMonth = bmriDividend + icbpDividend;
     let rdpuContribution = monthlyRdpuBudget;
@@ -1329,8 +1365,8 @@ function simulateInvestment(inputs) {
   const sellingFee = stockValue * SELLING_FEE_RATE;
   const netProfit = finalAsset - sellingFee - totalContribution;
   const passiveIncomeYear10 =
-    bmriLots * LOT_SIZE * dividendPerShare(inputs.bmriPrice, inputs.bmriYieldInitial, inputs.dividendGrowthAnnual, 10) +
-    icbpLots * LOT_SIZE * dividendPerShare(inputs.icbpPrice, inputs.icbpYieldInitial, inputs.dividendGrowthAnnual, 10);
+    bmriLots * LOT_SIZE * dividendPerShare(inputs.bmriDividendInitial, inputs.dividendGrowthAnnual, 10) +
+    icbpLots * LOT_SIZE * dividendPerShare(inputs.icbpDividendInitial, inputs.dividendGrowthAnnual, 10);
 
   return {
     totalContribution,
