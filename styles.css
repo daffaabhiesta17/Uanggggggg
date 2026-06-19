@@ -655,6 +655,197 @@ th {
   gap: 18px;
 }
 
+.investment-subtabs {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
+  overflow-x: auto;
+}
+
+.investment-subtabs button {
+  min-height: 42px;
+  padding: 10px 14px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.investment-subtabs button:hover {
+  border-color: var(--line);
+  background: #f8fafc;
+  color: var(--text);
+}
+
+.investment-subtabs button.active {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.investment-tab-panel {
+  display: none;
+  gap: 18px;
+}
+
+.investment-tab-panel.active {
+  display: grid;
+}
+
+.program-sync-banner {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.program-sync-banner.has-actual {
+  border-color: #86efac;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.program-sync-banner div {
+  display: grid;
+  gap: 4px;
+}
+
+.program-sync-banner strong {
+  color: #1e3a8a;
+}
+
+.program-sync-banner.has-actual strong {
+  color: #14532d;
+}
+
+.program-sync-banner span,
+.program-sync-banner small {
+  line-height: 1.5;
+}
+
+.actual-month-summary {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  background: #f0fdf4;
+}
+
+.actual-month-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 240px);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.actual-month-head > div,
+.actual-month-head > article,
+.actual-month-grid article {
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+  border: 1px solid rgba(22, 101, 52, 0.16);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.actual-month-head span,
+.actual-month-grid span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.actual-month-head strong,
+.actual-month-grid strong {
+  color: var(--text);
+}
+
+.actual-month-head small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.actual-month-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.investment-save-feedback {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 750;
+  line-height: 1.5;
+}
+
+.history-period-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 3px;
+}
+
+.source-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 850;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.source-actual {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.source-mixed {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.source-simulated {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.source-row-actual {
+  background: rgba(240, 253, 244, 0.42);
+}
+
+.source-row-mixed {
+  background: rgba(254, 243, 199, 0.3);
+}
+
+.positive {
+  color: var(--income) !important;
+}
+
+.negative {
+  color: var(--expense) !important;
+}
+
 .investment-section-divider {
   display: grid;
   grid-template-columns: minmax(34px, 1fr) auto minmax(34px, 1fr);
@@ -1545,7 +1736,8 @@ input:disabled {
   .monthly-strategy-header,
   .monthly-strategy-layout,
   .investment-grid,
-  .investment-info-grid {
+  .investment-info-grid,
+  .actual-month-head {
     grid-template-columns: 1fr;
   }
 
@@ -1587,8 +1779,9 @@ input:disabled {
   .table-toolbar,
   .input-pair,
   .allocation-values,
-  .investment-mini-grid,
-  .monthly-strategy-grid,
+    .investment-mini-grid,
+    .actual-month-grid,
+    .monthly-strategy-grid,
   .monthly-strategy-results,
   .investment-info-cards,
   .rdpu-info-cards,

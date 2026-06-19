@@ -98,6 +98,7 @@ let simulatorSettingsSaveTimer = null;
 let investmentGrowthChart = null;
 let investmentStockChart = null;
 let investmentStockChartPurchases = [];
+let activeInvestmentTab = "simulator";
 let remoteStore = {
   enabled: false,
   investmentsEnabled: false,
@@ -1152,10 +1153,77 @@ function actualInvestmentForSimulationMonth(calendarMonth, calendarYear) {
     hasActual: bmriLots > 0 || icbpLots > 0 || rdpuAmount > 0,
     bmriLots,
     icbpLots,
+    bmriAmount,
+    icbpAmount,
     stockAmount: bmriAmount + icbpAmount,
     rdpuAmount,
     contribution: bmriAmount + icbpAmount + rdpuAmount,
   };
+}
+
+function simulationMonthIndexForDate(inputs, calendarMonth, calendarYear) {
+  return (calendarYear - inputs.startYear) * 12 + (calendarMonth - inputs.startMonth) + 1;
+}
+
+function isMonthInSimulationRange(calendarMonth, calendarYear, inputs = readSimulationInputs()) {
+  const monthIndex = simulationMonthIndexForDate(inputs, calendarMonth, calendarYear);
+  return monthIndex >= 1 && monthIndex <= SIMULATION_MONTHS;
+}
+
+function actualInvestmentLine(actualInvestment, { withStockAmounts = false } = {}) {
+  const stockSuffix = (amount) => (withStockAmounts ? ` - ${formatMoney(amount)}` : "");
+  return [
+    `BMRI ${actualInvestment.bmriLots.toLocaleString("id-ID")} lot${stockSuffix(actualInvestment.bmriAmount)}`,
+    `ICBP ${actualInvestment.icbpLots.toLocaleString("id-ID")} lot${stockSuffix(actualInvestment.icbpAmount)}`,
+    `RDPU ${formatMoney(actualInvestment.rdpuAmount)}`,
+  ].join(", ");
+}
+
+function simulationActualSyncSummary(inputs) {
+  for (let month = 1; month <= SIMULATION_MONTHS; month += 1) {
+    const calendarMonth = simulationCalendarMonth(inputs, month);
+    const calendarYear = simulationCalendarYear(inputs, month);
+    const actualInvestment = actualInvestmentForSimulationMonth(calendarMonth, calendarYear);
+    if (actualInvestment.hasActual) {
+      return {
+        hasActual: true,
+        label: simulationMonthYearLabel(inputs, month),
+        actualInvestment,
+      };
+    }
+  }
+
+  return {
+    hasActual: false,
+    label: simulationPeriodLabel(inputs, 1, SIMULATION_MONTHS),
+    actualInvestment: null,
+  };
+}
+
+function renderProgramActualSyncBanner(inputs) {
+  if (!el.programActualSyncBanner) return;
+  const summary = simulationActualSyncSummary(inputs);
+  el.programActualSyncBanner.classList.toggle("has-actual", summary.hasActual);
+  el.programActualSyncTitle.textContent = "Sinkron Program 2 aktif";
+  if (summary.hasActual) {
+    el.programActualSyncText.textContent =
+      `${summary.label} memakai data aktual: ${actualInvestmentLine(summary.actualInvestment)}.`;
+    el.programActualSyncMeta.textContent = "Bulan kosong berikutnya memakai konfigurasi simulator.";
+  } else {
+    el.programActualSyncText.textContent = `Belum ada data aktual BMRI, ICBP, atau RDPU dalam rentang ${summary.label}.`;
+    el.programActualSyncMeta.textContent = "Semua bulan saat ini memakai konfigurasi simulator.";
+  }
+}
+
+function simulationSourceStatus(actualMonths) {
+  if (actualMonths >= 12) return { key: "actual", label: "Aktual" };
+  if (actualMonths > 0) return { key: "mixed", label: "Campuran" };
+  return { key: "simulated", label: "Simulasi" };
+}
+
+function formatSimulationSourceBadge(actualMonths) {
+  const status = simulationSourceStatus(actualMonths);
+  return `<span class="source-badge source-${status.key}">${status.label}</span>`;
 }
 
 function updateCustomLotSummary(inputs) {
@@ -1595,6 +1663,8 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
   el.simPriceChangeStatus.textContent = inputs.priceChangeEnabled
     ? "Aktif - persentase perubahan harga per tahun dipakai dalam simulasi."
     : "Mati - harga saham tetap memakai harga awal.";
+  renderProgramActualSyncBanner(inputs);
+  renderCurrentActualSummary(inputs);
 
   const result = simulateInvestment(inputs);
   el.simTotalContribution.textContent = formatMoney(result.totalContribution);
@@ -1626,10 +1696,15 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
 
   el.simHistoryTable.innerHTML = result.yearlyRows
     .map(
-      (row) => `
-        <tr>
+      (row) => {
+        const status = simulationSourceStatus(row.actualMonths);
+        return `
+        <tr class="source-row-${status.key}">
           <td>
-            <strong>Tahun ${row.year}</strong><br>
+            <div class="history-period-head">
+              <strong>Tahun ${row.year}</strong>
+              ${formatSimulationSourceBadge(row.actualMonths)}
+            </div>
             <small>${row.periodLabel}${row.actualMonths ? ` - ${row.actualMonths} bulan aktual Program 2` : ""}</small>
           </td>
           <td>${formatMoney(row.totalContribution)}</td>
@@ -1643,7 +1718,8 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
           <td>${formatMoney(row.rdpuBalance)}</td>
           <td><strong>${formatMoney(row.portfolioValue)}</strong></td>
         </tr>
-      `,
+      `;
+      },
     )
     .join("");
 
@@ -1654,10 +1730,15 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
   el.simDividendPurchaseEmpty.classList.toggle("hidden", dividendPurchaseRows.length > 0);
   el.simDividendPurchaseTable.innerHTML = dividendPurchaseRows
     .map(
-      (row) => `
-        <tr>
+      (row) => {
+        const status = simulationSourceStatus(row.actualMonths);
+        return `
+        <tr class="source-row-${status.key}">
           <td>
-            <strong>Tahun ${row.year}</strong><br>
+            <div class="history-period-head">
+              <strong>Tahun ${row.year}</strong>
+              ${formatSimulationSourceBadge(row.actualMonths)}
+            </div>
             <small>${row.periodLabel}${row.actualMonths ? ` - ${row.actualMonths} bulan aktual Program 2` : ""}</small>
           </td>
           <td>${formatMoney(row.annualDividends)}</td>
@@ -1666,7 +1747,8 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
           <td>${formatMoney(row.dividendLeftoverToRdpu)}</td>
           <td>${formatMoney(row.actualRdpuContributions)}</td>
         </tr>
-      `,
+      `;
+      },
     )
     .join("");
 
@@ -2549,6 +2631,221 @@ function renderInvestmentSummary() {
     .join("");
 }
 
+function currentActualMonthDate() {
+  const now = new Date();
+  return {
+    month: now.getMonth() + 1,
+    year: now.getFullYear(),
+  };
+}
+
+function renderCurrentActualSummary(inputs = readSimulationInputs()) {
+  if (!el.investmentActualMonthTitle) return;
+  const { month, year } = currentActualMonthDate();
+  const actualInvestment = actualInvestmentForSimulationMonth(month, year);
+  const inSimulation = isMonthInSimulationRange(month, year, inputs);
+  const totalActual = actualInvestment.contribution;
+  let programStatus = "Belum ada data aktual";
+
+  if (actualInvestment.hasActual && inSimulation) {
+    programStatus = "Ya";
+  } else if (actualInvestment.hasActual) {
+    programStatus = "Tidak, di luar rentang";
+  }
+
+  el.investmentActualMonthTitle.textContent = `Aktual ${investmentMonthLabel(month)} ${year}`;
+  el.investmentActualMonthMeta.textContent = actualInvestment.hasActual
+    ? "BMRI, ICBP, dan RDPU aktual bulan ini dibaca langsung oleh proyeksi jika periodenya cocok."
+    : "Belum ada catatan BMRI, ICBP, atau RDPU untuk bulan ini.";
+  el.investmentActualBmri.textContent = `${actualInvestment.bmriLots.toLocaleString("id-ID")} lot - ${formatMoney(actualInvestment.bmriAmount)}`;
+  el.investmentActualIcbp.textContent = `${actualInvestment.icbpLots.toLocaleString("id-ID")} lot - ${formatMoney(actualInvestment.icbpAmount)}`;
+  el.investmentActualRdpu.textContent = formatMoney(actualInvestment.rdpuAmount);
+  el.investmentActualTotal.textContent = formatMoney(totalActual);
+  el.investmentActualUsed.textContent = programStatus;
+  el.investmentActualUsed.classList.toggle("positive", actualInvestment.hasActual && inSimulation);
+  el.investmentActualUsed.classList.toggle("negative", actualInvestment.hasActual && !inSimulation);
+}
+
+function investmentSaveFeedbackMessage(purchase, type) {
+  const inputs = readSimulationInputs();
+  const dateLabel = formatInvestmentDate(purchase);
+  const inSimulation = isMonthInSimulationRange(purchase.month, purchase.year, inputs);
+  const isProgramStock = type === "stock" && ["BMRI", "ICBP"].includes(purchase.ticker);
+  const isProgramRdpu = type === "rdpu";
+
+  if ((isProgramStock || isProgramRdpu) && inSimulation) {
+    return `Tersimpan. Simulator 120 Bulan diperbarui memakai data ${dateLabel}.`;
+  }
+
+  if (type === "stock" && !isProgramStock) {
+    return `Tersimpan. ${purchase.ticker} masuk Catatan Aktual, tetapi Program 1 hanya memakai BMRI, ICBP, dan RDPU.`;
+  }
+
+  return `Tersimpan. Data ${dateLabel} belum masuk Program 1 karena di luar rentang simulasi saat ini.`;
+}
+
+function showInvestmentSaveFeedback(purchase, type) {
+  if (!el.investmentSaveFeedback) return;
+  el.investmentSaveFeedback.textContent = investmentSaveFeedbackMessage(purchase, type);
+  el.investmentSaveFeedback.classList.remove("hidden");
+}
+
+function setupInvestmentTabs() {
+  const stack = document.querySelector(".investment-stack");
+  if (!stack || stack.dataset.investmentTabsReady === "true") return;
+  stack.dataset.investmentTabsReady = "true";
+
+  const simulatorPanel = document.createElement("div");
+  const actualPanel = document.createElement("div");
+  const analysisPanel = document.createElement("div");
+  simulatorPanel.id = "investmentTabSimulator";
+  actualPanel.id = "investmentTabActual";
+  analysisPanel.id = "investmentTabAnalysis";
+  simulatorPanel.className = "investment-tab-panel active";
+  actualPanel.className = "investment-tab-panel";
+  analysisPanel.className = "investment-tab-panel";
+  simulatorPanel.dataset.investmentTabPanel = "simulator";
+  actualPanel.dataset.investmentTabPanel = "actual";
+  analysisPanel.dataset.investmentTabPanel = "analysis";
+
+  const tabs = document.createElement("nav");
+  tabs.className = "investment-subtabs";
+  tabs.setAttribute("aria-label", "Sub-tab investasi");
+  tabs.innerHTML = `
+    <button class="active" data-investment-tab-button="simulator" type="button" aria-controls="investmentTabSimulator" aria-selected="true">
+      Program 1: Proyeksi 120 Bulan
+    </button>
+    <button data-investment-tab-button="actual" type="button" aria-controls="investmentTabActual" aria-selected="false">
+      Catatan Aktual
+    </button>
+    <button data-investment-tab-button="analysis" type="button" aria-controls="investmentTabAnalysis" aria-selected="false">
+      Analisis Pembelian
+    </button>
+  `;
+
+  const actualSyncBanner = document.createElement("section");
+  actualSyncBanner.className = "program-sync-banner";
+  actualSyncBanner.id = "programActualSyncBanner";
+  actualSyncBanner.setAttribute("aria-live", "polite");
+  actualSyncBanner.innerHTML = `
+    <div>
+      <strong id="programActualSyncTitle">Sinkron Program 2 aktif</strong>
+      <span id="programActualSyncText">Data aktual Program 2 akan dipakai saat periodenya cocok.</span>
+    </div>
+    <small id="programActualSyncMeta">Bulan kosong berikutnya memakai konfigurasi simulator.</small>
+  `;
+
+  const actualMonthSummary = document.createElement("section");
+  actualMonthSummary.className = "actual-month-summary";
+  actualMonthSummary.id = "investmentActualMonthSummary";
+  actualMonthSummary.setAttribute("aria-live", "polite");
+  actualMonthSummary.innerHTML = `
+    <div class="actual-month-head">
+      <div>
+        <span>Aktual bulan ini</span>
+        <strong id="investmentActualMonthTitle">Aktual bulan ini</strong>
+        <small id="investmentActualMonthMeta">Belum ada catatan aktual untuk bulan ini.</small>
+      </div>
+      <article>
+        <span>Dipakai oleh Program 1</span>
+        <strong id="investmentActualUsed">Belum ada data aktual</strong>
+      </article>
+    </div>
+    <div class="actual-month-grid">
+      <article>
+        <span>BMRI</span>
+        <strong id="investmentActualBmri">0 lot - Rp0</strong>
+      </article>
+      <article>
+        <span>ICBP</span>
+        <strong id="investmentActualIcbp">0 lot - Rp0</strong>
+      </article>
+      <article>
+        <span>RDPU</span>
+        <strong id="investmentActualRdpu">Rp0</strong>
+      </article>
+      <article>
+        <span>Total Aktual</span>
+        <strong id="investmentActualTotal">Rp0</strong>
+      </article>
+    </div>
+  `;
+
+  const saveFeedback = document.createElement("p");
+  saveFeedback.className = "investment-save-feedback hidden";
+  saveFeedback.id = "investmentSaveFeedback";
+  saveFeedback.setAttribute("aria-live", "polite");
+
+  const simulatorGrid = stack.querySelector(".investment-simulator-grid");
+  const historySurface = el.simHistoryTable?.closest(".surface");
+  const dividendSurface = el.simDividendPurchaseTableWrap?.closest(".surface");
+  const divider = stack.querySelector(".investment-section-divider");
+  const strategySurface = document.querySelector(".monthly-strategy-calculator")?.closest(".surface");
+  const recordsSurface = document.querySelector(".investment-records-surface");
+  const analysisSections = recordsSurface
+    ? Array.from(recordsSurface.children).filter((node) => node.classList?.contains("investment-records-section"))
+    : [];
+
+  stack.insertBefore(tabs, stack.firstElementChild);
+  stack.append(simulatorPanel, actualPanel, analysisPanel);
+  simulatorPanel.append(actualSyncBanner);
+  [simulatorGrid, historySurface, dividendSurface].filter(Boolean).forEach((node) => simulatorPanel.append(node));
+  divider?.remove();
+  if (recordsSurface) {
+    const recordsHead = recordsSurface.firstElementChild;
+    recordsHead?.after(actualMonthSummary, saveFeedback);
+    actualPanel.append(recordsSurface);
+  }
+  if (strategySurface) {
+    analysisPanel.append(strategySurface);
+  }
+  analysisSections.forEach((node) => analysisPanel.append(node));
+
+  el.programActualSyncBanner = document.querySelector("#programActualSyncBanner");
+  el.programActualSyncTitle = document.querySelector("#programActualSyncTitle");
+  el.programActualSyncText = document.querySelector("#programActualSyncText");
+  el.programActualSyncMeta = document.querySelector("#programActualSyncMeta");
+  el.investmentActualMonthTitle = document.querySelector("#investmentActualMonthTitle");
+  el.investmentActualMonthMeta = document.querySelector("#investmentActualMonthMeta");
+  el.investmentActualBmri = document.querySelector("#investmentActualBmri");
+  el.investmentActualIcbp = document.querySelector("#investmentActualIcbp");
+  el.investmentActualRdpu = document.querySelector("#investmentActualRdpu");
+  el.investmentActualTotal = document.querySelector("#investmentActualTotal");
+  el.investmentActualUsed = document.querySelector("#investmentActualUsed");
+  el.investmentSaveFeedback = document.querySelector("#investmentSaveFeedback");
+
+  tabs.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-investment-tab-button]");
+    if (!button) return;
+    switchInvestmentTab(button.dataset.investmentTabButton);
+  });
+}
+
+function switchInvestmentTab(tab) {
+  activeInvestmentTab = ["simulator", "actual", "analysis"].includes(tab) ? tab : "simulator";
+  document.querySelectorAll("[data-investment-tab-button]").forEach((button) => {
+    const active = button.dataset.investmentTabButton === activeInvestmentTab;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+  document.querySelectorAll("[data-investment-tab-panel]").forEach((panel) => {
+    panel.classList.toggle("active", panel.dataset.investmentTabPanel === activeInvestmentTab);
+  });
+
+  if (activeInvestmentTab === "simulator" && investmentGrowthChart) {
+    investmentGrowthChart.resize();
+    investmentGrowthChart.update();
+  }
+  if (activeInvestmentTab === "analysis") {
+    if (investmentStockChart) {
+      investmentStockChart.resize();
+      investmentStockChart.update();
+    }
+    updateInvestmentInfo();
+    updateInvestmentStockChart();
+  }
+}
+
 function filteredInvestmentInfoStocks() {
   const ticker = el.investmentInfoTickerFilter.value || "all";
   const year = el.investmentInfoYearFilter.value || "all";
@@ -2909,6 +3206,7 @@ function initEvents() {
     el.investmentStockLotPrice.value = "";
     el.investmentStockLots.value = "";
     renderInvestments();
+    showInvestmentSaveFeedback(purchase, "stock");
     try {
       await persistStockPurchase(purchase);
     } catch (error) {
@@ -2936,6 +3234,7 @@ function initEvents() {
     state.investments.rdpuPurchases.push(purchase);
     el.investmentRdpuAmount.value = "";
     renderInvestments();
+    showInvestmentSaveFeedback(purchase, "rdpu");
     try {
       await persistRdpuPurchase(purchase);
     } catch (error) {
@@ -3203,6 +3502,7 @@ function initEvents() {
 el.monthFilter.value = currentMonth();
 el.transactionDate.value = new Date().toISOString().slice(0, 10);
 el.allMonthsFilter.checked = true;
+setupInvestmentTabs();
 initEvents();
 initInvestmentCharts();
 renderAll();
