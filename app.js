@@ -3005,100 +3005,21 @@ function switchView(view) {
   }
 }
 
-const NAV_VIEWS = ["dashboard", "transactions", "categories", "investments", "tools"];
-const NAV_STORAGE_KEY = "nav-hidden-views";
 
-function loadHiddenNavViews() {
-  try {
-    const raw = localStorage.getItem(NAV_STORAGE_KEY);
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((v) => NAV_VIEWS.includes(v)) : [];
-  } catch {
-    return [];
+function initSidebarToggle() {
+  const btn = document.querySelector("#sidebarToggle");
+  const shell = document.querySelector(".app-shell");
+  if (!btn || !shell) return;
+
+  // Pulihkan state tersimpan
+  if (localStorage.getItem("sidebar-collapsed") === "1") {
+    shell.classList.add("sidebar-collapsed");
   }
-}
 
-function saveHiddenNavViews(hiddenViews) {
-  localStorage.setItem(NAV_STORAGE_KEY, JSON.stringify(hiddenViews));
-}
-
-function applyNavVisibility() {
-  const hiddenViews = loadHiddenNavViews();
-  document.querySelectorAll(".nav-item").forEach((button) => {
-    const view = button.dataset.view;
-    button.classList.toggle("nav-hidden", hiddenViews.includes(view));
+  btn.addEventListener("click", () => {
+    const isCollapsed = shell.classList.toggle("sidebar-collapsed");
+    localStorage.setItem("sidebar-collapsed", isCollapsed ? "1" : "0");
   });
-  if (hiddenViews.includes(activeView)) {
-    const fallback = NAV_VIEWS.find((v) => !hiddenViews.includes(v));
-    if (fallback) switchView(fallback);
-  }
-}
-
-function toggleNavVisibility(view) {
-  const hiddenViews = loadHiddenNavViews();
-  const index = hiddenViews.indexOf(view);
-  if (index === -1) {
-    hiddenViews.push(view);
-  } else {
-    hiddenViews.splice(index, 1);
-  }
-  saveHiddenNavViews(hiddenViews);
-  applyNavVisibility();
-  renderNavEditPanel();
-}
-
-function renderNavEditPanel() {
-  const panel = document.querySelector("#navEditPanel");
-  if (!panel) return;
-  const hiddenViews = loadHiddenNavViews();
-  const labels = {
-    dashboard: "Dashboard",
-    transactions: "Transaksi",
-    categories: "Tab & Jenis",
-    investments: "Investasi",
-    tools: "Tools",
-  };
-  panel.innerHTML = NAV_VIEWS.map((view) => {
-    const isHidden = hiddenViews.includes(view);
-    const isActive = view === activeView;
-    return `
-      <button
-        class="nav-edit-btn ${isHidden ? "nav-edit-hidden" : "nav-edit-visible"} ${isActive ? "nav-edit-active" : ""}"
-        data-toggle-nav="${view}"
-        title="${isHidden ? "Tampilkan" : "Sembunyikan"} tab ${labels[view]}"
-        ${isActive ? "disabled" : ""}
-      >
-        ${isHidden ? "🚫" : "✅"} ${labels[view]}
-      </button>
-    `;
-  }).join("");
-}
-
-function initNavEditPanel() {
-  const toggleButton = document.querySelector("#navEditToggle");
-  const panel = document.querySelector("#navEditPanel");
-  if (!toggleButton || !panel) return;
-
-  toggleButton.addEventListener("click", (event) => {
-    event.stopPropagation();
-    const isOpen = panel.classList.toggle("open");
-    toggleButton.classList.toggle("active", isOpen);
-    if (isOpen) renderNavEditPanel();
-  });
-
-  document.addEventListener("click", (event) => {
-    if (!panel.contains(event.target) && event.target !== toggleButton) {
-      panel.classList.remove("open");
-      toggleButton.classList.remove("active");
-    }
-  });
-
-  panel.addEventListener("click", (event) => {
-    const view = event.target.closest("[data-toggle-nav]")?.dataset.toggleNav;
-    if (view) toggleNavVisibility(view);
-  });
-
-  applyNavVisibility();
 }
 
 function resetTransactionForm() {
@@ -3630,6 +3551,6 @@ el.allMonthsFilter.checked = true;
 setupInvestmentTabs();
 initEvents();
 initInvestmentCharts();
-initNavEditPanel();
+initSidebarToggle();
 renderAll();
 initRemoteStore().then(renderAll);
