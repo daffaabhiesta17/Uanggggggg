@@ -1506,9 +1506,10 @@ function simulateInvestment(inputs) {
   const rdpuReturnGain = rdpuBalance - totalRdpuContributions;
   const sellingFee = stockValue * SELLING_FEE_RATE;
   const netProfit = finalAsset - sellingFee - totalContribution;
-  const passiveIncomeYear10 =
-    bmriLots * LOT_SIZE * dividendPerShare(inputs.bmriDividendInitial, inputs.dividendGrowthAnnual, 10) +
-    icbpLots * LOT_SIZE * dividendPerShare(inputs.icbpDividendInitial, inputs.dividendGrowthAnnual, 10);
+  const yearAtEnd = Math.ceil(SIMULATION_MONTHS / 12);  // 15
+  const passiveIncomeAtEnd =
+    bmriLots * LOT_SIZE * dividendPerShare(..., yearAtEnd) +
+    icbpLots * LOT_SIZE * dividendPerShare(..., yearAtEnd);
 
   return {
     totalContribution,
