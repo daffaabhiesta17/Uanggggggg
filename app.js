@@ -1373,8 +1373,8 @@ function simulateInvestment(inputs) {
     const calendarMonth = simulationCalendarMonth(inputs, month);
     const calendarYear = simulationCalendarYear(inputs, month);
     const actualInvestment = actualInvestmentForSimulationMonth(calendarMonth, calendarYear);
-    const isBmriDividendMonth = calendarMonth === 11;
-    const isIcbpDividendMonth = calendarMonth === 12;
+    const isBmriDividendMonth = calendarMonth === 5;
+    const isIcbpDividendMonth = calendarMonth === 7;
     let monthlyContribution = inputs.monthlyDeposit;
 
     if (month > 1 && (month - 1) % 12 === 0) {
