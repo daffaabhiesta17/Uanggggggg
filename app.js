@@ -53,7 +53,7 @@ const INVESTMENT_MONTHS = [
   "November",
   "Desember",
 ];
-const SIMULATION_MONTHS = 120;
+const SIMULATION_MONTHS = 180;
 const LOT_SIZE = 100;
 const SELLING_FEE_RATE = 0.0035;
 const DEFAULT_SIMULATOR_CONFIG = {
