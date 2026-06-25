@@ -1506,15 +1506,16 @@ function simulateInvestment(inputs) {
   const rdpuReturnGain = rdpuBalance - totalRdpuContributions;
   const sellingFee = stockValue * SELLING_FEE_RATE;
   const netProfit = finalAsset - sellingFee - totalContribution;
-  const passiveIncomeYear10 =
-    bmriLots * LOT_SIZE * dividendPerShare(inputs.bmriDividendInitial, inputs.dividendGrowthAnnual, 10) +
-    icbpLots * LOT_SIZE * dividendPerShare(inputs.icbpDividendInitial, inputs.dividendGrowthAnnual, 10);
+  const finalYear = Math.ceil(SIMULATION_MONTHS / 12);
+  const passiveIncomeFinalYear =
+    bmriLots * LOT_SIZE * dividendPerShare(inputs.bmriDividendInitial, inputs.dividendGrowthAnnual, finalYear) +
+    icbpLots * LOT_SIZE * dividendPerShare(inputs.icbpDividendInitial, inputs.dividendGrowthAnnual, finalYear);
 
   return {
     totalContribution,
     finalAsset,
     netProfit,
-    passiveIncomeYear10,
+    passiveIncomeFinalYear,
     sellingFee,
     totalDividends,
     totalRdpuContributions,
@@ -1704,7 +1705,7 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
   el.simNetProfit.textContent = formatMoney(result.netProfit);
   el.simNetProfit.classList.toggle("negative", result.netProfit < 0);
   el.simNetProfit.classList.toggle("positive", result.netProfit >= 0);
-  el.simPassiveIncome.textContent = formatMoney(result.passiveIncomeYear10);
+  el.simPassiveIncome.textContent = formatMoney(result.passiveIncomeFinalYear);
   el.simSellingFee.textContent = formatMoney(result.sellingFee);
   el.simTotalDividends.textContent = formatMoney(result.totalDividends);
   el.simTotalRdpuContributions.textContent = formatMoney(result.totalRdpuContributions);
