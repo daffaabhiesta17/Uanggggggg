@@ -2707,7 +2707,7 @@ function investmentSaveFeedbackMessage(purchase, type) {
   const isProgramRdpu = type === "rdpu";
 
   if ((isProgramStock || isProgramRdpu) && inSimulation) {
-    return `Tersimpan. Simulator 120 Bulan diperbarui memakai data ${dateLabel}.`;
+    return `Tersimpan. Simulator 180 Bulan diperbarui memakai data ${dateLabel}.`;
   }
 
   if (type === "stock" && !isProgramStock) {
