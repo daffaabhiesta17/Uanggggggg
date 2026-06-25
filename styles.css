@@ -40,6 +40,18 @@ button {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
   min-height: 100vh;
+  transition: grid-template-columns 0.25s ease;
+}
+
+.app-shell.sidebar-collapsed {
+  grid-template-columns: 0 minmax(0, 1fr);
+}
+
+.app-shell.sidebar-collapsed .sidebar {
+  overflow: hidden;
+  padding: 0;
+  width: 0;
+  min-width: 0;
 }
 
 .sidebar {
@@ -134,6 +146,25 @@ button {
 .main {
   min-width: 0;
   padding: 28px;
+}
+
+
+.sidebar-toggle {
+  background: transparent;
+  border: 1px solid var(--line, #e2e8f0);
+  color: var(--muted, #64748b);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 6px 11px;
+  border-radius: 8px;
+  line-height: 1;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+  align-self: center;
+}
+.sidebar-toggle:hover {
+  background: var(--surface, #f8fafc);
+  color: var(--ink, #172033);
 }
 
 .topbar {
