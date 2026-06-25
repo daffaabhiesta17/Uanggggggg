@@ -34,7 +34,10 @@ const defaultState = {
     horizonYears: 11,
     tickers: ["BMRI", "ICBP"],
     stockPurchases: [],
+    stockSales: [],
     rdpuPurchases: [],
+    rdpuSales: [],
+    skippedMonths: [],
   },
 };
 
@@ -278,6 +281,18 @@ const el = {
   investmentRdpuYear: document.querySelector("#investmentRdpuYear"),
   investmentRdpuAmount: document.querySelector("#investmentRdpuAmount"),
   investmentRdpuTable: document.querySelector("#investmentRdpuTable"),
+  investmentStockSaleForm: document.querySelector("#investmentStockSaleForm"),
+  investmentStockSaleTicker: document.querySelector("#investmentStockSaleTicker"),
+  investmentStockSaleMonth: document.querySelector("#investmentStockSaleMonth"),
+  investmentStockSaleYear: document.querySelector("#investmentStockSaleYear"),
+  investmentStockSaleLotPrice: document.querySelector("#investmentStockSaleLotPrice"),
+  investmentStockSaleLots: document.querySelector("#investmentStockSaleLots"),
+  investmentStockSaleTable: document.querySelector("#investmentStockSaleTable"),
+  investmentRdpuSaleForm: document.querySelector("#investmentRdpuSaleForm"),
+  investmentRdpuSaleMonth: document.querySelector("#investmentRdpuSaleMonth"),
+  investmentRdpuSaleYear: document.querySelector("#investmentRdpuSaleYear"),
+  investmentRdpuSaleAmount: document.querySelector("#investmentRdpuSaleAmount"),
+  investmentRdpuSaleTable: document.querySelector("#investmentRdpuSaleTable"),
   investmentInfoTickerFilter: document.querySelector("#investmentInfoTickerFilter"),
   investmentInfoYearFilter: document.querySelector("#investmentInfoYearFilter"),
   investmentMinPrice: document.querySelector("#investmentMinPrice"),
@@ -363,6 +378,19 @@ function normalizeInvestments(investments = {}) {
         }))
         .filter((purchase) => purchase.ticker && purchase.lotPrice > 0 && purchase.lots > 0)
     : [];
+  const stockSales = Array.isArray(investments.stockSales)
+    ? investments.stockSales
+        .map((sale) => ({
+          id: String(sale.id || uid("sale")),
+          ticker: sanitizeTicker(sale.ticker),
+          month: clampNumber(Math.round(Number(sale.month) || 1), 1, 12),
+          year: Math.round(Number(sale.year) || INVESTMENT_START_YEAR),
+          lotPrice: positiveNumber(sale.lotPrice),
+          lots: Math.max(0, Math.floor(positiveNumber(sale.lots))),
+          createdAt: sale.createdAt || sale.created_at || new Date().toISOString(),
+        }))
+        .filter((sale) => sale.ticker && sale.lotPrice > 0 && sale.lots > 0)
+    : [];
   const rdpuPurchases = Array.isArray(investments.rdpuPurchases)
     ? investments.rdpuPurchases
         .map((purchase) => ({
@@ -374,13 +402,35 @@ function normalizeInvestments(investments = {}) {
         }))
         .filter((purchase) => purchase.amount > 0)
     : [];
+  const rdpuSales = Array.isArray(investments.rdpuSales)
+    ? investments.rdpuSales
+        .map((sale) => ({
+          id: String(sale.id || uid("rsale")),
+          month: clampNumber(Math.round(Number(sale.month) || 1), 1, 12),
+          year: Math.round(Number(sale.year) || INVESTMENT_START_YEAR),
+          amount: positiveNumber(sale.amount),
+          createdAt: sale.createdAt || sale.created_at || new Date().toISOString(),
+        }))
+        .filter((sale) => sale.amount > 0)
+    : [];
+  const skippedMonths = Array.isArray(investments.skippedMonths)
+    ? investments.skippedMonths
+        .map((entry) => ({
+          month: clampNumber(Math.round(Number(entry.month) || 1), 1, 12),
+          year: Math.round(Number(entry.year) || INVESTMENT_START_YEAR),
+        }))
+        .filter((entry) => entry.month >= 1 && entry.month <= 12 && entry.year >= 2000)
+    : [];
 
   return {
-    horizonYears: clampNumber(Math.round(Number(investments.horizonYears) || 11), 1, 50),
+    horizonYears: clampNumber(Math.round(Number(investments.horizonYears) || 11), 1, 80),
     simulatorConfig: normalizeSimulatorConfig(investments.simulatorConfig || investments.simulator_config),
-    tickers: [...new Set(["BMRI", "ICBP", ...tickers, ...stockPurchases.map((purchase) => purchase.ticker)])],
+    tickers: [...new Set(["BMRI", "ICBP", ...tickers, ...stockPurchases.map((purchase) => purchase.ticker), ...stockSales.map((sale) => sale.ticker)])],
     stockPurchases,
+    stockSales,
     rdpuPurchases,
+    rdpuSales,
+    skippedMonths,
   };
 }
 
@@ -618,6 +668,9 @@ async function initRemoteStore() {
       .on("postgres_changes", { event: "*", schema: "public", table: "investment_tickers" }, refreshFromRemote)
       .on("postgres_changes", { event: "*", schema: "public", table: "stock_purchases" }, refreshFromRemote)
       .on("postgres_changes", { event: "*", schema: "public", table: "rdpu_purchases" }, refreshFromRemote)
+      .on("postgres_changes", { event: "*", schema: "public", table: "stock_sales" }, refreshFromRemote)
+      .on("postgres_changes", { event: "*", schema: "public", table: "rdpu_sales" }, refreshFromRemote)
+      .on("postgres_changes", { event: "*", schema: "public", table: "skipped_months" }, refreshFromRemote)
       .subscribe();
   } catch (error) {
     console.error(error);
@@ -655,7 +708,7 @@ function isMissingInvestmentTableError(error) {
 
 async function loadRemoteInvestments(localInvestments = state.investments) {
   try {
-    const [settingsResult, tickersResult, stockResult, rdpuResult] = await Promise.all([
+    const [settingsResult, tickersResult, stockResult, rdpuResult, stockSalesResult, rdpuSalesResult, skippedResult] = await Promise.all([
       remoteStore.client.from("investment_settings").select("*").eq("id", "default").maybeSingle(),
       remoteStore.client.from("investment_tickers").select("*").order("symbol", { ascending: true }),
       remoteStore.client
@@ -670,6 +723,24 @@ async function loadRemoteInvestments(localInvestments = state.investments) {
         .order("year", { ascending: true })
         .order("month", { ascending: true })
         .order("created_at", { ascending: true }),
+      remoteStore.client
+        .from("stock_sales")
+        .select("*")
+        .order("year", { ascending: true })
+        .order("month", { ascending: true })
+        .order("created_at", { ascending: true })
+        .then((r) => (r.error && isMissingInvestmentTableError(r.error)) ? { data: [], error: null } : r),
+      remoteStore.client
+        .from("rdpu_sales")
+        .select("*")
+        .order("year", { ascending: true })
+        .order("month", { ascending: true })
+        .order("created_at", { ascending: true })
+        .then((r) => (r.error && isMissingInvestmentTableError(r.error)) ? { data: [], error: null } : r),
+      remoteStore.client
+        .from("skipped_months")
+        .select("*")
+        .then((r) => (r.error && isMissingInvestmentTableError(r.error)) ? { data: [], error: null } : r),
     ]);
 
     const errors = [settingsResult.error, tickersResult.error, stockResult.error, rdpuResult.error].filter(Boolean);
@@ -687,7 +758,10 @@ async function loadRemoteInvestments(localInvestments = state.investments) {
           simulatorConfig: settingsResult.data?.simulator_config || state.investments.simulatorConfig,
           tickers: tickersResult.data.map(fromDbInvestmentTicker),
           stockPurchases: stockResult.data.map(fromDbStockPurchase),
+          stockSales: (stockSalesResult.data || []).map(fromDbStockSale),
           rdpuPurchases: rdpuResult.data.map(fromDbRdpuPurchase),
+          rdpuSales: (rdpuSalesResult.data || []).map(fromDbRdpuSale),
+          skippedMonths: (skippedResult.data || []).map(fromDbSkippedMonth),
         })
       : normalizeInvestments(localInvestments);
 
@@ -748,6 +822,27 @@ async function syncInvestmentsToRemote() {
       .upsert(state.investments.rdpuPurchases.map(toDbRdpuPurchase));
     if (rdpuResult.error) throw rdpuResult.error;
   }
+
+  if (state.investments.stockSales.length) {
+    const stockSalesResult = await remoteStore.client
+      .from("stock_sales")
+      .upsert(state.investments.stockSales.map(toDbStockSale));
+    if (stockSalesResult.error && !isMissingInvestmentTableError(stockSalesResult.error)) throw stockSalesResult.error;
+  }
+
+  if (state.investments.rdpuSales.length) {
+    const rdpuSalesResult = await remoteStore.client
+      .from("rdpu_sales")
+      .upsert(state.investments.rdpuSales.map(toDbRdpuSale));
+    if (rdpuSalesResult.error && !isMissingInvestmentTableError(rdpuSalesResult.error)) throw rdpuSalesResult.error;
+  }
+
+  if (state.investments.skippedMonths.length) {
+    const skippedResult = await remoteStore.client
+      .from("skipped_months")
+      .upsert(state.investments.skippedMonths.map(toDbSkippedMonth));
+    if (skippedResult.error && !isMissingInvestmentTableError(skippedResult.error)) throw skippedResult.error;
+  }
 }
 
 async function persistInvestmentSettings() {
@@ -797,6 +892,100 @@ async function deleteRdpuPurchaseRemote(id) {
   if (!remoteStore.enabled || !remoteStore.investmentsEnabled) return;
   const { error } = await remoteStore.client.from("rdpu_purchases").delete().eq("id", id);
   if (error) throw error;
+}
+
+function toDbStockSale(sale) {
+  return {
+    id: sale.id,
+    ticker: sale.ticker,
+    month: sale.month,
+    year: sale.year,
+    lot_price: sale.lotPrice,
+    lots: sale.lots,
+    created_at: sale.createdAt || new Date().toISOString(),
+  };
+}
+
+function fromDbStockSale(sale) {
+  return {
+    id: sale.id,
+    ticker: sanitizeTicker(sale.ticker),
+    month: Number(sale.month),
+    year: Number(sale.year),
+    lotPrice: Number(sale.lot_price),
+    lots: Number(sale.lots),
+    createdAt: sale.created_at,
+  };
+}
+
+function toDbRdpuSale(sale) {
+  return {
+    id: sale.id,
+    month: sale.month,
+    year: sale.year,
+    amount: sale.amount,
+    created_at: sale.createdAt || new Date().toISOString(),
+  };
+}
+
+function fromDbRdpuSale(sale) {
+  return {
+    id: sale.id,
+    month: Number(sale.month),
+    year: Number(sale.year),
+    amount: Number(sale.amount),
+    createdAt: sale.created_at,
+  };
+}
+
+async function persistStockSale(sale) {
+  saveState();
+  if (!remoteStore.enabled || !remoteStore.investmentsEnabled) return;
+  const { error } = await remoteStore.client.from("stock_sales").upsert(toDbStockSale(sale));
+  if (error) throw error;
+}
+
+async function deleteStockSaleRemote(id) {
+  saveState();
+  if (!remoteStore.enabled || !remoteStore.investmentsEnabled) return;
+  const { error } = await remoteStore.client.from("stock_sales").delete().eq("id", id);
+  if (error) throw error;
+}
+
+async function persistRdpuSale(sale) {
+  saveState();
+  if (!remoteStore.enabled || !remoteStore.investmentsEnabled) return;
+  const { error } = await remoteStore.client.from("rdpu_sales").upsert(toDbRdpuSale(sale));
+  if (error) throw error;
+}
+
+async function deleteRdpuSaleRemote(id) {
+  saveState();
+  if (!remoteStore.enabled || !remoteStore.investmentsEnabled) return;
+  const { error } = await remoteStore.client.from("rdpu_sales").delete().eq("id", id);
+  if (error) throw error;
+}
+
+function toDbSkippedMonth(entry) {
+  return { month: entry.month, year: entry.year };
+}
+
+function fromDbSkippedMonth(row) {
+  return { month: Number(row.month), year: Number(row.year) };
+}
+
+async function persistSkippedMonth(entry) {
+  saveState();
+  if (!remoteStore.enabled || !remoteStore.investmentsEnabled) return;
+  const { error } = await remoteStore.client.from("skipped_months").upsert(toDbSkippedMonth(entry));
+  if (error && !isMissingInvestmentTableError(error)) throw error;
+}
+
+async function deleteSkippedMonthRemote(month, year) {
+  saveState();
+  if (!remoteStore.enabled || !remoteStore.investmentsEnabled) return;
+  const { error } = await remoteStore.client.from("skipped_months").delete().match({ month, year });
+  if (error && !isMissingInvestmentTableError(error)) throw error;
 }
 
 async function refreshFromRemote() {
@@ -861,6 +1050,15 @@ async function resetRemoteData() {
 
     const rdpuResult = await remoteStore.client.from("rdpu_purchases").delete().neq("id", "__never__");
     if (rdpuResult.error) throw rdpuResult.error;
+
+    const stockSalesResult = await remoteStore.client.from("stock_sales").delete().neq("id", "__never__");
+    if (stockSalesResult.error && !isMissingInvestmentTableError(stockSalesResult.error)) throw stockSalesResult.error;
+
+    const rdpuSalesResult = await remoteStore.client.from("rdpu_sales").delete().neq("id", "__never__");
+    if (rdpuSalesResult.error && !isMissingInvestmentTableError(rdpuSalesResult.error)) throw rdpuSalesResult.error;
+
+    const skippedResult = await remoteStore.client.from("skipped_months").delete().neq("month", -1);
+    if (skippedResult.error && !isMissingInvestmentTableError(skippedResult.error)) throw skippedResult.error;
 
     const tickerResult = await remoteStore.client.from("investment_tickers").delete().neq("symbol", "__never__");
     if (tickerResult.error) throw tickerResult.error;
@@ -1141,6 +1339,15 @@ function actualInvestmentForSimulationMonth(calendarMonth, calendarYear) {
   const rdpuPurchases = state.investments.rdpuPurchases.filter(
     (purchase) => purchase.month === calendarMonth && purchase.year === calendarYear,
   );
+  const monthStockSales = (state.investments.stockSales || []).filter(
+    (sale) => sale.month === calendarMonth && sale.year === calendarYear,
+  );
+  const monthRdpuSales = (state.investments.rdpuSales || []).filter(
+    (sale) => sale.month === calendarMonth && sale.year === calendarYear,
+  );
+  const isSkipped = (state.investments.skippedMonths || []).some(
+    (entry) => entry.month === calendarMonth && entry.year === calendarYear,
+  );
   const bmriPurchases = stockPurchases.filter((purchase) => purchase.ticker === "BMRI");
   const icbpPurchases = stockPurchases.filter((purchase) => purchase.ticker === "ICBP");
   const bmriLots = bmriPurchases.reduce((total, purchase) => total + purchase.lots, 0);
@@ -1148,9 +1355,17 @@ function actualInvestmentForSimulationMonth(calendarMonth, calendarYear) {
   const bmriAmount = bmriPurchases.reduce((total, purchase) => total + investmentValue(purchase), 0);
   const icbpAmount = icbpPurchases.reduce((total, purchase) => total + investmentValue(purchase), 0);
   const rdpuAmount = rdpuPurchases.reduce((total, purchase) => total + purchase.amount, 0);
+  const bmriSoldLots = monthStockSales.filter((s) => s.ticker === "BMRI").reduce((t, s) => t + s.lots, 0);
+  const icbpSoldLots = monthStockSales.filter((s) => s.ticker === "ICBP").reduce((t, s) => t + s.lots, 0);
+  const stockSalesProceeds = monthStockSales.reduce((t, s) => t + s.lots * s.lotPrice, 0);
+  const rdpuSaleAmount = monthRdpuSales.reduce((t, s) => t + s.amount, 0);
+  const hasPurchases = bmriLots > 0 || icbpLots > 0 || rdpuAmount > 0;
+  const hasSales = monthStockSales.length > 0 || monthRdpuSales.length > 0;
 
   return {
-    hasActual: bmriLots > 0 || icbpLots > 0 || rdpuAmount > 0,
+    hasActual: hasPurchases,
+    hasSales,
+    isSkipped,
     bmriLots,
     icbpLots,
     bmriAmount,
@@ -1158,6 +1373,10 @@ function actualInvestmentForSimulationMonth(calendarMonth, calendarYear) {
     stockAmount: bmriAmount + icbpAmount,
     rdpuAmount,
     contribution: bmriAmount + icbpAmount + rdpuAmount,
+    bmriSoldLots,
+    icbpSoldLots,
+    stockSalesProceeds,
+    rdpuSaleAmount,
   };
 }
 
@@ -1184,7 +1403,7 @@ function simulationActualSyncSummary(inputs) {
     const calendarMonth = simulationCalendarMonth(inputs, month);
     const calendarYear = simulationCalendarYear(inputs, month);
     const actualInvestment = actualInvestmentForSimulationMonth(calendarMonth, calendarYear);
-    if (actualInvestment.hasActual) {
+    if (actualInvestment.hasActual || actualInvestment.hasSales || actualInvestment.isSkipped) {
       return {
         hasActual: true,
         label: simulationMonthYearLabel(inputs, month),
@@ -1205,10 +1424,15 @@ function renderProgramActualSyncBanner(inputs) {
   const summary = simulationActualSyncSummary(inputs);
   el.programActualSyncBanner.classList.toggle("has-actual", summary.hasActual);
   el.programActualSyncTitle.textContent = "Sinkron Program 2 aktif";
-  if (summary.hasActual) {
-    el.programActualSyncText.textContent =
-      `${summary.label} memakai data aktual: ${actualInvestmentLine(summary.actualInvestment)}.`;
-    el.programActualSyncMeta.textContent = "Bulan kosong berikutnya memakai konfigurasi simulator.";
+  if (summary.hasActual && summary.actualInvestment) {
+    if (summary.actualInvestment.isSkipped) {
+      el.programActualSyncText.textContent = `${summary.label} dikosongkan oleh user. Simulator tidak memakai settingan default.`;
+      el.programActualSyncMeta.textContent = "Bulan yang dikosongkan tidak ada pembelian atau setoran.";
+    } else {
+      el.programActualSyncText.textContent =
+        `${summary.label} memakai data aktual: ${actualInvestmentLine(summary.actualInvestment)}.`;
+      el.programActualSyncMeta.textContent = "Bulan kosong berikutnya memakai konfigurasi simulator.";
+    }
   } else {
     el.programActualSyncText.textContent = `Belum ada data aktual BMRI, ICBP, atau RDPU dalam rentang ${summary.label}.`;
     el.programActualSyncMeta.textContent = "Semua bulan saat ini memakai konfigurasi simulator.";
@@ -1395,6 +1619,7 @@ function simulateInvestment(inputs) {
     let dividendBmriBought = 0;
     let dividendIcbpBought = 0;
     let dividendStockCashUsed = 0;
+    let rdpuSaleReduction = 0;
 
     if (actualInvestment.hasActual) {
       bmriLots += actualInvestment.bmriLots;
@@ -1407,6 +1632,11 @@ function simulateInvestment(inputs) {
       annualActualRdpuContributions += actualInvestment.rdpuAmount;
       annualActualContribution += actualInvestment.contribution;
       annualActualMonths += 1;
+      bmriLots = Math.max(0, bmriLots - actualInvestment.bmriSoldLots);
+      icbpLots = Math.max(0, icbpLots - actualInvestment.icbpSoldLots);
+      rdpuSaleReduction += actualInvestment.rdpuSaleAmount;
+    } else if (actualInvestment.isSkipped) {
+      rdpuContribution = 0;
     } else if (inputs.purchaseMode === "custom") {
       const purchase = buyCustomLotsWithDividendPolicy(
         inputs.monthlyDeposit,
@@ -1450,8 +1680,13 @@ function simulateInvestment(inputs) {
     annualDividendBmriLots += dividendBmriBought;
     annualDividendIcbpLots += dividendIcbpBought;
     annualDividendStockCashUsed += dividendStockCashUsed;
+    if (!actualInvestment.hasActual && actualInvestment.hasSales) {
+      bmriLots = Math.max(0, bmriLots - actualInvestment.bmriSoldLots);
+      icbpLots = Math.max(0, icbpLots - actualInvestment.icbpSoldLots);
+      rdpuSaleReduction = actualInvestment.rdpuSaleAmount;
+    }
     totalRdpuContributions += rdpuContribution;
-    rdpuBalance = (rdpuBalance + rdpuContribution) * (1 + monthlyRdpuRate);
+    rdpuBalance = Math.max(0, (rdpuBalance + rdpuContribution) * (1 + monthlyRdpuRate) - rdpuSaleReduction);
 
     if (month % 12 === 0) {
       const bmriValue = bmriLots * LOT_SIZE * currentBmriPrice;
@@ -2272,6 +2507,19 @@ function renderInvestmentOptions() {
     state.investments.tickers.map((ticker) => ({ value: ticker, label: ticker })),
     el.investmentStockTicker.value || state.investments.tickers[0],
   );
+  if (el.investmentStockSaleTicker) {
+    renderOptionList(
+      el.investmentStockSaleTicker,
+      state.investments.tickers.map((ticker) => ({ value: ticker, label: ticker })),
+      el.investmentStockSaleTicker.value || state.investments.tickers[0],
+    );
+    renderOptionList(el.investmentStockSaleMonth, monthOptions, el.investmentStockSaleMonth.value || "1");
+    renderOptionList(el.investmentStockSaleYear, yearOptions, el.investmentStockSaleYear.value || String(years[0]));
+  }
+  if (el.investmentRdpuSaleMonth) {
+    renderOptionList(el.investmentRdpuSaleMonth, monthOptions, el.investmentRdpuSaleMonth.value || "1");
+    renderOptionList(el.investmentRdpuSaleYear, yearOptions, el.investmentRdpuSaleYear.value || String(years[0]));
+  }
   renderOptionList(
     el.investmentInfoTickerFilter,
     [{ value: "all", label: "Semua Saham" }, ...state.investments.tickers.map((ticker) => ({ value: ticker, label: ticker }))],
@@ -2641,6 +2889,46 @@ function renderInvestmentTables() {
         )
         .join("")
     : `<tr><td colspan="3"><div class="empty-state">Belum ada pembelian RDPU.</div></td></tr>`;
+
+  renderInvestmentSaleTables();
+}
+
+function renderInvestmentSaleTables() {
+  if (!el.investmentStockSaleTable || !el.investmentRdpuSaleTable) return;
+
+  const stockSaleRows = [...(state.investments.stockSales || [])].sort((a, b) => investmentTimestamp(a) - investmentTimestamp(b));
+  const rdpuSaleRows = [...(state.investments.rdpuSales || [])].sort((a, b) => investmentTimestamp(a) - investmentTimestamp(b));
+
+  el.investmentStockSaleTable.innerHTML = stockSaleRows.length
+    ? stockSaleRows
+        .map(
+          (sale) => `
+            <tr>
+              <td>${formatInvestmentDate(sale)}</td>
+              <td><strong>${escapeHtml(sale.ticker)}</strong></td>
+              <td>${formatMoney(sale.lotPrice)}</td>
+              <td>${sale.lots.toLocaleString("id-ID")} lot</td>
+              <td><strong>${formatMoney(investmentValue(sale))}</strong></td>
+              <td><button class="icon-button delete" data-delete-stock-sale="${sale.id}" type="button">Hapus</button></td>
+            </tr>
+          `,
+        )
+        .join("")
+    : `<tr><td colspan="6"><div class="empty-state">Belum ada penjualan saham.</div></td></tr>`;
+
+  el.investmentRdpuSaleTable.innerHTML = rdpuSaleRows.length
+    ? rdpuSaleRows
+        .map(
+          (sale) => `
+            <tr>
+              <td>${formatInvestmentDate(sale)}</td>
+              <td><strong>${formatMoney(sale.amount)}</strong></td>
+              <td><button class="icon-button delete" data-delete-rdpu-sale="${sale.id}" type="button">Hapus</button></td>
+            </tr>
+          `,
+        )
+        .join("")
+    : `<tr><td colspan="3"><div class="empty-state">Belum ada penjualan RDPU.</div></td></tr>`;
 }
 
 function renderInvestmentSummary() {
@@ -2684,19 +2972,63 @@ function renderCurrentActualSummary(inputs = readSimulationInputs()) {
     programStatus = "Ya";
   } else if (actualInvestment.hasActual) {
     programStatus = "Tidak, di luar rentang";
+  } else if (actualInvestment.hasSales && inSimulation) {
+    programStatus = "Ya (penjualan)";
+  } else if (actualInvestment.hasSales) {
+    programStatus = "Tidak, di luar rentang (penjualan)";
+  }
+
+  let metaText = actualInvestment.hasActual
+    ? "BMRI, ICBP, dan RDPU aktual bulan ini dibaca langsung oleh proyeksi jika periodenya cocok."
+    : "Belum ada catatan BMRI, ICBP, atau RDPU untuk bulan ini.";
+  if (actualInvestment.hasSales) {
+    const salesInfo = [];
+    if (actualInvestment.bmriSoldLots > 0) salesInfo.push(`jual BMRI ${actualInvestment.bmriSoldLots} lot`);
+    if (actualInvestment.icbpSoldLots > 0) salesInfo.push(`jual ICBP ${actualInvestment.icbpSoldLots} lot`);
+    if (actualInvestment.rdpuSaleAmount > 0) salesInfo.push(`jual RDPU ${formatMoney(actualInvestment.rdpuSaleAmount)}`);
+    metaText += ` Penjualan: ${salesInfo.join(", ")}.`;
   }
 
   el.investmentActualMonthTitle.textContent = `Aktual ${investmentMonthLabel(month)} ${year}`;
-  el.investmentActualMonthMeta.textContent = actualInvestment.hasActual
-    ? "BMRI, ICBP, dan RDPU aktual bulan ini dibaca langsung oleh proyeksi jika periodenya cocok."
-    : "Belum ada catatan BMRI, ICBP, atau RDPU untuk bulan ini.";
+  el.investmentActualMonthMeta.textContent = metaText;
   el.investmentActualBmri.textContent = `${actualInvestment.bmriLots.toLocaleString("id-ID")} lot - ${formatMoney(actualInvestment.bmriAmount)}`;
   el.investmentActualIcbp.textContent = `${actualInvestment.icbpLots.toLocaleString("id-ID")} lot - ${formatMoney(actualInvestment.icbpAmount)}`;
   el.investmentActualRdpu.textContent = formatMoney(actualInvestment.rdpuAmount);
   el.investmentActualTotal.textContent = formatMoney(totalActual);
   el.investmentActualUsed.textContent = programStatus;
-  el.investmentActualUsed.classList.toggle("positive", actualInvestment.hasActual && inSimulation);
-  el.investmentActualUsed.classList.toggle("negative", actualInvestment.hasActual && !inSimulation);
+  el.investmentActualUsed.classList.toggle("positive", (actualInvestment.hasActual || actualInvestment.hasSales) && inSimulation);
+  el.investmentActualUsed.classList.toggle("negative", (actualInvestment.hasActual || actualInvestment.hasSales) && !inSimulation);
+
+  if (el.skipMonthButton && el.skipMonthStatus && el.skipMonthSelect && el.skipYearSelect) {
+    const selectedMonth = Number(el.skipMonthSelect.value);
+    const selectedYear = Number(el.skipYearSelect.value);
+    const isSkipped = (state.investments.skippedMonths || []).some(
+      (e) => e.month === selectedMonth && e.year === selectedYear,
+    );
+    el.skipMonthButton.textContent = isSkipped ? "Batalkan Kosongkan" : "Kosongkan Bulan";
+    el.skipMonthButton.classList.toggle("active", isSkipped);
+    el.skipMonthStatus.textContent = isSkipped
+      ? `${investmentMonthLabel(selectedMonth)} ${selectedYear} dikosongkan. Tidak ada pembelian default dari Program 1.`
+      : `${investmentMonthLabel(selectedMonth)} ${selectedYear} memakai settingan Program 1 jika tidak ada data aktual.`;
+  }
+
+  if (el.skippedMonthsList) {
+    const skipped = state.investments.skippedMonths || [];
+    if (skipped.length) {
+      const sorted = [...skipped].sort((a, b) => a.year - b.year || a.month - b.month);
+      el.skippedMonthsList.innerHTML =
+        `<div class="skipped-months-head">Bulan yang dikosongkan:</div>` +
+        sorted
+          .map(
+            (entry) =>
+              `<span class="skipped-tag">${investmentMonthLabel(entry.month)} ${entry.year}` +
+              ` <button type="button" data-unskip-month="${entry.month}" data-unskip-year="${entry.year}" aria-label="Batalkan">x</button></span>`,
+          )
+          .join("");
+    } else {
+      el.skippedMonthsList.innerHTML = "";
+    }
+  }
 }
 
 function investmentSaveFeedbackMessage(purchase, type) {
@@ -2802,6 +3134,34 @@ function setupInvestmentTabs() {
         <strong id="investmentActualTotal">Rp0</strong>
       </article>
     </div>
+    <div class="skip-month-control">
+      <div class="skip-month-inputs">
+        <label>
+          Bulan
+          <select id="skipMonthSelect">
+            <option value="1">Januari</option>
+            <option value="2">Februari</option>
+            <option value="3">Maret</option>
+            <option value="4">April</option>
+            <option value="5">Mei</option>
+            <option value="6">Juni</option>
+            <option value="7">Juli</option>
+            <option value="8">Agustus</option>
+            <option value="9">September</option>
+            <option value="10">Oktober</option>
+            <option value="11">November</option>
+            <option value="12">Desember</option>
+          </select>
+        </label>
+        <label>
+          Tahun
+          <select id="skipYearSelect"></select>
+        </label>
+      </div>
+      <button class="ghost-button" id="skipMonthButton" type="button">Kosongkan Bulan</button>
+      <small id="skipMonthStatus">Pilih bulan & tahun, lalu klik tombol untuk mengosongkannya.</small>
+    </div>
+    <div id="skippedMonthsList" class="skipped-months-list"></div>
   `;
 
   const saveFeedback = document.createElement("p");
@@ -2841,6 +3201,61 @@ function setupInvestmentTabs() {
   el.investmentActualTotal = document.querySelector("#investmentActualTotal");
   el.investmentActualUsed = document.querySelector("#investmentActualUsed");
   el.investmentSaveFeedback = document.querySelector("#investmentSaveFeedback");
+  el.skipMonthButton = document.querySelector("#skipMonthButton");
+  el.skipMonthStatus = document.querySelector("#skipMonthStatus");
+  el.skipMonthSelect = document.querySelector("#skipMonthSelect");
+  el.skipYearSelect = document.querySelector("#skipYearSelect");
+  el.skippedMonthsList = document.querySelector("#skippedMonthsList");
+
+  if (el.skipMonthSelect && el.skipYearSelect) {
+    const now = new Date();
+    el.skipMonthSelect.value = String(now.getMonth() + 1);
+    const years = investmentYears();
+    el.skipYearSelect.innerHTML = years.map((y) => `<option value="${y}">${y}</option>`).join("");
+    el.skipYearSelect.value = String(now.getFullYear());
+  }
+
+  if (el.skipMonthButton) {
+    el.skipMonthButton.addEventListener("click", async () => {
+      const month = Number(el.skipMonthSelect.value);
+      const year = Number(el.skipYearSelect.value);
+      if (!month || !year) return;
+      const skipped = state.investments.skippedMonths || [];
+      const existingIndex = skipped.findIndex((e) => e.month === month && e.year === year);
+
+      if (existingIndex >= 0) {
+        skipped.splice(existingIndex, 1);
+        try { await deleteSkippedMonthRemote(month, year); } catch (err) { console.error(err); }
+      } else {
+        skipped.push({ month, year });
+        try { await persistSkippedMonth({ month, year }); } catch (err) { console.error(err); }
+      }
+
+      renderInvestments();
+    });
+  }
+
+  if (el.skipMonthSelect) {
+    el.skipMonthSelect.addEventListener("change", () => renderCurrentActualSummary());
+  }
+  if (el.skipYearSelect) {
+    el.skipYearSelect.addEventListener("change", () => renderCurrentActualSummary());
+  }
+  if (el.skippedMonthsList) {
+    el.skippedMonthsList.addEventListener("click", async (event) => {
+      const btn = event.target.closest("[data-unskip-month]");
+      if (!btn) return;
+      const month = Number(btn.dataset.unskipMonth);
+      const year = Number(btn.dataset.unskipYear);
+      const skipped = state.investments.skippedMonths || [];
+      const idx = skipped.findIndex((e) => e.month === month && e.year === year);
+      if (idx >= 0) {
+        skipped.splice(idx, 1);
+        try { await deleteSkippedMonthRemote(month, year); } catch (err) { console.error(err); }
+      }
+      renderInvestments();
+    });
+  }
 
   tabs.addEventListener("click", (event) => {
     const button = event.target.closest("[data-investment-tab-button]");
@@ -3298,6 +3713,122 @@ function initEvents() {
       setSyncStatus("Hapus RDPU cloud gagal", "error");
     }
   });
+
+  if (el.investmentStockSaleLotPrice) {
+    el.investmentStockSaleLotPrice.addEventListener("input", () => {
+      el.investmentStockSaleLotPrice.value = formatNumberInput(el.investmentStockSaleLotPrice.value);
+    });
+  }
+
+  if (el.investmentRdpuSaleAmount) {
+    el.investmentRdpuSaleAmount.addEventListener("input", () => {
+      el.investmentRdpuSaleAmount.value = formatNumberInput(el.investmentRdpuSaleAmount.value);
+    });
+  }
+
+  if (el.investmentStockSaleForm) {
+    el.investmentStockSaleForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const lotPrice = parseNumberInput(el.investmentStockSaleLotPrice.value);
+      const lots = Math.floor(Number(el.investmentStockSaleLots.value) || 0);
+      if (!el.investmentStockSaleTicker.value || lotPrice <= 0 || lots <= 0) {
+        alert("Harga jual per lot dan jumlah lot harus lebih dari 0.");
+        return;
+      }
+
+      const sale = {
+        id: uid("sale"),
+        ticker: el.investmentStockSaleTicker.value,
+        month: Number(el.investmentStockSaleMonth.value),
+        year: Number(el.investmentStockSaleYear.value),
+        lotPrice,
+        lots,
+        createdAt: new Date().toISOString(),
+      };
+
+      if (!state.investments.stockSales) state.investments.stockSales = [];
+      state.investments.stockSales.push(sale);
+      el.investmentStockSaleLotPrice.value = "";
+      el.investmentStockSaleLots.value = "";
+      renderInvestments();
+      if (el.investmentSaveFeedback) {
+        el.investmentSaveFeedback.textContent = `Penjualan ${sale.ticker} ${sale.lots} lot tersimpan. Simulator 120 Bulan diperbarui.`;
+        el.investmentSaveFeedback.classList.remove("hidden");
+      }
+      try {
+        await persistStockSale(sale);
+      } catch (error) {
+        console.error(error);
+        setSyncStatus("Simpan penjualan saham cloud gagal", "error");
+      }
+    });
+  }
+
+  if (el.investmentRdpuSaleForm) {
+    el.investmentRdpuSaleForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const amount = parseNumberInput(el.investmentRdpuSaleAmount.value);
+      if (amount <= 0) {
+        alert("Nominal penjualan RDPU harus lebih dari 0.");
+        return;
+      }
+
+      const sale = {
+        id: uid("rsale"),
+        month: Number(el.investmentRdpuSaleMonth.value),
+        year: Number(el.investmentRdpuSaleYear.value),
+        amount,
+        createdAt: new Date().toISOString(),
+      };
+
+      if (!state.investments.rdpuSales) state.investments.rdpuSales = [];
+      state.investments.rdpuSales.push(sale);
+      el.investmentRdpuSaleAmount.value = "";
+      renderInvestments();
+      if (el.investmentSaveFeedback) {
+        el.investmentSaveFeedback.textContent = `Penjualan RDPU ${formatMoney(amount)} tersimpan. Simulator 120 Bulan diperbarui.`;
+        el.investmentSaveFeedback.classList.remove("hidden");
+      }
+      try {
+        await persistRdpuSale(sale);
+      } catch (error) {
+        console.error(error);
+        setSyncStatus("Simpan penjualan RDPU cloud gagal", "error");
+      }
+    });
+  }
+
+  if (el.investmentStockSaleTable) {
+    el.investmentStockSaleTable.addEventListener("click", async (event) => {
+      const id = event.target.dataset.deleteStockSale;
+      if (!id) return;
+
+      state.investments.stockSales = (state.investments.stockSales || []).filter((sale) => sale.id !== id);
+      renderInvestments();
+      try {
+        await deleteStockSaleRemote(id);
+      } catch (error) {
+        console.error(error);
+        setSyncStatus("Hapus penjualan saham cloud gagal", "error");
+      }
+    });
+  }
+
+  if (el.investmentRdpuSaleTable) {
+    el.investmentRdpuSaleTable.addEventListener("click", async (event) => {
+      const id = event.target.dataset.deleteRdpuSale;
+      if (!id) return;
+
+      state.investments.rdpuSales = (state.investments.rdpuSales || []).filter((sale) => sale.id !== id);
+      renderInvestments();
+      try {
+        await deleteRdpuSaleRemote(id);
+      } catch (error) {
+        console.error(error);
+        setSyncStatus("Hapus penjualan RDPU cloud gagal", "error");
+      }
+    });
+  }
 
   el.transactionForm.addEventListener("submit", async (event) => {
     event.preventDefault();

@@ -869,7 +869,7 @@
                   </aside>
                 </div>
               </div>
-            </section>
+              </section>
 
             <section class="surface investment-records-surface">
               <div class="section-head">
@@ -880,7 +880,7 @@
                 <div class="investment-year-control">
                   <label>
                     Horizon Tahun
-                    <input id="investmentHorizon" type="number" min="1" max="50" step="1" value="11" />
+                    <input id="investmentHorizon" type="number" min="1" max="80" step="1" value="11" />
                   </label>
                   <button class="primary-button" id="addInvestmentYearButton" type="button">Tambah Tahun</button>
                 </div>
@@ -909,43 +909,125 @@
                 </article>
               </div>
 
-            <div class="investment-grid">
+              <div class="investment-grid">
+                <section class="investment-records-section">
+                  <div class="section-head compact">
+                    <h3>Pembelian Saham</h3>
+                    <p>Default BMRI dan ICBP, saham lain bisa ditambahkan.</p>
+                  </div>
+                  <form class="investment-inline-form" id="investmentTickerForm">
+                    <label>
+                      Tambah Saham
+                      <input id="investmentTickerInput" type="text" maxlength="8" placeholder="Kode saham" />
+                    </label>
+                    <button class="primary-button" type="submit">Tambah</button>
+                  </form>
+                  <div class="ticker-list" id="investmentTickerList"></div>
+
+                  <form class="investment-form" id="investmentStockForm">
+                    <label>
+                      Saham
+                      <select id="investmentStockTicker"></select>
+                    </label>
+                    <label>
+                      Bulan
+                      <select id="investmentStockMonth"></select>
+                    </label>
+                    <label>
+                      Tahun
+                      <select id="investmentStockYear"></select>
+                    </label>
+                    <label>
+                      Harga / Lot
+                      <input id="investmentStockLotPrice" type="text" inputmode="numeric" placeholder="0" />
+                    </label>
+                    <label>
+                      Jumlah Lot
+                      <input id="investmentStockLots" type="number" min="1" step="1" placeholder="0" />
+                    </label>
+                    <button class="primary-button investment-submit" type="submit">Simpan Saham</button>
+                  </form>
+
+                  <div class="table-scroll investment-table-scroll investment-stock-scroll">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Bulan</th>
+                          <th>Saham</th>
+                          <th>Harga / Lot</th>
+                          <th>Lot</th>
+                          <th>Nominal</th>
+                          <th>Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody id="investmentStockTable"></tbody>
+                    </table>
+                  </div>
+                </section>
+
+                <section class="investment-records-section">
+                  <div class="section-head compact">
+                    <h3>Pembelian RDPU</h3>
+                    <p>Nominal RDPU dicatat per bulan dan tahun.</p>
+                  </div>
+                  <form class="investment-form rdpu-form" id="investmentRdpuForm">
+                    <label>
+                      Bulan
+                      <select id="investmentRdpuMonth"></select>
+                    </label>
+                    <label>
+                      Tahun
+                      <select id="investmentRdpuYear"></select>
+                    </label>
+                    <label>
+                      Nominal RDPU
+                      <input id="investmentRdpuAmount" type="text" inputmode="numeric" placeholder="0" />
+                    </label>
+                    <button class="primary-button investment-submit" type="submit">Simpan RDPU</button>
+                  </form>
+
+                  <div class="table-scroll investment-table-scroll investment-rdpu-scroll">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Bulan</th>
+                          <th>Nominal</th>
+                          <th>Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody id="investmentRdpuTable"></tbody>
+                    </table>
+                  </div>
+                </section>
+              </div>
+
               <section class="investment-records-section">
                 <div class="section-head compact">
-                  <h3>Pembelian Saham</h3>
-                  <p>Default BMRI dan ICBP, saham lain bisa ditambahkan.</p>
+                  <h3>Penjualan Saham</h3>
+                  <p>Catat penjualan sebagian lot saham. Penjualan mengurangi kepemilikan di Program 1.</p>
                 </div>
-                <form class="investment-inline-form" id="investmentTickerForm">
-                  <label>
-                    Tambah Saham
-                    <input id="investmentTickerInput" type="text" maxlength="8" placeholder="Kode saham" />
-                  </label>
-                  <button class="primary-button" type="submit">Tambah</button>
-                </form>
-                <div class="ticker-list" id="investmentTickerList"></div>
-
-                <form class="investment-form" id="investmentStockForm">
+                <form class="investment-form" id="investmentStockSaleForm">
                   <label>
                     Saham
-                    <select id="investmentStockTicker"></select>
+                    <select id="investmentStockSaleTicker"></select>
                   </label>
                   <label>
                     Bulan
-                    <select id="investmentStockMonth"></select>
+                    <select id="investmentStockSaleMonth"></select>
                   </label>
                   <label>
                     Tahun
-                    <select id="investmentStockYear"></select>
+                    <select id="investmentStockSaleYear"></select>
                   </label>
                   <label>
-                    Harga / Lot
-                    <input id="investmentStockLotPrice" type="text" inputmode="numeric" placeholder="0" />
+                    Harga Jual / Lot
+                    <input id="investmentStockSaleLotPrice" type="text" inputmode="numeric" placeholder="0" />
                   </label>
                   <label>
-                    Jumlah Lot
-                    <input id="investmentStockLots" type="number" min="1" step="1" placeholder="0" />
+                    Jumlah Lot Jual
+                    <input id="investmentStockSaleLots" type="number" min="1" step="1" placeholder="0" />
                   </label>
-                  <button class="primary-button investment-submit" type="submit">Simpan Saham</button>
+                  <button class="primary-button investment-submit" type="submit">Simpan Penjualan</button>
                 </form>
 
                 <div class="table-scroll investment-table-scroll investment-stock-scroll">
@@ -954,36 +1036,36 @@
                       <tr>
                         <th>Bulan</th>
                         <th>Saham</th>
-                        <th>Harga / Lot</th>
-                        <th>Lot</th>
+                        <th>Harga Jual / Lot</th>
+                        <th>Lot Jual</th>
                         <th>Nominal</th>
                         <th>Aksi</th>
                       </tr>
                     </thead>
-                    <tbody id="investmentStockTable"></tbody>
+                    <tbody id="investmentStockSaleTable"></tbody>
                   </table>
                 </div>
               </section>
 
               <section class="investment-records-section">
                 <div class="section-head compact">
-                  <h3>Pembelian RDPU</h3>
-                  <p>Nominal RDPU dicatat per bulan dan tahun.</p>
+                  <h3>Penjualan RDPU</h3>
+                  <p>Catat penjualan sebagian RDPU. Penjualan mengurangi saldo RDPU di Program 1.</p>
                 </div>
-                <form class="investment-form rdpu-form" id="investmentRdpuForm">
+                <form class="investment-form rdpu-form" id="investmentRdpuSaleForm">
                   <label>
                     Bulan
-                    <select id="investmentRdpuMonth"></select>
+                    <select id="investmentRdpuSaleMonth"></select>
                   </label>
                   <label>
                     Tahun
-                    <select id="investmentRdpuYear"></select>
+                    <select id="investmentRdpuSaleYear"></select>
                   </label>
                   <label>
-                    Nominal RDPU
-                    <input id="investmentRdpuAmount" type="text" inputmode="numeric" placeholder="0" />
+                    Nominal Penjualan RDPU
+                    <input id="investmentRdpuSaleAmount" type="text" inputmode="numeric" placeholder="0" />
                   </label>
-                  <button class="primary-button investment-submit" type="submit">Simpan RDPU</button>
+                  <button class="primary-button investment-submit" type="submit">Simpan Penjualan RDPU</button>
                 </form>
 
                 <div class="table-scroll investment-table-scroll investment-rdpu-scroll">
@@ -995,116 +1077,115 @@
                         <th>Aksi</th>
                       </tr>
                     </thead>
-                    <tbody id="investmentRdpuTable"></tbody>
+                    <tbody id="investmentRdpuSaleTable"></tbody>
                   </table>
                 </div>
               </section>
-            </div>
 
-            <section class="investment-records-section">
-              <div class="section-head">
-                <div>
-                  <h3>Grafik Pembelian Saham</h3>
-                  <p>Harga per lot dan jumlah lot dari catatan pembelian yang tersimpan.</p>
-                </div>
-                <div class="investment-filters">
-                  <label>
-                    Saham
-                    <select id="investmentStockChartTickerFilter"></select>
-                  </label>
-                  <label>
-                    Tahun
-                    <select id="investmentStockChartYearFilter"></select>
-                  </label>
-                </div>
-              </div>
-              <div class="chart-panel">
-                <canvas id="investmentStockChart" aria-label="Grafik pembelian saham" role="img"></canvas>
-                <div class="empty-state hidden" id="investmentStockChartEmpty">Belum ada pembelian saham sesuai filter.</div>
-              </div>
-            </section>
-
-            <section class="investment-records-section">
-              <div class="section-head">
-                <div>
-                  <h3>Informasi Pembelian</h3>
-                  <p>Ringkasan harga, lot, dan nominal RDPU dari transaksi yang sudah dicatat.</p>
-                </div>
-                <div class="investment-filters">
-                  <label>
-                    Saham
-                    <select id="investmentInfoTickerFilter"></select>
-                  </label>
-                  <label>
-                    Tahun
-                    <select id="investmentInfoYearFilter"></select>
-                  </label>
-                </div>
-              </div>
-              <div class="investment-info-grid">
-                <div>
-                  <h4 class="investment-info-title">Saham</h4>
-                  <div class="investment-info-cards">
-                    <article class="metric">
-                      <span>Nominal Pembelian Terendah</span>
-                      <strong id="investmentMinPrice">-</strong>
-                      <small id="investmentMinPriceMeta">-</small>
-                    </article>
-                    <article class="metric">
-                      <span>Nominal Pembelian Terbesar</span>
-                      <strong id="investmentMaxPrice">-</strong>
-                      <small id="investmentMaxPriceMeta">-</small>
-                    </article>
-                    <article class="metric">
-                      <span>Lot Paling Sedikit</span>
-                      <strong id="investmentMinLots">-</strong>
-                      <small id="investmentMinLotsMeta">-</small>
-                    </article>
-                    <article class="metric">
-                      <span>Lot Paling Banyak</span>
-                      <strong id="investmentMaxLots">-</strong>
-                      <small id="investmentMaxLotsMeta">-</small>
-                    </article>
+              <section class="investment-records-section">
+                <div class="section-head">
+                  <div>
+                    <h3>Grafik Pembelian Saham</h3>
+                    <p>Harga per lot dan jumlah lot dari catatan pembelian yang tersimpan.</p>
+                  </div>
+                  <div class="investment-filters">
+                    <label>
+                      Saham
+                      <select id="investmentStockChartTickerFilter"></select>
+                    </label>
+                    <label>
+                      Tahun
+                      <select id="investmentStockChartYearFilter"></select>
+                    </label>
                   </div>
                 </div>
-                <div>
-                  <h4 class="investment-info-title">RDPU</h4>
-                  <div class="investment-info-cards rdpu-info-cards">
-                    <article class="metric">
-                      <span>Nominal Terendah</span>
-                      <strong id="investmentMinRdpu">-</strong>
-                      <small id="investmentMinRdpuMeta">-</small>
-                    </article>
-                    <article class="metric">
-                      <span>Nominal Terbesar</span>
-                      <strong id="investmentMaxRdpu">-</strong>
-                      <small id="investmentMaxRdpuMeta">-</small>
-                    </article>
+                <div class="chart-panel">
+                  <canvas id="investmentStockChart" aria-label="Grafik pembelian saham" role="img"></canvas>
+                  <div class="empty-state hidden" id="investmentStockChartEmpty">Belum ada pembelian saham sesuai filter.</div>
+                </div>
+              </section>
+
+              <section class="investment-records-section">
+                <div class="section-head">
+                  <div>
+                    <h3>Informasi Pembelian</h3>
+                    <p>Ringkasan harga, lot, dan nominal RDPU dari transaksi yang sudah dicatat.</p>
+                  </div>
+                  <div class="investment-filters">
+                    <label>
+                      Saham
+                      <select id="investmentInfoTickerFilter"></select>
+                    </label>
+                    <label>
+                      Tahun
+                      <select id="investmentInfoYearFilter"></select>
+                    </label>
                   </div>
                 </div>
-              </div>
-            </section>
+                <div class="investment-info-grid">
+                  <div>
+                    <h4 class="investment-info-title">Saham</h4>
+                    <div class="investment-info-cards">
+                      <article class="metric">
+                        <span>Nominal Pembelian Terendah</span>
+                        <strong id="investmentMinPrice">-</strong>
+                        <small id="investmentMinPriceMeta">-</small>
+                      </article>
+                      <article class="metric">
+                        <span>Nominal Pembelian Terbesar</span>
+                        <strong id="investmentMaxPrice">-</strong>
+                        <small id="investmentMaxPriceMeta">-</small>
+                      </article>
+                      <article class="metric">
+                        <span>Lot Paling Sedikit</span>
+                        <strong id="investmentMinLots">-</strong>
+                        <small id="investmentMinLotsMeta">-</small>
+                      </article>
+                      <article class="metric">
+                        <span>Lot Paling Banyak</span>
+                        <strong id="investmentMaxLots">-</strong>
+                        <small id="investmentMaxLotsMeta">-</small>
+                      </article>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 class="investment-info-title">RDPU</h4>
+                    <div class="investment-info-cards rdpu-info-cards">
+                      <article class="metric">
+                        <span>Nominal Terendah</span>
+                        <strong id="investmentMinRdpu">-</strong>
+                        <small id="investmentMinRdpuMeta">-</small>
+                      </article>
+                      <article class="metric">
+                        <span>Nominal Terbesar</span>
+                        <strong id="investmentMaxRdpu">-</strong>
+                        <small id="investmentMaxRdpuMeta">-</small>
+                      </article>
+                    </div>
+                  </div>
+                </div>
+              </section>
 
-            <section class="investment-records-section">
-              <div class="section-head compact">
-                <h3>Akumulasi Tahunan</h3>
-                <p>Setiap baris hanya menghitung transaksi pada tahun yang sama.</p>
-              </div>
-              <div class="table-scroll">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Tahun</th>
-                      <th>Pembelian Saham</th>
-                      <th>Total Lot</th>
-                      <th>Pembelian RDPU</th>
-                      <th>Total Tahun Ini</th>
-                    </tr>
-                  </thead>
-                  <tbody id="investmentSummaryTable"></tbody>
-                </table>
-              </div>
-            </section>
+              <section class="investment-records-section">
+                <div class="section-head compact">
+                  <h3>Akumulasi Tahunan</h3>
+                  <p>Setiap baris hanya menghitung transaksi pada tahun yang sama.</p>
+                </div>
+                <div class="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Tahun</th>
+                        <th>Pembelian Saham</th>
+                        <th>Total Lot</th>
+                        <th>Pembelian RDPU</th>
+                        <th>Total Tahun Ini</th>
+                      </tr>
+                    </thead>
+                    <tbody id="investmentSummaryTable"></tbody>
+                  </table>
+                </div>
+              </section>
             </section>
           </div>
         </section>

@@ -182,6 +182,98 @@ insert into public.investment_settings (id, horizon_years)
 values ('default', 11)
 on conflict (id) do nothing;
 
+create table if not exists public.stock_sales (
+  id text primary key,
+  ticker text not null references public.investment_tickers(symbol) on update cascade on delete cascade,
+  month integer not null check (month between 1 and 12),
+  year integer not null check (year between 1900 and 2200),
+  lot_price numeric not null check (lot_price > 0),
+  lots integer not null check (lots > 0),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.rdpu_sales (
+  id text primary key,
+  month integer not null check (month between 1 and 12),
+  year integer not null check (year between 1900 and 2200),
+  amount numeric not null check (amount > 0),
+  created_at timestamptz not null default now()
+);
+
+alter table public.stock_sales enable row level security;
+alter table public.rdpu_sales enable row level security;
+
+drop policy if exists "public stock sales read" on public.stock_sales;
+drop policy if exists "public stock sales write" on public.stock_sales;
+drop policy if exists "public rdpu sales read" on public.rdpu_sales;
+drop policy if exists "public rdpu sales write" on public.rdpu_sales;
+
+create policy "public stock sales read"
+on public.stock_sales for select
+to anon
+using (true);
+
+create policy "public stock sales write"
+on public.stock_sales for all
+to anon
+using (true)
+with check (true);
+
+create policy "public rdpu sales read"
+on public.rdpu_sales for select
+to anon
+using (true);
+
+create policy "public rdpu sales write"
+on public.rdpu_sales for all
+to anon
+using (true)
+with check (true);
+
+do $$
+begin
+  alter publication supabase_realtime add table public.stock_sales;
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.rdpu_sales;
+exception
+  when duplicate_object then null;
+end $$;
+
+create table if not exists public.skipped_months (
+  month integer not null check (month between 1 and 12),
+  year integer not null check (year between 1900 and 2200),
+  created_at timestamptz not null default now(),
+  primary key (month, year)
+);
+
+alter table public.skipped_months enable row level security;
+
+drop policy if exists "public skipped months read" on public.skipped_months;
+drop policy if exists "public skipped months write" on public.skipped_months;
+
+create policy "public skipped months read"
+on public.skipped_months for select
+to anon
+using (true);
+
+create policy "public skipped months write"
+on public.skipped_months for all
+to anon
+using (true)
+with check (true);
+
+do $$
+begin
+  alter publication supabase_realtime add table public.skipped_months;
+exception
+  when duplicate_object then null;
+end $$;
+
 insert into public.investment_tickers (symbol)
 values ('BMRI'), ('ICBP')
 on conflict (symbol) do nothing;
