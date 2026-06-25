@@ -53,7 +53,7 @@ const INVESTMENT_MONTHS = [
   "November",
   "Desember",
 ];
-const SIMULATION_MONTHS = 180;
+const SIMULATION_MONTHS = 120;
 const LOT_SIZE = 100;
 const SELLING_FEE_RATE = 0.0035;
 const DEFAULT_SIMULATOR_CONFIG = {
@@ -1507,8 +1507,8 @@ function simulateInvestment(inputs) {
   const sellingFee = stockValue * SELLING_FEE_RATE;
   const netProfit = finalAsset - sellingFee - totalContribution;
   const passiveIncomeYear10 =
-    bmriLots * LOT_SIZE * dividendPerShare(..., 10) +  // ← Fixed ke tahun 10
-    icbpLots * LOT_SIZE * dividendPerShare(..., 10);
+    bmriLots * LOT_SIZE * dividendPerShare(inputs.bmriDividendInitial, inputs.dividendGrowthAnnual, 10) +
+    icbpLots * LOT_SIZE * dividendPerShare(inputs.icbpDividendInitial, inputs.dividendGrowthAnnual, 10);
 
   return {
     totalContribution,
@@ -2707,7 +2707,7 @@ function investmentSaveFeedbackMessage(purchase, type) {
   const isProgramRdpu = type === "rdpu";
 
   if ((isProgramStock || isProgramRdpu) && inSimulation) {
-    return `Tersimpan. Simulator 180 Bulan diperbarui memakai data ${dateLabel}.`;
+    return `Tersimpan. Simulator 120 Bulan diperbarui memakai data ${dateLabel}.`;
   }
 
   if (type === "stock" && !isProgramStock) {
