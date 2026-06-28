@@ -1374,7 +1374,7 @@ function simulateInvestment(inputs) {
     const calendarYear = simulationCalendarYear(inputs, month);
     const actualInvestment = actualInvestmentForSimulationMonth(calendarMonth, calendarYear);
     const isBmriDividendMonth = calendarMonth === 5;
-    const isAsiiDividendMonth = calendarMonth === 7;
+    const isAsiiDividendMonth = calendarMonth === 10;
     let monthlyContribution = inputs.monthlyDeposit;
 
     if (month > 1 && (month - 1) % 12 === 0) {
