@@ -278,7 +278,7 @@
               <form class="surface investment-simulator-form" id="investmentSimulatorForm">
                 <div class="section-head compact">
                   <h3>Program 1: Proyeksi 120 Bulan</h3>
-                  <p>Bola salju saham BMRI, ICBP, dan RDPU dengan pola beli selang-seling.</p>
+                  <p>Bola salju saham BMRI, ASII, dan RDPU dengan pola beli selang-seling.</p>
                 </div>
                 <div class="simulator-sync-banner hidden" id="simulatorSyncBanner">
                   <strong>Terhubung ke Program 2</strong>
@@ -330,8 +330,8 @@
                       <input id="simBmriPrice" type="number" min="1" step="0.01" value="4130" />
                     </label>
                     <label>
-                      Harga ICBP
-                      <input id="simIcbpPrice" type="number" min="1" step="0.01" value="6875" />
+                      Harga ASII
+                      <input id="simAsiiPrice" type="number" min="1" step="0.01" value="4800" />
                     </label>
                   </div>
 
@@ -368,11 +368,11 @@
                     <div class="custom-lot-presets" aria-label="Preset custom lot">
                       <button type="button" data-sim-lot-preset="2-1">
                         <strong>2 + 1</strong>
-                        <span>BMRI 2 lot, ICBP 1 lot</span>
+                        <span>BMRI 2 lot, ASII 1 lot</span>
                       </button>
                       <button type="button" data-sim-lot-preset="3-1">
                         <strong>3 + 1</strong>
-                        <span>BMRI 3 lot, ICBP 1 lot</span>
+                        <span>BMRI 3 lot, ASII 1 lot</span>
                       </button>
                     </div>
                     <div class="input-pair">
@@ -381,8 +381,8 @@
                         <input id="simBmriMonthlyLots" type="number" min="0" step="1" value="1" />
                       </label>
                       <label>
-                        ICBP Lot / Bulan
-                        <input id="simIcbpMonthlyLots" type="number" min="0" step="1" value="1" />
+                        ASII Lot / Bulan
+                        <input id="simAsiiMonthlyLots" type="number" min="0" step="1" value="1" />
                       </label>
                     </div>
                     <div class="custom-lot-summary" aria-live="polite">
@@ -391,8 +391,8 @@
                         <strong id="simCustomBmriPurchase">0 lot - Rp0</strong>
                       </article>
                       <article>
-                        <span>ICBP terbeli</span>
-                        <strong id="simCustomIcbpPurchase">0 lot - Rp0</strong>
+                        <span>ASII terbeli</span>
+                        <strong id="simCustomAsiiPurchase">0 lot - Rp0</strong>
                       </article>
                       <article>
                         <span>Total saham</span>
@@ -453,8 +453,8 @@
                         <input id="simBmriPriceChange" type="number" step="0.1" value="5" disabled />
                       </label>
                       <label>
-                        ICBP % / Tahun
-                        <input id="simIcbpPriceChange" type="number" step="0.1" value="5" disabled />
+                        ASII % / Tahun
+                        <input id="simAsiiPriceChange" type="number" step="0.1" value="5" disabled />
                       </label>
                     </div>
                   </div>
@@ -482,8 +482,8 @@
                       <input id="simBmriYield" type="text" inputmode="decimal" placeholder="206.5" value="206.5" />
                     </label>
                     <label>
-                      Dividen Awal ICBP / Lembar
-                      <input id="simIcbpYield" type="text" inputmode="decimal" placeholder="275" value="275" />
+                      Dividen Awal ASII / Lembar
+                      <input id="simAsiiYield" type="text" inputmode="decimal" placeholder="390" value="390" />
                     </label>
                   </div>
                 </div>
@@ -542,9 +542,9 @@
                       <small id="simBmriValue">Rp0</small>
                     </div>
                     <div class="composition-item">
-                      <div class="row-between"><strong>ICBP</strong><span id="simIcbpLots">0 lot</span></div>
-                      <div class="composition-track"><span id="simIcbpBar"></span></div>
-                      <small id="simIcbpValue">Rp0</small>
+                      <div class="row-between"><strong>ASII</strong><span id="simAsiiLots">0 lot</span></div>
+                      <div class="composition-track"><span id="simAsiiBar"></span></div>
+                      <small id="simAsiiValue">Rp0</small>
                     </div>
                     <div class="composition-item">
                       <div class="row-between"><strong>RDPU</strong><span id="simRdpuShare">0%</span></div>
@@ -588,8 +588,8 @@
                       <th>Total Setoran</th>
                       <th>Harga BMRI</th>
                       <th>Lot BMRI</th>
-                      <th>Harga ICBP</th>
-                      <th>Lot ICBP</th>
+                      <th>Harga ASII</th>
+                      <th>Lot ASII</th>
                       <th>Dividen Cair</th>
                       <th>Setoran RDPU</th>
                       <th>Return RDPU</th>
@@ -674,16 +674,16 @@
                           <input id="monthlyStrategyBmriPrice" type="text" inputmode="numeric" value="4.130" />
                         </label>
                         <label>
-                          Harga ICBP / Lembar
-                          <input id="monthlyStrategyIcbpPrice" type="text" inputmode="numeric" value="6.875" />
+                          Harga ASII / Lembar
+                          <input id="monthlyStrategyAsiiPrice" type="text" inputmode="numeric" value="4.800" />
                         </label>
                         <label>
                           BMRI Base Lot
                           <input id="monthlyStrategyBmriBaseLots" type="number" min="0" step="1" value="2" />
                         </label>
                         <label>
-                          ICBP Base Lot
-                          <input id="monthlyStrategyIcbpBaseLots" type="number" min="0" step="1" value="1" />
+                          ASII Base Lot
+                          <input id="monthlyStrategyAsiiBaseLots" type="number" min="0" step="1" value="1" />
                         </label>
                       </div>
                     </div>
@@ -742,7 +742,7 @@
                       <label class="switch-row monthly-extra-toggle monthly-dividend-gate" id="monthlyStrategyDividendGate">
                         <span>
                           <strong>4. Ada dividen cair bulan ini</strong>
-                          <small>Opsional karena dividen biasanya hanya 1-2x setahun. Rekomendasi mengikuti rasio lot bulan ini BMRI:ICBP = 2:1, sisanya RDPU.</small>
+                          <small>Opsional karena dividen biasanya hanya 1-2x setahun. Rekomendasi mengikuti rasio lot bulan ini BMRI:ASII = 2:1, sisanya RDPU.</small>
                         </span>
                         <input id="monthlyStrategyUseDividend" type="checkbox" />
                         <span class="switch-control" aria-hidden="true"></span>
@@ -777,8 +777,8 @@
                             <strong id="monthlyStrategyBmriBaseResult">0 lot - Rp0</strong>
                           </article>
                           <article>
-                            <span>ICBP Base</span>
-                            <strong id="monthlyStrategyIcbpBaseResult">0 lot - Rp0</strong>
+                            <span>ASII Base</span>
+                            <strong id="monthlyStrategyAsiiBaseResult">0 lot - Rp0</strong>
                           </article>
                           <article>
                             <span>Total Saham Base</span>
@@ -856,8 +856,8 @@
                             <strong id="monthlyStrategyTotalBmriLotsResult">0 lot</strong>
                           </article>
                           <article>
-                            <span>Total Lot ICBP</span>
-                            <strong id="monthlyStrategyTotalIcbpLotsResult">0 lot</strong>
+                            <span>Total Lot ASII</span>
+                            <strong id="monthlyStrategyTotalAsiiLotsResult">0 lot</strong>
                           </article>
                           <article class="monthly-summary-total">
                             <span>Total RDPU Bulan Ini</span>
@@ -914,7 +914,7 @@
               <section class="investment-records-section">
                 <div class="section-head compact">
                   <h3>Pembelian Saham</h3>
-                  <p>Default BMRI dan ICBP, saham lain bisa ditambahkan.</p>
+                  <p>Default BMRI dan ASII, saham lain bisa ditambahkan.</p>
                 </div>
                 <form class="investment-inline-form" id="investmentTickerForm">
                   <label>
