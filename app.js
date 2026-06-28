@@ -1236,7 +1236,7 @@ function formatAnnualActualPurchase(row) {
   return `
     <div class="actual-sync-cell">
       <strong>${row.actualMonths.toLocaleString("id-ID")} bulan aktual</strong>
-      <span>${parts.join(" Â· ")}</span>
+      <span>${parts.join(" · ")}</span>
       <small>Total ${formatMoney(row.actualContribution)}</small>
     </div>
   `;
