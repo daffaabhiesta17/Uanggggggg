@@ -183,5 +183,5 @@ values ('default', 11)
 on conflict (id) do nothing;
 
 insert into public.investment_tickers (symbol)
-values ('BMRI'), ('ASII'), ('BBRI')
+values ('BMRI'), ('ASII')
 on conflict (symbol) do nothing;

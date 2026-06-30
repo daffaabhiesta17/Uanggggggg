@@ -811,7 +811,7 @@ th {
 
 .actual-month-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -1031,12 +1031,6 @@ th {
   gap: 10px;
 }
 
-.input-trio {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
 .allocation-control {
   display: grid;
   gap: 10px;
@@ -1140,10 +1134,6 @@ th {
   gap: 10px;
 }
 
-.custom-lot-presets.three-stock {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
 .custom-lot-presets button {
   display: grid;
   gap: 3px;
@@ -1174,12 +1164,8 @@ th {
 
 .custom-lot-summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-}
-
-.custom-lot-summary .custom-lot-summary-total {
-  grid-column: 1 / -1;
 }
 
 .custom-lot-summary article {
@@ -1372,10 +1358,6 @@ input:disabled {
 }
 
 .composition-item:nth-child(3) .composition-track span {
-  background: #a855f7;
-}
-
-.composition-item:nth-child(4) .composition-track span {
   background: #f59e0b;
 }
 
@@ -1749,11 +1731,11 @@ input:disabled {
 }
 
 .sim-history-table {
-  min-width: 1620px;
+  min-width: 1360px;
 }
 
 .sim-dividend-purchase-table {
-  min-width: 1100px;
+  min-width: 980px;
 }
 
 .investment-info-grid {
@@ -1819,10 +1801,6 @@ input:disabled {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .actual-month-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
   .monthly-strategy-output {
     position: static;
   }
@@ -1847,7 +1825,6 @@ input:disabled {
   .summary-grid,
   .table-toolbar,
   .input-pair,
-  .input-trio,
   .allocation-values,
     .investment-mini-grid,
     .actual-month-grid,

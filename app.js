@@ -32,7 +32,7 @@ const defaultState = {
   ],
   investments: {
     horizonYears: 11,
-    tickers: ["BMRI", "ASII", "BBRI"],
+    tickers: ["BMRI", "ASII"],
     stockPurchases: [],
     rdpuPurchases: [],
   },
@@ -378,7 +378,7 @@ function normalizeInvestments(investments = {}) {
   return {
     horizonYears: clampNumber(Math.round(Number(investments.horizonYears) || 11), 1, 50),
     simulatorConfig: normalizeSimulatorConfig(investments.simulatorConfig || investments.simulator_config),
-    tickers: [...new Set(["BMRI", "ASII", "BBRI", ...tickers, ...stockPurchases.map((purchase) => purchase.ticker)])],
+    tickers: [...new Set(["BMRI", "ASII", ...tickers, ...stockPurchases.map((purchase) => purchase.ticker)])],
     stockPurchases,
     rdpuPurchases,
   };
@@ -1143,26 +1143,21 @@ function actualInvestmentForSimulationMonth(calendarMonth, calendarYear) {
   );
   const bmriPurchases = stockPurchases.filter((purchase) => purchase.ticker === "BMRI");
   const asiiPurchases = stockPurchases.filter((purchase) => purchase.ticker === "ASII");
-  const bbriPurchases = stockPurchases.filter((purchase) => purchase.ticker === "BBRI");
   const bmriLots = bmriPurchases.reduce((total, purchase) => total + purchase.lots, 0);
   const asiiLots = asiiPurchases.reduce((total, purchase) => total + purchase.lots, 0);
-  const bbriLots = bbriPurchases.reduce((total, purchase) => total + purchase.lots, 0);
   const bmriAmount = bmriPurchases.reduce((total, purchase) => total + investmentValue(purchase), 0);
   const asiiAmount = asiiPurchases.reduce((total, purchase) => total + investmentValue(purchase), 0);
-  const bbriAmount = bbriPurchases.reduce((total, purchase) => total + investmentValue(purchase), 0);
   const rdpuAmount = rdpuPurchases.reduce((total, purchase) => total + purchase.amount, 0);
 
   return {
-    hasActual: bmriLots > 0 || asiiLots > 0 || bbriLots > 0 || rdpuAmount > 0,
+    hasActual: bmriLots > 0 || asiiLots > 0 || rdpuAmount > 0,
     bmriLots,
     asiiLots,
-    bbriLots,
     bmriAmount,
     asiiAmount,
-    bbriAmount,
-    stockAmount: bmriAmount + asiiAmount + bbriAmount,
+    stockAmount: bmriAmount + asiiAmount,
     rdpuAmount,
-    contribution: bmriAmount + asiiAmount + bbriAmount + rdpuAmount,
+    contribution: bmriAmount + asiiAmount + rdpuAmount,
   };
 }
 
@@ -1180,7 +1175,6 @@ function actualInvestmentLine(actualInvestment, { withStockAmounts = false } = {
   return [
     `BMRI ${actualInvestment.bmriLots.toLocaleString("id-ID")} lot${stockSuffix(actualInvestment.bmriAmount)}`,
     `ASII ${actualInvestment.asiiLots.toLocaleString("id-ID")} lot${stockSuffix(actualInvestment.asiiAmount)}`,
-    `BBRI ${actualInvestment.bbriLots.toLocaleString("id-ID")} lot${stockSuffix(actualInvestment.bbriAmount)}`,
     `RDPU ${formatMoney(actualInvestment.rdpuAmount)}`,
   ].join(", ");
 }
@@ -1216,7 +1210,7 @@ function renderProgramActualSyncBanner(inputs) {
       `${summary.label} memakai data aktual: ${actualInvestmentLine(summary.actualInvestment)}.`;
     el.programActualSyncMeta.textContent = "Bulan kosong berikutnya memakai konfigurasi simulator.";
   } else {
-    el.programActualSyncText.textContent = `Belum ada data aktual BMRI, ASII, BBRI, atau RDPU dalam rentang ${summary.label}.`;
+    el.programActualSyncText.textContent = `Belum ada data aktual BMRI, ASII, atau RDPU dalam rentang ${summary.label}.`;
     el.programActualSyncMeta.textContent = "Semua bulan saat ini memakai konfigurasi simulator.";
   }
 }
@@ -1237,7 +1231,6 @@ function formatAnnualActualPurchase(row) {
   const parts = [
     `BMRI ${row.actualBmriLots.toLocaleString("id-ID")} lot`,
     `ASII ${row.actualAsiiLots.toLocaleString("id-ID")} lot`,
-    `BBRI ${row.actualBbriLots.toLocaleString("id-ID")} lot`,
     `RDPU ${formatMoney(row.actualRdpuContributions)}`,
   ];
   return `
@@ -1361,7 +1354,6 @@ function simulateInvestment(inputs) {
   let annualActualRdpuContributions = 0;
   let annualActualBmriLots = 0;
   let annualActualAsiiLots = 0;
-  let annualActualBbriLots = 0;
   let annualActualStockAmount = 0;
   let annualActualContribution = 0;
   let annualActualMonths = 0;
@@ -1382,7 +1374,7 @@ function simulateInvestment(inputs) {
     const calendarYear = simulationCalendarYear(inputs, month);
     const actualInvestment = actualInvestmentForSimulationMonth(calendarMonth, calendarYear);
     const isBmriDividendMonth = calendarMonth === 5;
-    const isAsiiDividendMonth = calendarMonth === 7;
+    const isAsiiDividendMonth = calendarMonth === 10;
     let monthlyContribution = inputs.monthlyDeposit;
 
     if (month > 1 && (month - 1) % 12 === 0) {
@@ -1411,7 +1403,6 @@ function simulateInvestment(inputs) {
       monthlyContribution = actualInvestment.contribution;
       annualActualBmriLots += actualInvestment.bmriLots;
       annualActualAsiiLots += actualInvestment.asiiLots;
-      annualActualBbriLots += actualInvestment.bbriLots;
       annualActualStockAmount += actualInvestment.stockAmount;
       annualActualRdpuContributions += actualInvestment.rdpuAmount;
       annualActualContribution += actualInvestment.contribution;
@@ -1473,7 +1464,6 @@ function simulateInvestment(inputs) {
         actualMonths: annualActualMonths,
         actualBmriLots: annualActualBmriLots,
         actualAsiiLots: annualActualAsiiLots,
-        actualBbriLots: annualActualBbriLots,
         actualStockAmount: annualActualStockAmount,
         actualContribution: annualActualContribution,
         totalContribution,
@@ -1503,7 +1493,6 @@ function simulateInvestment(inputs) {
       annualActualRdpuContributions = 0;
       annualActualBmriLots = 0;
       annualActualAsiiLots = 0;
-      annualActualBbriLots = 0;
       annualActualStockAmount = 0;
       annualActualContribution = 0;
       annualActualMonths = 0;
@@ -2309,7 +2298,7 @@ function renderInvestmentOptions() {
 function renderInvestmentTickers() {
   el.investmentTickerList.innerHTML = state.investments.tickers
     .map((ticker) => {
-      const locked = ticker === "BMRI" || ticker === "ASII" || ticker === "BBRI";
+      const locked = ticker === "BMRI" || ticker === "ASII";
       return `
         <span class="ticker-chip">
           ${escapeHtml(ticker)}
@@ -2700,13 +2689,10 @@ function renderCurrentActualSummary(inputs = readSimulationInputs()) {
 
   el.investmentActualMonthTitle.textContent = `Aktual ${investmentMonthLabel(month)} ${year}`;
   el.investmentActualMonthMeta.textContent = actualInvestment.hasActual
-    ? "BMRI, ASII, BBRI, dan RDPU aktual bulan ini dibaca langsung oleh proyeksi jika periodenya cocok."
-    : "Belum ada catatan BMRI, ASII, BBRI, atau RDPU untuk bulan ini.";
+    ? "BMRI, ASII, dan RDPU aktual bulan ini dibaca langsung oleh proyeksi jika periodenya cocok."
+    : "Belum ada catatan BMRI, ASII, atau RDPU untuk bulan ini.";
   el.investmentActualBmri.textContent = `${actualInvestment.bmriLots.toLocaleString("id-ID")} lot - ${formatMoney(actualInvestment.bmriAmount)}`;
   el.investmentActualAsii.textContent = `${actualInvestment.asiiLots.toLocaleString("id-ID")} lot - ${formatMoney(actualInvestment.asiiAmount)}`;
-  if (el.investmentActualBbri) {
-    el.investmentActualBbri.textContent = `${actualInvestment.bbriLots.toLocaleString("id-ID")} lot - ${formatMoney(actualInvestment.bbriAmount)}`;
-  }
   el.investmentActualRdpu.textContent = formatMoney(actualInvestment.rdpuAmount);
   el.investmentActualTotal.textContent = formatMoney(totalActual);
   el.investmentActualUsed.textContent = programStatus;
@@ -2718,7 +2704,7 @@ function investmentSaveFeedbackMessage(purchase, type) {
   const inputs = readSimulationInputs();
   const dateLabel = formatInvestmentDate(purchase);
   const inSimulation = isMonthInSimulationRange(purchase.month, purchase.year, inputs);
-  const isProgramStock = type === "stock" && ["BMRI", "ASII", "BBRI"].includes(purchase.ticker);
+  const isProgramStock = type === "stock" && ["BMRI", "ASII"].includes(purchase.ticker);
   const isProgramRdpu = type === "rdpu";
 
   if ((isProgramStock || isProgramRdpu) && inSimulation) {
@@ -2809,10 +2795,6 @@ function setupInvestmentTabs() {
         <strong id="investmentActualAsii">0 lot - Rp0</strong>
       </article>
       <article>
-        <span>BBRI</span>
-        <strong id="investmentActualBbri">0 lot - Rp0</strong>
-      </article>
-      <article>
         <span>RDPU</span>
         <strong id="investmentActualRdpu">Rp0</strong>
       </article>
@@ -2856,7 +2838,6 @@ function setupInvestmentTabs() {
   el.investmentActualMonthMeta = document.querySelector("#investmentActualMonthMeta");
   el.investmentActualBmri = document.querySelector("#investmentActualBmri");
   el.investmentActualAsii = document.querySelector("#investmentActualAsii");
-  el.investmentActualBbri = document.querySelector("#investmentActualBbri");
   el.investmentActualRdpu = document.querySelector("#investmentActualRdpu");
   el.investmentActualTotal = document.querySelector("#investmentActualTotal");
   el.investmentActualUsed = document.querySelector("#investmentActualUsed");
