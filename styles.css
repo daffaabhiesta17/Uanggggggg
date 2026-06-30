@@ -686,6 +686,89 @@ th {
   gap: 18px;
 }
 
+/* stock toggles */
+.stock-toggles {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  flex-wrap: wrap;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+.stock-toggles-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.stock-toggle-group {
+  display: flex;
+  gap: 6px;
+}
+
+.stock-toggle-btn {
+  min-height: 34px;
+  padding: 6px 16px;
+  border: 1.5px solid var(--line);
+  border-radius: 20px;
+  background: #f1f5f9;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.stock-toggle-btn:hover {
+  border-color: #93c5fd;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.stock-toggle-btn.active {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #fff;
+}
+
+.stock-toggle-btn.active:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.stock-toggles-hint {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-left: auto;
+}
+
+.badge-inactive {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 0.7rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.row-inactive td {
+  opacity: 0.45;
+}
+
+.row-inactive td:last-child {
+  opacity: 1;
+}
+
 .investment-subtabs {
   display: flex;
   gap: 8px;

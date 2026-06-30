@@ -33,6 +33,7 @@ const defaultState = {
   investments: {
     horizonYears: 11,
     tickers: ["BMRI", "ICBP", "BBRI"],
+    activeStocks: ["BMRI", "ICBP", "BBRI"],
     stockPurchases: [],
     rdpuPurchases: [],
   },
@@ -397,10 +398,16 @@ function normalizeInvestments(investments = {}) {
         .filter((purchase) => purchase.amount > 0)
     : [];
 
+  const CORE_STOCKS = ["BMRI", "ICBP", "BBRI"];
+  const rawActive = Array.isArray(investments.activeStocks) ? investments.activeStocks : CORE_STOCKS;
+  const activeStocks = CORE_STOCKS.filter((s) => rawActive.includes(s));
+  const safeActiveStocks = activeStocks.length >= 1 ? activeStocks : ["BMRI"];
+
   return {
     horizonYears: clampNumber(Math.round(Number(investments.horizonYears) || 11), 1, 50),
     simulatorConfig: normalizeSimulatorConfig(investments.simulatorConfig || investments.simulator_config),
     tickers: [...new Set(["BMRI", "ICBP", "BBRI", ...tickers, ...stockPurchases.map((purchase) => purchase.ticker)])],
+    activeStocks: safeActiveStocks,
     stockPurchases,
     rdpuPurchases,
   };
@@ -1215,15 +1222,16 @@ function simulationPeriodLabel(inputs, startMonthIndex, endMonthIndex) {
 }
 
 function actualInvestmentForSimulationMonth(calendarMonth, calendarYear) {
+  const active = state.investments.activeStocks;
   const stockPurchases = state.investments.stockPurchases.filter(
     (purchase) => purchase.month === calendarMonth && purchase.year === calendarYear,
   );
   const rdpuPurchases = state.investments.rdpuPurchases.filter(
     (purchase) => purchase.month === calendarMonth && purchase.year === calendarYear,
   );
-  const bmriPurchases = stockPurchases.filter((purchase) => purchase.ticker === "BMRI");
-  const icbpPurchases = stockPurchases.filter((purchase) => purchase.ticker === "ICBP");
-  const bbriPurchases = stockPurchases.filter((purchase) => purchase.ticker === "BBRI");
+  const bmriPurchases = active.includes("BMRI") ? stockPurchases.filter((p) => p.ticker === "BMRI") : [];
+  const icbpPurchases = active.includes("ICBP") ? stockPurchases.filter((p) => p.ticker === "ICBP") : [];
+  const bbriPurchases = active.includes("BBRI") ? stockPurchases.filter((p) => p.ticker === "BBRI") : [];
   const bmriLots = bmriPurchases.reduce((total, purchase) => total + purchase.lots, 0);
   const icbpLots = icbpPurchases.reduce((total, purchase) => total + purchase.lots, 0);
   const bbriLots = bbriPurchases.reduce((total, purchase) => total + purchase.lots, 0);
@@ -1479,13 +1487,15 @@ function simulateInvestment(inputs) {
 
   for (let month = 1; month <= SIMULATION_MONTHS; month += 1) {
     const year = Math.ceil(month / 12);
-    const stockTurn = (month - 1) % 3;
+    const active = state.investments.activeStocks;
+    const activeCycle = active.filter((s) => ["BMRI", "ICBP", "BBRI"].includes(s));
+    const stockTurnTicker = activeCycle[(month - 1) % activeCycle.length];
     const calendarMonth = simulationCalendarMonth(inputs, month);
     const calendarYear = simulationCalendarYear(inputs, month);
     const actualInvestment = actualInvestmentForSimulationMonth(calendarMonth, calendarYear);
-    const isBmriDividendMonth = calendarMonth === 5;
-    const isIcbpDividendMonth = calendarMonth === 7;
-    const isBbriDividendMonth = calendarMonth === 5;
+    const isBmriDividendMonth = active.includes("BMRI") && calendarMonth === 5;
+    const isIcbpDividendMonth = active.includes("ICBP") && calendarMonth === 7;
+    const isBbriDividendMonth = active.includes("BBRI") && calendarMonth === 5;
     let monthlyContribution = inputs.monthlyDeposit;
 
     if (month > 1 && (month - 1) % 12 === 0) {
@@ -1533,9 +1543,9 @@ function simulateInvestment(inputs) {
         bmriLotPrice,
         icbpLotPrice,
         bbriLotPrice,
-        inputs.bmriMonthlyLots,
-        inputs.icbpMonthlyLots,
-        inputs.bbriMonthlyLots,
+        active.includes("BMRI") ? inputs.bmriMonthlyLots : 0,
+        active.includes("ICBP") ? inputs.icbpMonthlyLots : 0,
+        active.includes("BBRI") ? inputs.bbriMonthlyLots : 0,
         inputs.reinvestCustomDividends,
       );
 
@@ -1547,7 +1557,7 @@ function simulateInvestment(inputs) {
       dividendBbriBought = purchase.dividendBbriBought || 0;
       dividendStockCashUsed = purchase.dividendStockCashUsed || 0;
       rdpuContribution = purchase.leftoverCash;
-    } else if (stockTurn === 0) {
+    } else if (stockTurnTicker === "BMRI") {
       const stockCash = monthlyStockBudget + dividendThisMonth;
       const boughtLots = Math.floor(stockCash / bmriLotPrice);
       const depositOnlyLots = Math.floor(monthlyStockBudget / bmriLotPrice);
@@ -1556,7 +1566,7 @@ function simulateInvestment(inputs) {
       dividendStockCashUsed = Math.min(dividendThisMonth, Math.max(0, stockCost - monthlyStockBudget));
       bmriLots += boughtLots;
       rdpuContribution += stockCash - boughtLots * bmriLotPrice;
-    } else if (stockTurn === 1) {
+    } else if (stockTurnTicker === "ICBP") {
       const stockCash = monthlyStockBudget + dividendThisMonth;
       const boughtLots = Math.floor(stockCash / icbpLotPrice);
       const depositOnlyLots = Math.floor(monthlyStockBudget / icbpLotPrice);
@@ -2500,36 +2510,35 @@ function recommendDividendLots(
   bmriLotPrice,
   icbpLotPrice,
   bbriLotPrice,
+  activeStocks = ["BMRI", "ICBP", "BBRI"],
 ) {
+  const bmriActive = activeStocks.includes("BMRI");
+  const icbpActive = activeStocks.includes("ICBP");
+  const bbriActive = activeStocks.includes("BBRI");
+  const minActive = [
+    bmriActive ? bmriLotPrice : Infinity,
+    icbpActive ? icbpLotPrice : Infinity,
+    bbriActive ? bbriLotPrice : Infinity,
+  ].filter((p) => p < Infinity);
+  if (minActive.length === 0) return { bmriLots: 0, icbpLots: 0, bbriLots: 0, leftover: dividendAmount, stockCost: 0 };
+
   let cash = dividendAmount;
   let bmriLots = 0;
   let icbpLots = 0;
   let bbriLots = 0;
 
-  while (cash >= Math.min(bmriLotPrice, icbpLotPrice, bbriLotPrice)) {
+  while (cash >= Math.min(...minActive)) {
     const projectedBmri = bmriLotsBeforeDividend + bmriLots;
     const projectedIcbp = icbpLotsBeforeDividend + icbpLots;
     const projectedBbri = bbriLotsBeforeDividend + bbriLots;
-    const needsIcbp = projectedBmri > projectedIcbp * DIVIDEND_TARGET_BMRI_RATIO;
-    const needsBbri = !needsIcbp && projectedBmri > projectedBbri * DIVIDEND_TARGET_BMRI_RATIO;
+    const needsIcbp = icbpActive && projectedBmri > projectedIcbp * DIVIDEND_TARGET_BMRI_RATIO;
+    const needsBbri = bbriActive && !needsIcbp && projectedBmri > projectedBbri * DIVIDEND_TARGET_BMRI_RATIO;
 
-    if (needsIcbp && cash >= icbpLotPrice) {
-      icbpLots += 1;
-      cash -= icbpLotPrice;
-      continue;
-    }
-
+    if (needsIcbp && cash >= icbpLotPrice) { icbpLots += 1; cash -= icbpLotPrice; continue; }
     if (needsIcbp && cash < icbpLotPrice) break;
-
-    if (needsBbri && cash >= bbriLotPrice) {
-      bbriLots += 1;
-      cash -= bbriLotPrice;
-      continue;
-    }
-
+    if (needsBbri && cash >= bbriLotPrice) { bbriLots += 1; cash -= bbriLotPrice; continue; }
     if (needsBbri && cash < bbriLotPrice) break;
-    if (bmriLots >= MAX_DIVIDEND_BMRI_LOTS_AFTER_BALANCE || cash < bmriLotPrice) break;
-
+    if (!bmriActive || bmriLots >= MAX_DIVIDEND_BMRI_LOTS_AFTER_BALANCE || cash < bmriLotPrice) break;
     bmriLots += 1;
     cash -= bmriLotPrice;
   }
@@ -2647,14 +2656,15 @@ function updateMonthlyStrategyCalculator() {
   const bmriBaseLotPrice = inputs.bmriPrice * LOT_SIZE;
   const icbpLotPrice = inputs.icbpPrice * LOT_SIZE;
   const bbriLotPrice = inputs.bbriPrice * LOT_SIZE;
+  const active = state.investments.activeStocks;
   const basePurchase = buyAffordableCustomLots(
     inputs.deposit,
     bmriBaseLotPrice,
     icbpLotPrice,
     bbriLotPrice,
-    inputs.bmriBaseLots,
-    inputs.icbpBaseLots,
-    inputs.bbriBaseLots,
+    active.includes("BMRI") ? inputs.bmriBaseLots : 0,
+    active.includes("ICBP") ? inputs.icbpBaseLots : 0,
+    active.includes("BBRI") ? inputs.bbriBaseLots : 0,
   );
   const boughtBmriBaseLots = basePurchase.bmriBought;
   const boughtIcbpBaseLots = basePurchase.icbpBought;
@@ -2699,6 +2709,7 @@ function updateMonthlyStrategyCalculator() {
     bmriExtraLotPrice,
     icbpLotPrice,
     bbriLotPrice,
+    active,
   );
   const dividendIcbpLots = dividendRecommendation.icbpLots;
   const dividendBmriLots = dividendRecommendation.bmriLots;
@@ -2819,16 +2830,22 @@ function calculateInvestmentSummary() {
 }
 
 function renderInvestmentTables() {
+  const active = state.investments.activeStocks;
   const stockRows = [...state.investments.stockPurchases].sort((a, b) => investmentTimestamp(a) - investmentTimestamp(b));
   const rdpuRows = [...state.investments.rdpuPurchases].sort((a, b) => investmentTimestamp(a) - investmentTimestamp(b));
 
   el.investmentStockTable.innerHTML = stockRows.length
     ? stockRows
         .map(
-          (purchase) => `
-            <tr>
+          (purchase) => {
+            const inactive = !active.includes(purchase.ticker);
+            return `
+            <tr class="${inactive ? "row-inactive" : ""}">
               <td>${formatInvestmentDate(purchase)}</td>
-              <td><strong>${escapeHtml(purchase.ticker)}</strong></td>
+              <td>
+                <strong>${escapeHtml(purchase.ticker)}</strong>
+                ${inactive ? `<span class="badge-inactive">Nonaktif</span>` : ""}
+              </td>
               <td>${formatMoney(purchase.lotPrice)}</td>
               <td>${purchase.lots.toLocaleString("id-ID")} lot</td>
               <td><strong>${formatMoney(investmentValue(purchase))}</strong></td>
@@ -2839,7 +2856,8 @@ function renderInvestmentTables() {
                 </div>
               </td>
             </tr>
-          `,
+          `;
+          },
         )
         .join("")
     : `<tr><td colspan="6"><div class="empty-state">Belum ada pembelian saham.</div></td></tr>`;
@@ -2963,8 +2981,20 @@ function setupInvestmentTabs() {
   actualPanel.dataset.investmentTabPanel = "actual";
   analysisPanel.dataset.investmentTabPanel = "analysis";
 
-  const tabs = document.createElement("nav");
-  tabs.className = "investment-subtabs";
+  const stockToggles = document.createElement("div");
+  stockToggles.className = "stock-toggles";
+  stockToggles.setAttribute("aria-label", "Saham aktif");
+  stockToggles.innerHTML = `
+    <span class="stock-toggles-label">Saham Aktif</span>
+    <div class="stock-toggle-group" id="stockToggleGroup">
+      <button class="stock-toggle-btn active" data-stock-toggle="BMRI" type="button" aria-pressed="true">BMRI</button>
+      <button class="stock-toggle-btn active" data-stock-toggle="ICBP" type="button" aria-pressed="true">ICBP</button>
+      <button class="stock-toggle-btn active" data-stock-toggle="BBRI" type="button" aria-pressed="true">BBRI</button>
+    </div>
+    <small class="stock-toggles-hint">Minimal 1 saham aktif. Data saham non-aktif tetap tersimpan.</small>
+  `;
+
+  stack.insertBefore(stockToggles, stack.firstChild);
   tabs.setAttribute("aria-label", "Sub-tab investasi");
   tabs.innerHTML = `
     <button class="active" data-investment-tab-button="simulator" type="button" aria-controls="investmentTabSimulator" aria-selected="true">
@@ -3073,6 +3103,19 @@ function setupInvestmentTabs() {
     const button = event.target.closest("[data-investment-tab-button]");
     if (!button) return;
     switchInvestmentTab(button.dataset.investmentTabButton);
+  });
+
+  stockToggles.addEventListener("click", (event) => {
+    const btn = event.target.closest("[data-stock-toggle]");
+    if (!btn) return;
+    const ticker = btn.dataset.stockToggle;
+    const current = [...state.investments.activeStocks];
+    const isActive = current.includes(ticker);
+    if (isActive && current.length <= 1) return; // jaga minimal 1
+    const next = isActive ? current.filter((s) => s !== ticker) : [...current, ticker];
+    state.investments.activeStocks = next;
+    saveState();
+    renderInvestments();
   });
 }
 
@@ -3187,9 +3230,22 @@ function updateInvestmentStockChart() {
   investmentStockChart.update();
 }
 
+function renderStockToggles() {
+  const group = document.querySelector("#stockToggleGroup");
+  if (!group) return;
+  const active = state.investments.activeStocks;
+  group.querySelectorAll("[data-stock-toggle]").forEach((btn) => {
+    const ticker = btn.dataset.stockToggle;
+    const isActive = active.includes(ticker);
+    btn.classList.toggle("active", isActive);
+    btn.setAttribute("aria-pressed", String(isActive));
+  });
+}
+
 function renderInvestments() {
   state.investments = normalizeInvestments(state.investments);
   applySimulatorConfigToForm(state.investments.simulatorConfig);
+  renderStockToggles();
   updateInvestmentSimulator({ persistConfig: false });
   renderInvestmentOptions();
   renderInvestmentTickers();
