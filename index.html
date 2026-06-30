@@ -277,8 +277,8 @@
             <section class="investment-simulator-grid">
               <form class="surface investment-simulator-form" id="investmentSimulatorForm">
                 <div class="section-head compact">
-                  <h3>Program 1: Proyeksi 120 Bulan</h3>
-                  <p>Bola salju saham BMRI, ASII, dan RDPU dengan pola beli selang-seling.</p>
+                  <h3>Program 1: Proyeksi 180 Bulan</h3>
+                  <p>Bola salju saham BMRI, ASII, BBRI, dan RDPU dengan pola beli selang-seling.</p>
                 </div>
                 <div class="simulator-sync-banner hidden" id="simulatorSyncBanner">
                   <strong>Terhubung ke Program 2</strong>
@@ -333,6 +333,10 @@
                       Harga ASII
                       <input id="simAsiiPrice" type="number" min="1" step="0.01" value="4800" />
                     </label>
+                    <label>
+                      Harga BBRI
+                      <input id="simBbriPrice" type="number" min="1" step="0.01" value="4000" />
+                    </label>
                   </div>
 
                   <label>
@@ -366,13 +370,13 @@
                       <span class="switch-control" aria-hidden="true"></span>
                     </label>
                     <div class="custom-lot-presets" aria-label="Preset custom lot">
-                      <button type="button" data-sim-lot-preset="2-1">
-                        <strong>2 + 1</strong>
-                        <span>BMRI 2 lot, ASII 1 lot</span>
+                      <button type="button" data-sim-lot-preset="2-1-1">
+                        <strong>2 + 1 + 1</strong>
+                        <span>BMRI 2 lot, ASII 1 lot, BBRI 1 lot</span>
                       </button>
-                      <button type="button" data-sim-lot-preset="3-1">
-                        <strong>3 + 1</strong>
-                        <span>BMRI 3 lot, ASII 1 lot</span>
+                      <button type="button" data-sim-lot-preset="3-1-1">
+                        <strong>3 + 1 + 1</strong>
+                        <span>BMRI 3 lot, ASII 1 lot, BBRI 1 lot</span>
                       </button>
                     </div>
                     <div class="input-pair">
@@ -384,6 +388,10 @@
                         ASII Lot / Bulan
                         <input id="simAsiiMonthlyLots" type="number" min="0" step="1" value="1" />
                       </label>
+                      <label>
+                        BBRI Lot / Bulan
+                        <input id="simBbriMonthlyLots" type="number" min="0" step="1" value="1" />
+                      </label>
                     </div>
                     <div class="custom-lot-summary" aria-live="polite">
                       <article>
@@ -393,6 +401,10 @@
                       <article>
                         <span>ASII terbeli</span>
                         <strong id="simCustomAsiiPurchase">0 lot - Rp0</strong>
+                      </article>
+                      <article>
+                        <span>BBRI terbeli</span>
+                        <strong id="simCustomBbriPurchase">0 lot - Rp0</strong>
                       </article>
                       <article>
                         <span>Total saham</span>
@@ -456,6 +468,10 @@
                         ASII % / Tahun
                         <input id="simAsiiPriceChange" type="number" step="0.1" value="5" disabled />
                       </label>
+                      <label>
+                        BBRI % / Tahun
+                        <input id="simBbriPriceChange" type="number" step="0.1" value="5" disabled />
+                      </label>
                     </div>
                   </div>
                 </div>
@@ -463,7 +479,7 @@
                 <div class="simulator-setting-group">
                   <div class="simulator-setting-head">
                     <strong>4. Return & Dividen</strong>
-                    <small>Input asumsi RDPU dan dividen tahunan untuk 120 bulan.</small>
+                    <small>Input asumsi RDPU dan dividen tahunan untuk 180 bulan.</small>
                   </div>
                   <div class="input-pair">
                     <label>
@@ -484,6 +500,10 @@
                     <label>
                       Dividen Awal ASII / Lembar
                       <input id="simAsiiYield" type="text" inputmode="decimal" placeholder="390" value="390" />
+                    </label>
+                    <label>
+                      Dividen Awal BBRI / Lembar
+                      <input id="simBbriYield" type="text" inputmode="decimal" placeholder="235" value="235" />
                     </label>
                   </div>
                 </div>
@@ -547,6 +567,11 @@
                       <small id="simAsiiValue">Rp0</small>
                     </div>
                     <div class="composition-item">
+                      <div class="row-between"><strong>BBRI</strong><span id="simBbriLots">0 lot</span></div>
+                      <div class="composition-track"><span id="simBbriBar"></span></div>
+                      <small id="simBbriValue">Rp0</small>
+                    </div>
+                    <div class="composition-item">
                       <div class="row-between"><strong>RDPU</strong><span id="simRdpuShare">0%</span></div>
                       <div class="composition-track"><span id="simRdpuBar"></span></div>
                       <small id="simRdpuValue">Rp0</small>
@@ -590,6 +615,8 @@
                       <th>Lot BMRI</th>
                       <th>Harga ASII</th>
                       <th>Lot ASII</th>
+                      <th>Harga BBRI</th>
+                      <th>Lot BBRI</th>
                       <th>Dividen Cair</th>
                       <th>Setoran RDPU</th>
                       <th>Return RDPU</th>
@@ -641,7 +668,7 @@
                 <div class="monthly-strategy-header">
                   <div>
                     <h3>Penghitung Strategi Bulanan</h3>
-                    <p>Atur base, cek diskon BMRI, lalu kirim strateginya ke simulator 120 bulan.</p>
+                    <p>Atur base, cek diskon BMRI, lalu kirim strateginya ke simulator 180 bulan.</p>
                   </div>
                   <label class="switch-row monthly-sync-toggle">
                     <span>
@@ -678,12 +705,20 @@
                           <input id="monthlyStrategyAsiiPrice" type="text" inputmode="numeric" value="4.800" />
                         </label>
                         <label>
+                          Harga BBRI / Lembar
+                          <input id="monthlyStrategyBbriPrice" type="text" inputmode="numeric" value="4.000" />
+                        </label>
+                        <label>
                           BMRI Base Lot
                           <input id="monthlyStrategyBmriBaseLots" type="number" min="0" step="1" value="2" />
                         </label>
                         <label>
                           ASII Base Lot
                           <input id="monthlyStrategyAsiiBaseLots" type="number" min="0" step="1" value="1" />
+                        </label>
+                        <label>
+                          BBRI Base Lot
+                          <input id="monthlyStrategyBbriBaseLots" type="number" min="0" step="1" value="1" />
                         </label>
                       </div>
                     </div>
@@ -781,6 +816,10 @@
                             <strong id="monthlyStrategyAsiiBaseResult">0 lot - Rp0</strong>
                           </article>
                           <article>
+                            <span>BBRI Base</span>
+                            <strong id="monthlyStrategyBbriBaseResult">0 lot - Rp0</strong>
+                          </article>
+                          <article>
                             <span>Total Saham Base</span>
                             <strong id="monthlyStrategyBaseStockResult">Rp0</strong>
                           </article>
@@ -859,6 +898,10 @@
                             <span>Total Lot ASII</span>
                             <strong id="monthlyStrategyTotalAsiiLotsResult">0 lot</strong>
                           </article>
+                          <article>
+                            <span>Total Lot BBRI</span>
+                            <strong id="monthlyStrategyTotalBbriLotsResult">0 lot</strong>
+                          </article>
                           <article class="monthly-summary-total">
                             <span>Total RDPU Bulan Ini</span>
                             <strong id="monthlyStrategyTotalRdpuResult">Rp0</strong>
@@ -914,7 +957,7 @@
               <section class="investment-records-section">
                 <div class="section-head compact">
                   <h3>Pembelian Saham</h3>
-                  <p>Default BMRI dan ASII, saham lain bisa ditambahkan.</p>
+                  <p>Default BMRI, ASII, dan BBRI; saham lain bisa ditambahkan.</p>
                 </div>
                 <form class="investment-inline-form" id="investmentTickerForm">
                   <label>
