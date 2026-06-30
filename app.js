@@ -2989,6 +2989,9 @@ function setupInvestmentTabs() {
   `;
 
   stack.insertBefore(stockToggles, stack.firstChild);
+
+  const tabs = document.createElement("nav");
+  tabs.className = "investment-tabs";
   tabs.setAttribute("aria-label", "Sub-tab investasi");
   tabs.innerHTML = `
     <button class="active" data-investment-tab-button="simulator" type="button" aria-controls="investmentTabSimulator" aria-selected="true">
