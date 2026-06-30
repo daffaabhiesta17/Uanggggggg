@@ -98,6 +98,8 @@ let transactionSelectionMode = false;
 let selectedTransactionIds = new Set();
 let chartBars = [];
 let investmentsDirty = true;
+let editingStockPurchaseId = null;
+let editingRdpuPurchaseId = null;
 let simulatorSettingsSaveTimer = null;
 let investmentGrowthChart = null;
 let investmentStockChart = null;
@@ -283,6 +285,8 @@ const el = {
   investmentTickerInput: document.querySelector("#investmentTickerInput"),
   investmentTickerList: document.querySelector("#investmentTickerList"),
   investmentStockForm: document.querySelector("#investmentStockForm"),
+  investmentStockSubmit: document.querySelector("#investmentStockSubmit"),
+  investmentStockCancelEdit: document.querySelector("#investmentStockCancelEdit"),
   investmentStockTicker: document.querySelector("#investmentStockTicker"),
   investmentStockMonth: document.querySelector("#investmentStockMonth"),
   investmentStockYear: document.querySelector("#investmentStockYear"),
@@ -290,6 +294,8 @@ const el = {
   investmentStockLots: document.querySelector("#investmentStockLots"),
   investmentStockTable: document.querySelector("#investmentStockTable"),
   investmentRdpuForm: document.querySelector("#investmentRdpuForm"),
+  investmentRdpuSubmit: document.querySelector("#investmentRdpuSubmit"),
+  investmentRdpuCancelEdit: document.querySelector("#investmentRdpuCancelEdit"),
   investmentRdpuMonth: document.querySelector("#investmentRdpuMonth"),
   investmentRdpuYear: document.querySelector("#investmentRdpuYear"),
   investmentRdpuAmount: document.querySelector("#investmentRdpuAmount"),
@@ -2826,7 +2832,12 @@ function renderInvestmentTables() {
               <td>${formatMoney(purchase.lotPrice)}</td>
               <td>${purchase.lots.toLocaleString("id-ID")} lot</td>
               <td><strong>${formatMoney(investmentValue(purchase))}</strong></td>
-              <td><button class="icon-button delete" data-delete-stock-purchase="${purchase.id}" type="button">Hapus</button></td>
+              <td>
+                <div class="table-actions">
+                  <button class="icon-button" data-edit-stock-purchase="${purchase.id}" type="button">Edit</button>
+                  <button class="icon-button delete" data-delete-stock-purchase="${purchase.id}" type="button">Hapus</button>
+                </div>
+              </td>
             </tr>
           `,
         )
@@ -2840,7 +2851,12 @@ function renderInvestmentTables() {
             <tr>
               <td>${formatInvestmentDate(purchase)}</td>
               <td><strong>${formatMoney(purchase.amount)}</strong></td>
-              <td><button class="icon-button delete" data-delete-rdpu-purchase="${purchase.id}" type="button">Hapus</button></td>
+              <td>
+                <div class="table-actions">
+                  <button class="icon-button" data-edit-rdpu-purchase="${purchase.id}" type="button">Edit</button>
+                  <button class="icon-button delete" data-delete-rdpu-purchase="${purchase.id}" type="button">Hapus</button>
+                </div>
+              </td>
             </tr>
           `,
         )
@@ -3441,6 +3457,42 @@ function initEvents() {
     }
   });
 
+  function enterStockEditMode(purchase) {
+    editingStockPurchaseId = purchase.id;
+    el.investmentStockTicker.value = purchase.ticker;
+    el.investmentStockMonth.value = String(purchase.month);
+    el.investmentStockYear.value = String(purchase.year);
+    el.investmentStockLotPrice.value = String(purchase.lotPrice);
+    el.investmentStockLots.value = String(purchase.lots);
+    el.investmentStockSubmit.textContent = "Update Saham";
+    el.investmentStockCancelEdit.hidden = false;
+    el.investmentStockForm.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function exitStockEditMode() {
+    editingStockPurchaseId = null;
+    el.investmentStockForm.reset();
+    el.investmentStockSubmit.textContent = "Simpan Saham";
+    el.investmentStockCancelEdit.hidden = true;
+  }
+
+  function enterRdpuEditMode(purchase) {
+    editingRdpuPurchaseId = purchase.id;
+    el.investmentRdpuMonth.value = String(purchase.month);
+    el.investmentRdpuYear.value = String(purchase.year);
+    el.investmentRdpuAmount.value = String(purchase.amount);
+    el.investmentRdpuSubmit.textContent = "Update RDPU";
+    el.investmentRdpuCancelEdit.hidden = false;
+    el.investmentRdpuForm.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function exitRdpuEditMode() {
+    editingRdpuPurchaseId = null;
+    el.investmentRdpuForm.reset();
+    el.investmentRdpuSubmit.textContent = "Simpan RDPU";
+    el.investmentRdpuCancelEdit.hidden = true;
+  }
+
   el.investmentStockForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const lotPrice = parseNumberInput(el.investmentStockLotPrice.value);
@@ -3450,27 +3502,42 @@ function initEvents() {
       return;
     }
 
+    const isEditing = Boolean(editingStockPurchaseId);
+    const existing = isEditing
+      ? state.investments.stockPurchases.find((item) => item.id === editingStockPurchaseId)
+      : null;
+
     const purchase = {
-      id: uid("stock"),
+      id: isEditing ? editingStockPurchaseId : uid("stock"),
       ticker: el.investmentStockTicker.value,
       month: Number(el.investmentStockMonth.value),
       year: Number(el.investmentStockYear.value),
       lotPrice,
       lots,
-      createdAt: new Date().toISOString(),
+      createdAt: existing ? existing.createdAt : new Date().toISOString(),
     };
 
-    state.investments.stockPurchases.push(purchase);
-    el.investmentStockLotPrice.value = "";
-    el.investmentStockLots.value = "";
+    if (isEditing) {
+      state.investments.stockPurchases = state.investments.stockPurchases.map((item) =>
+        item.id === purchase.id ? purchase : item,
+      );
+    } else {
+      state.investments.stockPurchases.push(purchase);
+    }
+
+    exitStockEditMode();
     renderInvestments();
     showInvestmentSaveFeedback(purchase, "stock");
     try {
       await persistStockPurchase(purchase);
     } catch (error) {
       console.error(error);
-      setSyncStatus("Simpan pembelian saham cloud gagal", "error");
+      setSyncStatus(isEditing ? "Update pembelian saham cloud gagal" : "Simpan pembelian saham cloud gagal", "error");
     }
+  });
+
+  el.investmentStockCancelEdit.addEventListener("click", () => {
+    exitStockEditMode();
   });
 
   el.investmentRdpuForm.addEventListener("submit", async (event) => {
@@ -3481,30 +3548,54 @@ function initEvents() {
       return;
     }
 
+    const isEditing = Boolean(editingRdpuPurchaseId);
+    const existing = isEditing
+      ? state.investments.rdpuPurchases.find((item) => item.id === editingRdpuPurchaseId)
+      : null;
+
     const purchase = {
-      id: uid("rdpu"),
+      id: isEditing ? editingRdpuPurchaseId : uid("rdpu"),
       month: Number(el.investmentRdpuMonth.value),
       year: Number(el.investmentRdpuYear.value),
       amount,
-      createdAt: new Date().toISOString(),
+      createdAt: existing ? existing.createdAt : new Date().toISOString(),
     };
 
-    state.investments.rdpuPurchases.push(purchase);
-    el.investmentRdpuAmount.value = "";
+    if (isEditing) {
+      state.investments.rdpuPurchases = state.investments.rdpuPurchases.map((item) =>
+        item.id === purchase.id ? purchase : item,
+      );
+    } else {
+      state.investments.rdpuPurchases.push(purchase);
+    }
+
+    exitRdpuEditMode();
     renderInvestments();
     showInvestmentSaveFeedback(purchase, "rdpu");
     try {
       await persistRdpuPurchase(purchase);
     } catch (error) {
       console.error(error);
-      setSyncStatus("Simpan RDPU cloud gagal", "error");
+      setSyncStatus(isEditing ? "Update RDPU cloud gagal" : "Simpan RDPU cloud gagal", "error");
     }
   });
 
+  el.investmentRdpuCancelEdit.addEventListener("click", () => {
+    exitRdpuEditMode();
+  });
+
   el.investmentStockTable.addEventListener("click", async (event) => {
+    const editId = event.target.dataset.editStockPurchase;
+    if (editId) {
+      const purchase = state.investments.stockPurchases.find((item) => item.id === editId);
+      if (purchase) enterStockEditMode(purchase);
+      return;
+    }
+
     const id = event.target.dataset.deleteStockPurchase;
     if (!id) return;
 
+    if (editingStockPurchaseId === id) exitStockEditMode();
     state.investments.stockPurchases = state.investments.stockPurchases.filter((purchase) => purchase.id !== id);
     renderInvestments();
     try {
@@ -3516,9 +3607,17 @@ function initEvents() {
   });
 
   el.investmentRdpuTable.addEventListener("click", async (event) => {
+    const editId = event.target.dataset.editRdpuPurchase;
+    if (editId) {
+      const purchase = state.investments.rdpuPurchases.find((item) => item.id === editId);
+      if (purchase) enterRdpuEditMode(purchase);
+      return;
+    }
+
     const id = event.target.dataset.deleteRdpuPurchase;
     if (!id) return;
 
+    if (editingRdpuPurchaseId === id) exitRdpuEditMode();
     state.investments.rdpuPurchases = state.investments.rdpuPurchases.filter((purchase) => purchase.id !== id);
     renderInvestments();
     try {
