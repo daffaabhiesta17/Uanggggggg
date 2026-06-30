@@ -1491,13 +1491,13 @@ function simulateInvestment(inputs) {
     const bmriLotPrice = currentBmriPrice * LOT_SIZE;
     const asiiLotPrice = currentAsiiPrice * LOT_SIZE;
     const bbriLotPrice = currentBbriPrice * LOT_SIZE;
-    const bmriDividend = isBmriDividendMonth
+    const bmriDividend = !actualInvestment.hasActual && isBmriDividendMonth
       ? bmriLots * LOT_SIZE * dividendPerShare(inputs.bmriDividendInitial, inputs.dividendGrowthAnnual, year)
       : 0;
-    const asiiDividend = isAsiiDividendMonth
+    const asiiDividend = !actualInvestment.hasActual && isAsiiDividendMonth
       ? asiiLots * LOT_SIZE * dividendPerShare(inputs.asiiDividendInitial, inputs.dividendGrowthAnnual, year)
       : 0;
-    const bbriDividend = isBbriDividendMonth
+    const bbriDividend = !actualInvestment.hasActual && isBbriDividendMonth
       ? bbriLots * LOT_SIZE * dividendPerShare(inputs.bbriDividendInitial, inputs.dividendGrowthAnnual, year)
       : 0;
     const dividendThisMonth = bmriDividend + asiiDividend + bbriDividend;
@@ -1511,7 +1511,7 @@ function simulateInvestment(inputs) {
       bmriLots += actualInvestment.bmriLots;
       asiiLots += actualInvestment.asiiLots;
       bbriLots += actualInvestment.bbriLots;
-      rdpuContribution = actualInvestment.rdpuAmount + dividendThisMonth;
+      rdpuContribution = actualInvestment.rdpuAmount;
       monthlyContribution = actualInvestment.contribution;
       annualActualBmriLots += actualInvestment.bmriLots;
       annualActualAsiiLots += actualInvestment.asiiLots;
