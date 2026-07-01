@@ -1421,6 +1421,31 @@ function readSimulationInputs() {
   };
 }
 
+function applyActiveStocksToForm() {
+  const active = state.investments.activeStocks;
+  const isCustom = el.simPurchaseMode ? el.simPurchaseMode.value === "custom" : false;
+  const priceChangeOn = el.simEnablePriceChange ? el.simEnablePriceChange.checked : false;
+  const stocks = { BMRI: "Bmri", ICBP: "Icbp", BBRI: "Bbri" };
+
+  Object.entries(stocks).forEach(([ticker, t]) => {
+    const isActive = active.includes(ticker);
+    const fields = {
+      [`sim${t}MonthlyLots`]: !isActive || !isCustom,
+      [`sim${t}Price`]: !isActive,
+      [`sim${t}PriceChange`]: !isActive || !priceChangeOn,
+      [`sim${t}Yield`]: !isActive,
+      [`simCustom${t}Purchase`]: !isActive,
+    };
+    Object.entries(fields).forEach(([id, shouldDisable]) => {
+      const fieldEl = el[id];
+      if (!fieldEl) return;
+      fieldEl.disabled = shouldDisable;
+      const wrapper = fieldEl.closest(".sim-field, .form-row, .price-change-field, .field-group, label") || fieldEl.parentElement;
+      if (wrapper) wrapper.classList.toggle("stock-field-inactive", !isActive);
+    });
+  });
+}
+
 function applySimulatorConfigToForm(config) {
   const normalized = normalizeSimulatorConfig(config);
   el.simMonthlyDeposit.value = String(normalized.monthlyDeposit);
@@ -1846,9 +1871,14 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
   el.simStockAllocationNumber.disabled = isCustomPurchase;
   el.simCustomLotPanel.classList.toggle("hidden", !isCustomPurchase);
   el.simReinvestCustomDividends.disabled = !isCustomPurchase;
-  el.simBmriMonthlyLots.disabled = !isCustomPurchase;
-  el.simIcbpMonthlyLots.disabled = !isCustomPurchase;
-  el.simBbriMonthlyLots.disabled = !isCustomPurchase;
+  el.simPriceChangePanel.classList.toggle("active", inputs.priceChangeEnabled);
+  el.simPriceChangeToggle.classList.toggle("active", inputs.priceChangeEnabled);
+  el.simPriceChangeFields.classList.toggle("disabled", !inputs.priceChangeEnabled);
+  el.simPriceChangeStatus.textContent = inputs.priceChangeEnabled
+    ? "Aktif - persentase perubahan harga per tahun dipakai dalam simulasi."
+    : "Mati - harga saham tetap memakai harga awal.";
+  applyActiveStocksToForm();
+  renderStockToggles();
   el.simRdpuAllocationLabel.textContent = isCustomPurchase ? "Sisa kas" : `${inputs.rdpuAllocation}%`;
   el.simStockAllocationAmount.textContent = isCustomPurchase
     ? `${inputs.bmriMonthlyLots.toLocaleString("id-ID")} lot BMRI + ${inputs.icbpMonthlyLots.toLocaleString("id-ID")} lot ICBP + ${inputs.bbriMonthlyLots.toLocaleString("id-ID")} lot BBRI`
@@ -1859,15 +1889,6 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
   if (isCustomPurchase) {
     updateCustomLotSummary(inputs);
   }
-  el.simBmriPriceChange.disabled = !inputs.priceChangeEnabled;
-  el.simIcbpPriceChange.disabled = !inputs.priceChangeEnabled;
-  el.simBbriPriceChange.disabled = !inputs.priceChangeEnabled;
-  el.simPriceChangePanel.classList.toggle("active", inputs.priceChangeEnabled);
-  el.simPriceChangeToggle.classList.toggle("active", inputs.priceChangeEnabled);
-  el.simPriceChangeFields.classList.toggle("disabled", !inputs.priceChangeEnabled);
-  el.simPriceChangeStatus.textContent = inputs.priceChangeEnabled
-    ? "Aktif - persentase perubahan harga per tahun dipakai dalam simulasi."
-    : "Mati - harga saham tetap memakai harga awal.";
   renderProgramActualSyncBanner(inputs);
   renderCurrentActualSummary(inputs);
 
