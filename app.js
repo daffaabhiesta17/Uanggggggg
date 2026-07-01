@@ -480,6 +480,12 @@ function normalizeSimulatorConfig(config = {}) {
       -99,
       1000,
     ),
+    activeStocks: (() => {
+      const CORE = ["BMRI", "ICBP", "BBRI"];
+      const raw = Array.isArray(config.activeStocks) ? config.activeStocks : CORE;
+      const filtered = CORE.filter((s) => raw.includes(s));
+      return filtered.length >= 1 ? filtered : ["BMRI"];
+    })(),
   };
 }
 
@@ -728,6 +734,8 @@ async function loadRemoteInvestments(localInvestments = state.investments) {
       ? normalizeInvestments({
           horizonYears: Number(settingsResult.data?.horizon_years) || state.investments.horizonYears,
           simulatorConfig: settingsResult.data?.simulator_config || state.investments.simulatorConfig,
+          activeStocks: (settingsResult.data?.simulator_config || state.investments.simulatorConfig)?.activeStocks
+            || state.investments.activeStocks,
           tickers: tickersResult.data.map(fromDbInvestmentTicker),
           stockPurchases: stockResult.data.map(fromDbStockPurchase),
           rdpuPurchases: rdpuResult.data.map(fromDbRdpuPurchase),
@@ -1332,6 +1340,7 @@ function formatAnnualActualPurchase(row) {
 }
 
 function updateCustomLotSummary(inputs) {
+  const active = state.investments.activeStocks;
   const bmriLotPrice = inputs.bmriPrice * LOT_SIZE;
   const icbpLotPrice = inputs.icbpPrice * LOT_SIZE;
   const bbriLotPrice = inputs.bbriPrice * LOT_SIZE;
@@ -1340,26 +1349,33 @@ function updateCustomLotSummary(inputs) {
     bmriLotPrice,
     icbpLotPrice,
     bbriLotPrice,
-    inputs.bmriMonthlyLots,
-    inputs.icbpMonthlyLots,
-    inputs.bbriMonthlyLots,
+    active.includes("BMRI") ? inputs.bmriMonthlyLots : 0,
+    active.includes("ICBP") ? inputs.icbpMonthlyLots : 0,
+    active.includes("BBRI") ? inputs.bbriMonthlyLots : 0,
   );
   const bmriAmount = purchase.bmriBought * bmriLotPrice;
   const icbpAmount = purchase.icbpBought * icbpLotPrice;
   const bbriAmount = purchase.bbriBought * bbriLotPrice;
   const stockAmount = bmriAmount + icbpAmount + bbriAmount;
   const targetAmount =
-    inputs.bmriMonthlyLots * bmriLotPrice +
-    inputs.icbpMonthlyLots * icbpLotPrice +
-    inputs.bbriMonthlyLots * bbriLotPrice;
+    (active.includes("BMRI") ? inputs.bmriMonthlyLots : 0) * bmriLotPrice +
+    (active.includes("ICBP") ? inputs.icbpMonthlyLots : 0) * icbpLotPrice +
+    (active.includes("BBRI") ? inputs.bbriMonthlyLots : 0) * bbriLotPrice;
   const targetReached =
-    purchase.bmriBought === inputs.bmriMonthlyLots &&
-    purchase.icbpBought === inputs.icbpMonthlyLots &&
-    purchase.bbriBought === inputs.bbriMonthlyLots;
+    purchase.bmriBought === (active.includes("BMRI") ? inputs.bmriMonthlyLots : 0) &&
+    purchase.icbpBought === (active.includes("ICBP") ? inputs.icbpMonthlyLots : 0) &&
+    purchase.bbriBought === (active.includes("BBRI") ? inputs.bbriMonthlyLots : 0);
 
-  el.simCustomBmriPurchase.textContent = formatLotPurchase(purchase.bmriBought, bmriAmount);
-  el.simCustomIcbpPurchase.textContent = formatLotPurchase(purchase.icbpBought, icbpAmount);
-  el.simCustomBbriPurchase.textContent = formatLotPurchase(purchase.bbriBought, bbriAmount);
+  const nonaktifLabel = `<span class="badge-inactive" style="font-size:0.68rem">Nonaktif</span>`;
+  el.simCustomBmriPurchase.innerHTML = active.includes("BMRI")
+    ? formatLotPurchase(purchase.bmriBought, bmriAmount)
+    : nonaktifLabel;
+  el.simCustomIcbpPurchase.innerHTML = active.includes("ICBP")
+    ? formatLotPurchase(purchase.icbpBought, icbpAmount)
+    : nonaktifLabel;
+  el.simCustomBbriPurchase.innerHTML = active.includes("BBRI")
+    ? formatLotPurchase(purchase.bbriBought, bbriAmount)
+    : nonaktifLabel;
   el.simCustomStockPurchase.textContent = formatMoney(stockAmount);
   el.simCustomRdpuPurchase.textContent = formatMoney(purchase.leftoverCash);
 
@@ -1401,36 +1417,8 @@ function readSimulationInputs() {
     bmriPriceChangeAnnual: clampNumber(readNumber(el.simBmriPriceChange, 5), -99, 1000),
     icbpPriceChangeAnnual: clampNumber(readNumber(el.simIcbpPriceChange, 5), -99, 1000),
     bbriPriceChangeAnnual: clampNumber(readNumber(el.simBbriPriceChange, 5), -99, 1000),
+    activeStocks: state.investments.activeStocks,
   };
-}
-
-function applyActiveStocksToForm() {
-  const active = state.investments.activeStocks;
-  const isCustom = el.simPurchaseMode.value === "custom";
-  const priceChangeOn = el.simEnablePriceChange.checked;
-
-  const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
-  const stocks = { BMRI: "Bmri", ICBP: "Icbp", BBRI: "Bbri" };
-
-  Object.entries(stocks).forEach(([ticker, t]) => {
-    const isActive = active.includes(ticker);
-
-    const fields = {
-      [`sim${t}MonthlyLots`]: !isActive || !isCustom,
-      [`sim${t}Price`]: !isActive,
-      [`sim${t}PriceChange`]: !isActive || !priceChangeOn,
-      [`sim${t}Yield`]: !isActive,
-      [`simCustom${t}Purchase`]: !isActive,
-    };
-
-    Object.entries(fields).forEach(([id, shouldDisable]) => {
-      const fieldEl = el[id];
-      if (!fieldEl) return;
-      fieldEl.disabled = shouldDisable;
-      const wrapper = fieldEl.closest(".sim-field, .form-row, .price-change-field, .field-group, label") || fieldEl.parentElement;
-      if (wrapper) wrapper.classList.toggle("stock-field-inactive", !isActive);
-    });
-  });
 }
 
 function applySimulatorConfigToForm(config) {
@@ -1461,7 +1449,11 @@ function applySimulatorConfigToForm(config) {
 }
 
 function saveSimulatorConfigFromInputs() {
-  state.investments.simulatorConfig = normalizeSimulatorConfig(readSimulationInputs());
+  const inputs = readSimulationInputs();
+  state.investments.simulatorConfig = normalizeSimulatorConfig({
+    ...inputs,
+    activeStocks: state.investments.activeStocks,
+  });
   saveState();
   schedulePersistInvestmentSettings();
 }
@@ -1511,7 +1503,7 @@ function simulateInvestment(inputs) {
 
   for (let month = 1; month <= SIMULATION_MONTHS; month += 1) {
     const year = Math.ceil(month / 12);
-    const active = state.investments.activeStocks;
+    const active = inputs.activeStocks;
     const activeCycle = active.filter((s) => ["BMRI", "ICBP", "BBRI"].includes(s));
     const stockTurnTicker = activeCycle[(month - 1) % activeCycle.length];
     const calendarMonth = simulationCalendarMonth(inputs, month);
@@ -1854,14 +1846,9 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
   el.simStockAllocationNumber.disabled = isCustomPurchase;
   el.simCustomLotPanel.classList.toggle("hidden", !isCustomPurchase);
   el.simReinvestCustomDividends.disabled = !isCustomPurchase;
-  el.simPriceChangePanel.classList.toggle("active", inputs.priceChangeEnabled);
-  el.simPriceChangeToggle.classList.toggle("active", inputs.priceChangeEnabled);
-  el.simPriceChangeFields.classList.toggle("disabled", !inputs.priceChangeEnabled);
-  el.simPriceChangeStatus.textContent = inputs.priceChangeEnabled
-    ? "Aktif - persentase perubahan harga per tahun dipakai dalam simulasi."
-    : "Mati - harga saham tetap memakai harga awal.";
-  applyActiveStocksToForm();
-  renderStockToggles();
+  el.simBmriMonthlyLots.disabled = !isCustomPurchase;
+  el.simIcbpMonthlyLots.disabled = !isCustomPurchase;
+  el.simBbriMonthlyLots.disabled = !isCustomPurchase;
   el.simRdpuAllocationLabel.textContent = isCustomPurchase ? "Sisa kas" : `${inputs.rdpuAllocation}%`;
   el.simStockAllocationAmount.textContent = isCustomPurchase
     ? `${inputs.bmriMonthlyLots.toLocaleString("id-ID")} lot BMRI + ${inputs.icbpMonthlyLots.toLocaleString("id-ID")} lot ICBP + ${inputs.bbriMonthlyLots.toLocaleString("id-ID")} lot BBRI`
@@ -1872,6 +1859,15 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
   if (isCustomPurchase) {
     updateCustomLotSummary(inputs);
   }
+  el.simBmriPriceChange.disabled = !inputs.priceChangeEnabled;
+  el.simIcbpPriceChange.disabled = !inputs.priceChangeEnabled;
+  el.simBbriPriceChange.disabled = !inputs.priceChangeEnabled;
+  el.simPriceChangePanel.classList.toggle("active", inputs.priceChangeEnabled);
+  el.simPriceChangeToggle.classList.toggle("active", inputs.priceChangeEnabled);
+  el.simPriceChangeFields.classList.toggle("disabled", !inputs.priceChangeEnabled);
+  el.simPriceChangeStatus.textContent = inputs.priceChangeEnabled
+    ? "Aktif - persentase perubahan harga per tahun dipakai dalam simulasi."
+    : "Mati - harga saham tetap memakai harga awal.";
   renderProgramActualSyncBanner(inputs);
   renderCurrentActualSummary(inputs);
 
@@ -3021,25 +3017,13 @@ function setupInvestmentTabs() {
   tabs.setAttribute("aria-label", "Sub-tab investasi");
   tabs.innerHTML = `
     <button class="active" data-investment-tab-button="simulator" type="button" aria-controls="investmentTabSimulator" aria-selected="true">
-      <span class="subtab-icon">📈</span>
-      <span class="subtab-label">
-        <strong>Program 1</strong>
-        <small>Proyeksi 180 Bulan</small>
-      </span>
+      Program 1: Proyeksi 180 Bulan
     </button>
     <button data-investment-tab-button="actual" type="button" aria-controls="investmentTabActual" aria-selected="false">
-      <span class="subtab-icon">📋</span>
-      <span class="subtab-label">
-        <strong>Catatan Aktual</strong>
-        <small>Program 2</small>
-      </span>
+      Catatan Aktual
     </button>
     <button data-investment-tab-button="analysis" type="button" aria-controls="investmentTabAnalysis" aria-selected="false">
-      <span class="subtab-icon">🧮</span>
-      <span class="subtab-label">
-        <strong>Analisis Pembelian</strong>
-        <small>Kalkulator Bulanan</small>
-      </span>
+      Analisis Pembelian
     </button>
   `;
 
