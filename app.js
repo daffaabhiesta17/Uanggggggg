@@ -1404,6 +1404,35 @@ function readSimulationInputs() {
   };
 }
 
+function applyActiveStocksToForm() {
+  const active = state.investments.activeStocks;
+  const isCustom = el.simPurchaseMode.value === "custom";
+  const priceChangeOn = el.simEnablePriceChange.checked;
+
+  const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+  const stocks = { BMRI: "Bmri", ICBP: "Icbp", BBRI: "Bbri" };
+
+  Object.entries(stocks).forEach(([ticker, t]) => {
+    const isActive = active.includes(ticker);
+
+    const fields = {
+      [`sim${t}MonthlyLots`]: !isActive || !isCustom,
+      [`sim${t}Price`]: !isActive,
+      [`sim${t}PriceChange`]: !isActive || !priceChangeOn,
+      [`sim${t}Yield`]: !isActive,
+      [`simCustom${t}Purchase`]: !isActive,
+    };
+
+    Object.entries(fields).forEach(([id, shouldDisable]) => {
+      const fieldEl = el[id];
+      if (!fieldEl) return;
+      fieldEl.disabled = shouldDisable;
+      const wrapper = fieldEl.closest(".sim-field, .form-row, .price-change-field, .field-group, label") || fieldEl.parentElement;
+      if (wrapper) wrapper.classList.toggle("stock-field-inactive", !isActive);
+    });
+  });
+}
+
 function applySimulatorConfigToForm(config) {
   const normalized = normalizeSimulatorConfig(config);
   el.simMonthlyDeposit.value = String(normalized.monthlyDeposit);
@@ -1428,6 +1457,7 @@ function applySimulatorConfigToForm(config) {
   el.simBmriPriceChange.value = String(normalized.bmriPriceChangeAnnual);
   el.simIcbpPriceChange.value = String(normalized.icbpPriceChangeAnnual);
   el.simBbriPriceChange.value = String(normalized.bbriPriceChangeAnnual);
+  applyActiveStocksToForm();
 }
 
 function saveSimulatorConfigFromInputs() {
@@ -1824,9 +1854,14 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
   el.simStockAllocationNumber.disabled = isCustomPurchase;
   el.simCustomLotPanel.classList.toggle("hidden", !isCustomPurchase);
   el.simReinvestCustomDividends.disabled = !isCustomPurchase;
-  el.simBmriMonthlyLots.disabled = !isCustomPurchase;
-  el.simIcbpMonthlyLots.disabled = !isCustomPurchase;
-  el.simBbriMonthlyLots.disabled = !isCustomPurchase;
+  el.simPriceChangePanel.classList.toggle("active", inputs.priceChangeEnabled);
+  el.simPriceChangeToggle.classList.toggle("active", inputs.priceChangeEnabled);
+  el.simPriceChangeFields.classList.toggle("disabled", !inputs.priceChangeEnabled);
+  el.simPriceChangeStatus.textContent = inputs.priceChangeEnabled
+    ? "Aktif - persentase perubahan harga per tahun dipakai dalam simulasi."
+    : "Mati - harga saham tetap memakai harga awal.";
+  applyActiveStocksToForm();
+  renderStockToggles();
   el.simRdpuAllocationLabel.textContent = isCustomPurchase ? "Sisa kas" : `${inputs.rdpuAllocation}%`;
   el.simStockAllocationAmount.textContent = isCustomPurchase
     ? `${inputs.bmriMonthlyLots.toLocaleString("id-ID")} lot BMRI + ${inputs.icbpMonthlyLots.toLocaleString("id-ID")} lot ICBP + ${inputs.bbriMonthlyLots.toLocaleString("id-ID")} lot BBRI`
@@ -1837,15 +1872,6 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
   if (isCustomPurchase) {
     updateCustomLotSummary(inputs);
   }
-  el.simBmriPriceChange.disabled = !inputs.priceChangeEnabled;
-  el.simIcbpPriceChange.disabled = !inputs.priceChangeEnabled;
-  el.simBbriPriceChange.disabled = !inputs.priceChangeEnabled;
-  el.simPriceChangePanel.classList.toggle("active", inputs.priceChangeEnabled);
-  el.simPriceChangeToggle.classList.toggle("active", inputs.priceChangeEnabled);
-  el.simPriceChangeFields.classList.toggle("disabled", !inputs.priceChangeEnabled);
-  el.simPriceChangeStatus.textContent = inputs.priceChangeEnabled
-    ? "Aktif - persentase perubahan harga per tahun dipakai dalam simulasi."
-    : "Mati - harga saham tetap memakai harga awal.";
   renderProgramActualSyncBanner(inputs);
   renderCurrentActualSummary(inputs);
 
@@ -2995,13 +3021,25 @@ function setupInvestmentTabs() {
   tabs.setAttribute("aria-label", "Sub-tab investasi");
   tabs.innerHTML = `
     <button class="active" data-investment-tab-button="simulator" type="button" aria-controls="investmentTabSimulator" aria-selected="true">
-      Program 1: Proyeksi 180 Bulan
+      <span class="subtab-icon">📈</span>
+      <span class="subtab-label">
+        <strong>Program 1</strong>
+        <small>Proyeksi 180 Bulan</small>
+      </span>
     </button>
     <button data-investment-tab-button="actual" type="button" aria-controls="investmentTabActual" aria-selected="false">
-      Catatan Aktual
+      <span class="subtab-icon">📋</span>
+      <span class="subtab-label">
+        <strong>Catatan Aktual</strong>
+        <small>Program 2</small>
+      </span>
     </button>
     <button data-investment-tab-button="analysis" type="button" aria-controls="investmentTabAnalysis" aria-selected="false">
-      Analisis Pembelian
+      <span class="subtab-icon">🧮</span>
+      <span class="subtab-label">
+        <strong>Analisis Pembelian</strong>
+        <small>Kalkulator Bulanan</small>
+      </span>
     </button>
   `;
 
