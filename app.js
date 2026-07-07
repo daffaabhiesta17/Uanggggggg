@@ -3000,6 +3000,150 @@ function showInvestmentSaveFeedback(purchase, type) {
   el.investmentSaveFeedback.classList.remove("hidden");
 }
 
+
+// ============================================================
+// REBALANCING PORTFOLIO CALCULATOR
+// ============================================================
+
+function parseFormattedNumber(str) {
+  if (!str) return 0;
+  // Hapus titik ribuan dan ganti koma desimal ke titik
+  const cleaned = String(str).replace(/\./g, "").replace(",", ".");
+  const val = parseFloat(cleaned);
+  return isNaN(val) ? 0 : val;
+}
+
+function formatPct(value) {
+  return `${value.toFixed(2).replace(".", ",")}%`;
+}
+
+function renderRebalancingCalculator() {
+  const panel = document.querySelector("#rebalancingCalculator");
+  if (!panel) return;
+
+  const bmriVal = parseFormattedNumber(document.querySelector("#rebBmriValue")?.value || "0");
+  const asiiVal = parseFormattedNumber(document.querySelector("#rebAsiiValue")?.value || "0");
+  const bbriVal = parseFormattedNumber(document.querySelector("#rebBbriValue")?.value || "0");
+  const rdpuVal = parseFormattedNumber(document.querySelector("#rebRdpuValue")?.value || "0");
+
+  const stockTotal = bmriVal + asiiVal + bbriVal;
+  const grandTotal = stockTotal + rdpuVal;
+
+  if (grandTotal <= 0) {
+    document.querySelector("#rebResultArea").innerHTML = `
+      <p class="reb-empty">Masukkan nilai portofolio untuk melihat analisis.</p>
+    `;
+    return;
+  }
+
+  const bmriPct  = (bmriVal  / grandTotal) * 100;
+  const asiiPct  = (asiiVal  / grandTotal) * 100;
+  const bbriPct  = (bbriVal  / grandTotal) * 100;
+  const rdpuPct  = (rdpuVal  / grandTotal) * 100;
+  const stockPct = (stockTotal / grandTotal) * 100;
+
+  // Target alokasi dari input
+  const targetBmriPct  = parseFloat(document.querySelector("#rebTargetBmri")?.value  || "50");
+  const targetAsiiPct  = parseFloat(document.querySelector("#rebTargetAsii")?.value  || "25");
+  const targetBbriPct  = parseFloat(document.querySelector("#rebTargetBbri")?.value  || "25");
+  const totalTargetPct = targetBmriPct + targetAsiiPct + targetBbriPct;
+
+  // Nilai ideal berdasarkan target vs total saham
+  const idealBmri = (targetBmriPct / 100) * stockTotal;
+  const idealAsii = (targetAsiiPct / 100) * stockTotal;
+  const idealBbri = (targetBbriPct / 100) * stockTotal;
+
+  const diffBmri = bmriVal - idealBmri;
+  const diffAsii = asiiVal - idealAsii;
+  const diffBbri = bbriVal - idealBbri;
+
+  function diffLabel(diff) {
+    if (Math.abs(diff) < 1000) return '<span class="reb-neutral">Seimbang</span>';
+    if (diff > 0) return `<span class="reb-over">+${formatMoney(diff)} (kelebihan)</span>`;
+    return `<span class="reb-under">${formatMoney(diff)} (kekurangan)</span>`;
+  }
+
+  function pctBar(pct, color) {
+    return `<div class="reb-bar-wrap"><div class="reb-bar" style="width:${Math.min(pct,100).toFixed(1)}%;background:${color}"></div><span>${formatPct(pct)}</span></div>`;
+  }
+
+  const targetWarning = Math.abs(totalTargetPct - 100) > 0.1
+    ? `<p class="reb-warning">⚠️ Total target ${formatPct(totalTargetPct)} — harus 100%. Koreksi input target.</p>`
+    : "";
+
+  document.querySelector("#rebResultArea").innerHTML = `
+    ${targetWarning}
+    <div class="reb-section">
+      <h4>Komposisi Portofolio Saat Ini</h4>
+      <div class="reb-formula-box">
+        <p class="reb-formula-title">Rumus:</p>
+        <p class="reb-formula">Total Portofolio = Nilai Saham + Nilai RDPU</p>
+        <p class="reb-formula">= ${formatMoney(stockTotal)} + ${formatMoney(rdpuVal)} = <strong>${formatMoney(grandTotal)}</strong></p>
+        <p class="reb-formula">% Saham = (${formatMoney(stockTotal)} / ${formatMoney(grandTotal)}) × 100% = <strong>${formatPct(stockPct)}</strong></p>
+        <p class="reb-formula">% RDPU = (${formatMoney(rdpuVal)} / ${formatMoney(grandTotal)}) × 100% = <strong>${formatPct(rdpuPct)}</strong></p>
+      </div>
+      <div class="reb-bar-list">
+        <div class="reb-bar-row">
+          <span>BMRI</span>
+          ${pctBar(bmriPct, "var(--income)")}
+          <small>${formatMoney(bmriVal)}</small>
+        </div>
+        <div class="reb-bar-row">
+          <span>ASII</span>
+          ${pctBar(asiiPct, "#0ea5e9")}
+          <small>${formatMoney(asiiVal)}</small>
+        </div>
+        <div class="reb-bar-row">
+          <span>BBRI</span>
+          ${pctBar(bbriPct, "#f59e0b")}
+          <small>${formatMoney(bbriVal)}</small>
+        </div>
+        <div class="reb-bar-row">
+          <span>RDPU</span>
+          ${pctBar(rdpuPct, "#8b5cf6")}
+          <small>${formatMoney(rdpuVal)}</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="reb-section">
+      <h4>Analisis vs Target Alokasi Saham</h4>
+      <div class="reb-formula-box">
+        <p class="reb-formula-title">Rumus (dari total saham Rp${formatMoney(stockTotal).replace("Rp","").trim()}):</p>
+        <p class="reb-formula">Nilai Ideal BMRI = ${formatPct(targetBmriPct)} × ${formatMoney(stockTotal)} = <strong>${formatMoney(idealBmri)}</strong></p>
+        <p class="reb-formula">Nilai Ideal ASII = ${formatPct(targetAsiiPct)} × ${formatMoney(stockTotal)} = <strong>${formatMoney(idealAsii)}</strong></p>
+        <p class="reb-formula">Nilai Ideal BBRI = ${formatPct(targetBbriPct)} × ${formatMoney(stockTotal)} = <strong>${formatMoney(idealBbri)}</strong></p>
+      </div>
+      <div class="reb-diff-list">
+        <div class="reb-diff-row">
+          <strong>BMRI</strong>
+          <span>Aktual ${formatPct(bmriPct)} → Target ${formatPct(targetBmriPct)}</span>
+          ${diffLabel(diffBmri)}
+        </div>
+        <div class="reb-diff-row">
+          <strong>ASII</strong>
+          <span>Aktual ${formatPct(asiiPct)} → Target ${formatPct(targetAsiiPct)}</span>
+          ${diffLabel(diffAsii)}
+        </div>
+        <div class="reb-diff-row">
+          <strong>BBRI</strong>
+          <span>Aktual ${formatPct(bbriPct)} → Target ${formatPct(targetBbriPct)}</span>
+          ${diffLabel(diffBbri)}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function initRebalancingCalculator() {
+  const inputs = document.querySelectorAll(".reb-input");
+  if (!inputs.length) return;
+  inputs.forEach((input) => {
+    input.addEventListener("input", renderRebalancingCalculator);
+  });
+  renderRebalancingCalculator();
+}
+
 function setupInvestmentTabs() {
   const stack = document.querySelector(".investment-stack");
   if (!stack || stack.dataset.investmentTabsReady === "true") return;
@@ -3124,6 +3268,85 @@ function setupInvestmentTabs() {
   if (strategySurface) {
     analysisPanel.append(strategySurface);
   }
+
+  // Rebalancing Calculator
+  const rebalancingSurface = document.createElement("section");
+  rebalancingSurface.className = "surface";
+  rebalancingSurface.id = "rebalancingCalculator";
+  rebalancingSurface.innerHTML = `
+    <div class="surface-head">
+      <div>
+        <small>Analisis Portofolio</small>
+        <strong>Kalkulator Komposisi &amp; Rebalancing</strong>
+      </div>
+    </div>
+
+    <div class="reb-intro">
+      <p>Masukkan nilai portofolio Anda saat ini untuk melihat komposisi persentase dan analisis terhadap target alokasi yang Anda tentukan.</p>
+      <div class="reb-formula-box">
+        <p class="reb-formula-title">Cara hitung:</p>
+        <p class="reb-formula">Total Portofolio = Nilai BMRI + Nilai ASII + Nilai BBRI + Nilai RDPU</p>
+        <p class="reb-formula">% Aset = (Nilai Aset ÷ Total Portofolio) × 100%</p>
+      </div>
+    </div>
+
+    <div class="reb-layout">
+      <div class="reb-controls">
+        <div class="reb-block">
+          <div class="reb-block-title">
+            <span>1</span>
+            <strong>Nilai Portofolio Saat Ini</strong>
+          </div>
+          <div class="reb-input-grid">
+            <label>
+              Nilai BMRI (Rp)
+              <input class="reb-input" id="rebBmriValue" type="text" inputmode="numeric" placeholder="0" value="" />
+            </label>
+            <label>
+              Nilai ASII (Rp)
+              <input class="reb-input" id="rebAsiiValue" type="text" inputmode="numeric" placeholder="0" value="" />
+            </label>
+            <label>
+              Nilai BBRI (Rp)
+              <input class="reb-input" id="rebBbriValue" type="text" inputmode="numeric" placeholder="0" value="" />
+            </label>
+            <label>
+              Nilai RDPU (Rp)
+              <input class="reb-input" id="rebRdpuValue" type="text" inputmode="numeric" placeholder="0" value="" />
+            </label>
+          </div>
+        </div>
+
+        <div class="reb-block">
+          <div class="reb-block-title">
+            <span>2</span>
+            <strong>Target Alokasi Saham (%)</strong>
+          </div>
+          <p class="reb-block-hint">Total harus 100%. RDPU tidak masuk target saham.</p>
+          <div class="reb-input-grid">
+            <label>
+              Target BMRI (%)
+              <input class="reb-input" id="rebTargetBmri" type="number" min="0" max="100" step="1" value="50" />
+            </label>
+            <label>
+              Target ASII (%)
+              <input class="reb-input" id="rebTargetAsii" type="number" min="0" max="100" step="1" value="25" />
+            </label>
+            <label>
+              Target BBRI (%)
+              <input class="reb-input" id="rebTargetBbri" type="number" min="0" max="100" step="1" value="25" />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="reb-output" id="rebResultArea">
+        <p class="reb-empty">Masukkan nilai portofolio untuk melihat analisis.</p>
+      </div>
+    </div>
+  \`;
+  analysisPanel.append(rebalancingSurface);
+  initRebalancingCalculator();
 
   el.programActualSyncBanner = document.querySelector("#programActualSyncBanner");
   el.programActualSyncTitle = document.querySelector("#programActualSyncTitle");
