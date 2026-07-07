@@ -3344,7 +3344,7 @@ function setupInvestmentTabs() {
         <p class="reb-empty">Masukkan nilai portofolio untuk melihat analisis.</p>
       </div>
     </div>
-  \`;
+  `;
   analysisPanel.append(rebalancingSurface);
   initRebalancingCalculator();
 
