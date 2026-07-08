@@ -3260,9 +3260,16 @@ function calculatePajakDividenDomestik(data) {
   const sisaKenaPajak = Math.max(0, totalBruto - totalReinvested);
   const pajakTerutang = sisaKenaPajak * 0.1;
 
+  const listNames = list.filter((item) => item.nominal > 0).map((item) => item.name || "-");
+  const asetDisplay = reinvestYa
+    ? emiten || "-"
+    : listNames.length > 0
+      ? listNames.join(" / ")
+      : emiten || "-";
+
   return {
     jenis: "dividen_domestik",
-    aset: emiten || "-",
+    aset: asetDisplay,
     aplikasi: "Stockbit",
     nominalAsli: totalBruto,
     mataUang: "IDR",
@@ -3473,7 +3480,7 @@ function readTaxForm() {
       hargaBeli: parseNumberInput(el.taxJualHargaBeli.value),
       hargaJual: parseNumberInput(el.taxJualHargaJual.value),
       unit: Math.max(0, Math.floor(Number(el.taxJualUnit.value) || 0)),
-      kursKmk: parseDecimalInput(el.taxJualKurs.value),
+      kursKmk: parseNumberInput(el.taxJualKurs.value),
     };
   }
 
@@ -3831,6 +3838,9 @@ function setupTaxEvents() {
   });
   el.taxJualHargaJual.addEventListener("input", () => {
     el.taxJualHargaJual.value = formatNumberInput(el.taxJualHargaJual.value);
+  });
+  el.taxJualKurs.addEventListener("input", () => {
+    el.taxJualKurs.value = formatNumberInput(el.taxJualKurs.value);
   });
 }
 
