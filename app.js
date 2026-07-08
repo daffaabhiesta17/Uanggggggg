@@ -3741,7 +3741,10 @@ function setupInvestmentTabs() {
   pajakPanel.id = "investmentTabPajak";
   pajakPanel.className = "investment-tab-panel";
   pajakPanel.dataset.investmentTabPanel = "pajak";
-  if (el.taxCalculatorSurface) pajakPanel.append(el.taxCalculatorSurface);
+  if (el.taxCalculatorSurface) {
+    el.taxCalculatorSurface.classList.remove("hidden");
+    pajakPanel.append(el.taxCalculatorSurface);
+  }
 
   const tabs = document.createElement("nav");
   tabs.className = "investment-tabs";
@@ -3927,9 +3930,6 @@ function switchInvestmentTab(tab) {
   }
   if (activeInvestmentTab === "pajak") {
     renderTaxHistory();
-    if (el.taxCalculatorSurface) {
-      el.taxCalculatorSurface.style.display = "block";
-    }
   }
 }
 
