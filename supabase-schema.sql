@@ -24,15 +24,6 @@ create table if not exists public.investment_settings (
   updated_at timestamptz not null default now()
 );
 
-create table if not exists public.tax_transactions (
-  id text primary key,
-  transaction_type text not null,
-  tahun_pajak integer not null,
-  data jsonb not null default '{}'::jsonb,
-  hasil jsonb not null default '{}'::jsonb,
-  created_at timestamptz not null default now()
-);
-
 alter table public.investment_settings
 add column if not exists simulator_config jsonb not null default '{}'::jsonb;
 
@@ -59,6 +50,15 @@ create table if not exists public.rdpu_purchases (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.tax_transactions (
+  id text primary key,
+  transaction_type text not null check (transaction_type in ('dividen_domestik', 'dividen_ln', 'penjualan')),
+  tahun_pajak integer not null,
+  data jsonb not null default '{}'::jsonb,
+  hasil jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
 alter table public.categories enable row level security;
 alter table public.transactions enable row level security;
 alter table public.investment_settings enable row level security;
@@ -79,6 +79,8 @@ drop policy if exists "public stock purchases read" on public.stock_purchases;
 drop policy if exists "public stock purchases write" on public.stock_purchases;
 drop policy if exists "public rdpu purchases read" on public.rdpu_purchases;
 drop policy if exists "public rdpu purchases write" on public.rdpu_purchases;
+drop policy if exists "public tax transactions read" on public.tax_transactions;
+drop policy if exists "public tax transactions write" on public.tax_transactions;
 
 create policy "public categories read"
 on public.categories for select
@@ -146,9 +148,6 @@ to anon
 using (true)
 with check (true);
 
-drop policy if exists "public tax transactions read" on public.tax_transactions;
-drop policy if exists "public tax transactions write" on public.tax_transactions;
-
 create policy "public tax transactions read"
 on public.tax_transactions for select
 to anon
@@ -214,5 +213,5 @@ values ('default', 11)
 on conflict (id) do nothing;
 
 insert into public.investment_tickers (symbol)
-values ('BMRI'), ('ASII'), ('BBRI')
+values ('BMRI'), ('ICBP'), ('BBRI')
 on conflict (symbol) do nothing;
