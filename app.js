@@ -3378,6 +3378,9 @@ function calculatePajakPenjualan(data) {
   const totalBeliIdr = totalBeli * kurs;
   const totalJualIdr = totalJual * kurs;
   const capitalGainIdr = totalJualIdr - totalBeliIdr;
+  const isLoss = capitalGainIdr < 0;
+  const lossAmount = isLoss ? Math.abs(capitalGainIdr) : 0;
+  const capitalGainTaxable = isLoss ? 0 : capitalGainIdr;
 
   return {
     jenis: "penjualan",
@@ -3386,7 +3389,7 @@ function calculatePajakPenjualan(data) {
     nominalAsli: totalJual,
     mataUang: "USD",
     bebasPajak: 0,
-    kenaPajak: capitalGainIdr,
+    kenaPajak: capitalGainTaxable,
     pajakTerutang: 0,
     reinvestYa: false,
     detail: {
@@ -3397,11 +3400,18 @@ function calculatePajakPenjualan(data) {
       totalBeliIdr,
       totalJualIdr,
       capitalGainIdr,
-      keterangan: "Capital Gain Non-Final. Digabungkan ke Pendapatan Progresif PPh Pasal 17 di akhir tahun.",
+      isLoss,
+      lossAmount,
+      capitalGainTaxable,
+      keterangan: isLoss
+        ? "Capital Loss (Rugi). Kerugian aset luar negeri tidak dikenakan pajak dan tidak dapat mengurangi penghasilan dalam negeri."
+        : "Capital Gain Non-Final. Digabungkan ke Pendapatan Progresif PPh Pasal 17 di akhir tahun.",
     },
     panduan: {
       epelaporan: null,
-      spt: { lampiran: "L-2 Bagian C", nominal: capitalGainIdr },
+      spt: isLoss
+        ? { lampiran: "L-2 Bagian C", nominal: 0, skip: true, pesan: "Transaksi rugi ini TIDAK PERLU dimasukkan ke Lampiran L-2 Bagian C. Biarkan kolom Penghasilan Neto Luar Negeri bernilai Rp 0 (tidak perlu tambah baris baru)." }
+        : { lampiran: "L-2 Bagian C", nominal: capitalGainTaxable },
       kodeBilling: null,
     },
   };
@@ -3548,9 +3558,17 @@ function renderTaxResult(hasil) {
       statusHtml += `
         <div><strong>Total Jual (USD):</strong> $${d.totalJual.toFixed(2)}</div>
         <div><strong>Total Jual (IDR):</strong> ${formatTaxCurrency(d.totalJualIdr)} (kurs: ${d.kurs})</div>
-        <div><strong>Total Beli (IDR):</strong> ${formatTaxCurrency(d.totalBeliIdr)}</div>
-        <div class="tax-warning">Capital Gain (Non-Final): ${formatTaxCurrency(d.capitalGainIdr)}</div>
+        <div><strong>Total Beli (IDR):</strong> ${formatTaxCurrency(d.totalBeliIdr)}</div>`;
+      if (d.isLoss) {
+        statusHtml += `
+        <div class="tax-warning">Status: Capital Loss (Rugi Bersih) sebesar ${formatTaxCurrency(d.lossAmount)}</div>
+        <div class="tax-warning">Pajak Terutang di Indonesia: Rp 0</div>
         <div class="tax-note">${d.keterangan}</div>`;
+      } else {
+        statusHtml += `
+        <div class="tax-warning">Capital Gain (Non-Final): ${formatTaxCurrency(d.capitalGainTaxable)}</div>
+        <div class="tax-note">${d.keterangan}</div>`;
+      }
     }
   }
 
@@ -3563,33 +3581,93 @@ function renderTaxResult(hasil) {
       <div class="tax-note">`;
 
   const deadline = `31 Maret ${tahun + 1}`;
-  if (p.epelaporan) {
+
+  if (hasil.jenis === "dividen_domestik" && !d.reinvestYa && d.reinvestList?.length > 0) {
+    panduanHtml += `
+      <div><strong>Menu Alur Kasus (e-Pelaporan - Sebelum ${deadline}):</strong></div>
+      <div class="tax-warning">⚠ PENTING: Jangan gabungkan laporan! Di portal Coretax asli, buat baris permohonan baru satu per satu dengan mengklik "+ Tambah Data" untuk setiap emiten berikut:</div>`;
+    d.reinvestList.forEach((item) => {
+      const nama = item.name || "-";
+      const nominal = Number(item.nominal) || 0;
+      panduanHtml += `
+      <div class="tax-note" style="margin-top: 4px">- Untuk Alokasi <strong>${escapeHtml(nama)}</strong>: Pilih Jenis Penghasilan "Dividen Dalam Negeri", isi kolom Pemberi Penghasilan dengan "<strong>${escapeHtml(nama)}</strong>", dan masukkan Jumlah Diinvestasikan sebesar <strong>${formatTaxCurrency(nominal)}</strong>.</div>`;
+    });
+    panduanHtml += `
+      <div style="margin-top: 8px"><strong>Menu SPT Tahunan (Akhir Tahun):</strong></div>
+      <div>Masukkan total <strong>${formatTaxCurrency(d.totalReinvested)}</strong> ke Lampiran L-2 Bagian B (Bebas Pajak).</div>`;
+    if (d.sisaKenaPajak > 0) {
+      panduanHtml += `
+      <div>Masukkan nominal sisa <strong>${formatTaxCurrency(d.sisaKenaPajak)}</strong> ke Lampiran L-1 (Bersifat Final) dan lakukan pembayaran kode billing sebesar <strong>${formatTaxCurrency(d.pajakTerutang)}</strong>.</div>`;
+    }
+  } else if (hasil.jenis === "dividen_domestik") {
+    if (p.epelaporan) {
+      panduanHtml += `
+      <div><strong>Menu Alur Kasus (e-Pelaporan - Sebelum ${deadline}):</strong></div>
+      <div>Pilih Jenis Penghasilan: ${p.epelaporan.jenisPenghasilan}</div>
+      <div>Pemberi Penghasilan: ${p.epelaporan.pemberiPenghasilan}</div>
+      <div>Jumlah Diinvestasikan: ${formatTaxCurrency(p.epelaporan.jumlahDiinvestasikan)}</div>`;
+    }
+    if (p.spt) {
+      panduanHtml += `
+      <div style="margin-top: 6px"><strong>Menu SPT Tahunan (Akhir Tahun):</strong></div>
+      <div>Masukkan ${formatTaxCurrency(p.spt.nominal)} ke Lampiran ${p.spt.lampiran}.</div>`;
+    }
+    if (p.kodeBilling) {
+      panduanHtml += `
+      <div style="margin-top: 6px"><strong>Status Kode Billing:</strong></div>
+      <div>Gunakan Kode ${p.kodeBilling.kode} sebesar ${formatTaxCurrency(p.kodeBilling.nominal)}.</div>`;
+    }
+  } else if (hasil.jenis === "dividen_ln") {
     panduanHtml += `
       <div><strong>Menu Alur Kasus (e-Pelaporan - Sebelum ${deadline}):</strong></div>
       <div>Pilih Jenis Penghasilan: ${p.epelaporan.jenisPenghasilan}</div>
       <div>Pemberi Penghasilan: ${p.epelaporan.pemberiPenghasilan}</div>
       <div>Jumlah Diinvestasikan: ${formatTaxCurrency(p.epelaporan.jumlahDiinvestasikan)}</div>`;
+    if (p.spt) {
+      panduanHtml += `
+      <div style="margin-top: 6px"><strong>Menu SPT Tahunan (Akhir Tahun):</strong></div>
+      <div>Masukkan ${formatTaxCurrency(p.spt.nominal)} ke Lampiran ${p.spt.lampiran}.</div>`;
+    }
+  } else if (hasil.jenis === "dividen_ln") {
+    if (p.epelaporan) {
+      panduanHtml += `
+      <div><strong>Menu Alur Kasus (e-Pelaporan - Sebelum ${deadline}):</strong></div>
+      <div>Pilih Jenis Penghasilan: ${p.epelaporan.jenisPenghasilan}</div>
+      <div>Pemberi Penghasilan: ${p.epelaporan.pemberiPenghasilan}</div>
+      <div>Jumlah Diinvestasikan: ${formatTaxCurrency(p.epelaporan.jumlahDiinvestasikan)}</div>`;
+    } else {
+      panduanHtml += `
+      <div><strong>Menu Alur Kasus (e-Pelaporan):</strong> Tidak perlu lapor realisasi (bukan dividen).</div>`;
+    }
+    if (p.spt) {
+      panduanHtml += `
+      <div style="margin-top: 6px"><strong>Menu SPT Tahunan (Akhir Tahun):</strong></div>
+      <div>Masukkan ${formatTaxCurrency(p.spt.nominal)} ke Lampiran ${p.spt.lampiran}.</div>`;
+    }
+    if (p.kreditPajak) {
+      panduanHtml += `
+      <div style="margin-top: 6px"><strong>Kredit Pajak PPh 24:</strong></div>
+      <div>Kredit Pajak ${p.kreditPajak.jenis} sebesar ${formatTaxCurrency(p.kreditPajak.nominal)} dapat dikurangkan dari pajak terutang di formulir induk.</div>`;
+    }
+  } else if (hasil.jenis === "penjualan" && d.isLoss) {
+    panduanHtml += `
+      <div><strong>Menu Alur Kasus (e-Pelaporan):</strong> Tidak perlu lapor realisasi (bukan dividen).</div>
+      <div style="margin-top: 6px"><strong>Menu SPT Tahunan (Akhir Tahun):</strong></div>
+      <div>${p.spt.pesan || "Transaksi tidak perlu dilaporkan."}</div>`;
   } else if (hasil.jenis === "penjualan") {
     panduanHtml += `
       <div><strong>Menu Alur Kasus (e-Pelaporan):</strong> Tidak perlu lapor realisasi (bukan dividen).</div>`;
-  }
-
-  if (p.spt) {
-    panduanHtml += `
+    if (p.spt) {
+      panduanHtml += `
       <div style="margin-top: 6px"><strong>Menu SPT Tahunan (Akhir Tahun):</strong></div>
       <div>Masukkan ${formatTaxCurrency(p.spt.nominal)} ke Lampiran ${p.spt.lampiran}.</div>`;
+    }
   }
 
-  if (p.kodeBilling) {
+  if (p.kodeBilling && hasil.jenis !== "dividen_domestik") {
     panduanHtml += `
       <div style="margin-top: 6px"><strong>Status Kode Billing:</strong></div>
       <div>Gunakan Kode ${p.kodeBilling.kode} sebesar ${formatTaxCurrency(p.kodeBilling.nominal)}.</div>`;
-  }
-
-  if (p.kreditPajak) {
-    panduanHtml += `
-      <div style="margin-top: 6px"><strong>Kredit Pajak PPh 24:</strong></div>
-      <div>Kredit Pajak ${p.kreditPajak.jenis} sebesar ${formatTaxCurrency(p.kreditPajak.nominal)} dapat dikurangkan dari pajak terutang di formulir induk.</div>`;
   }
 
   panduanHtml += `</div></div>`;
