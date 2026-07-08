@@ -686,89 +686,6 @@ th {
   gap: 18px;
 }
 
-/* stock toggles */
-.stock-toggles {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: #fff;
-  flex-wrap: wrap;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
-}
-
-.stock-toggles-label {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-}
-
-.stock-toggle-group {
-  display: flex;
-  gap: 6px;
-}
-
-.stock-toggle-btn {
-  min-height: 34px;
-  padding: 6px 16px;
-  border: 1.5px solid var(--line);
-  border-radius: 20px;
-  background: #f1f5f9;
-  color: var(--muted);
-  font-size: 0.85rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.stock-toggle-btn:hover {
-  border-color: #93c5fd;
-  background: #eff6ff;
-  color: #1d4ed8;
-}
-
-.stock-toggle-btn.active {
-  border-color: #2563eb;
-  background: #2563eb;
-  color: #fff;
-}
-
-.stock-toggle-btn.active:hover {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
-}
-
-.stock-toggles-hint {
-  font-size: 0.75rem;
-  color: var(--muted);
-  margin-left: auto;
-}
-
-.badge-inactive {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 1px 7px;
-  border-radius: 10px;
-  background: #fef2f2;
-  color: #dc2626;
-  font-size: 0.7rem;
-  font-weight: 700;
-  vertical-align: middle;
-}
-
-.row-inactive td {
-  opacity: 0.45;
-}
-
-.row-inactive td:last-child {
-  opacity: 1;
-}
-
 .investment-subtabs {
   display: flex;
   gap: 8px;
@@ -1949,137 +1866,147 @@ input:disabled {
 }
 
 /* ============================================================
-   KALKULATOR KOMPOSISI PORTOFOLIO
+   SIMULASI PAJAK
    ============================================================ */
 
-.kalc-desc {
-  color: var(--muted);
-  font-size: 0.875rem;
-  margin: 0 0 16px;
-}
-
-.kalc-layout {
+.tax-calculator-surface {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
-  gap: 20px;
-  align-items: start;
+  gap: 18px;
 }
 
-@media (max-width: 700px) {
-  .kalc-layout { grid-template-columns: 1fr; }
+.tax-form {
+  display: grid;
+  gap: 16px;
 }
 
-.kalc-inputs {
-  display: flex;
-  flex-direction: column;
+.tax-form-main {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
   gap: 12px;
 }
 
-.kalc-output {
-  background: var(--surface-soft);
-  border-radius: 10px;
-  padding: 16px 20px;
-  min-height: 140px;
-}
-
-.kalc-empty {
-  color: var(--muted);
-  font-size: 0.875rem;
-  text-align: center;
-  padding: 32px 0;
-  margin: 0;
-}
-
-.kalc-result-block {
-  margin-bottom: 14px;
-}
-
-.kalc-line {
-  font-size: 0.875rem;
-  margin: 3px 0;
-  font-family: ui-monospace, "Cascadia Code", monospace;
-}
-
-.kalc-line strong {
-  color: var(--ink, #172033);
-}
-
-.kalc-total {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--line, #e2e8f0);
-  font-weight: 600;
-}
-
-.kalc-total strong {
-  color: var(--income);
-}
-
-.kalc-formula-block {
-  background: var(--surface, #fff);
-  border-radius: 8px;
-  padding: 10px 14px;
-  margin-bottom: 14px;
-}
-
-.kalc-formula-title {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--muted);
-  margin: 0 0 6px;
-}
-
-.kalc-formula {
-  font-size: 0.82rem;
-  margin: 4px 0;
-  font-family: ui-monospace, "Cascadia Code", monospace;
-  color: var(--ink, #172033);
-}
-
-.kalc-formula strong {
-  color: var(--income);
-}
-
-.kalc-bar-section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.kalc-bar-row {
+.tax-field-group {
   display: grid;
-  grid-template-columns: 52px 1fr 44px;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.8rem;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
 }
 
-.kalc-bar-row > span:first-child {
-  font-weight: 600;
-  font-size: 0.78rem;
-}
-
-.kalc-track {
-  height: 14px;
-  background: var(--surface, #fff);
-  border-radius: 100px;
-  overflow: hidden;
-}
-
-.kalc-fill {
-  height: 100%;
-  border-radius: 100px;
-  transition: width 0.3s ease;
-}
-
-.kalc-fill-saham { background: var(--income); }
-.kalc-fill-etf   { background: #0ea5e9; }
-
-.kalc-pct {
-  font-size: 0.78rem;
+.tax-field-group-head {
   font-weight: 700;
-  text-align: right;
-  color: var(--ink);
+  color: var(--text);
+  font-size: 0.9rem;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.tax-field {
+  display: grid;
+  gap: 6px;
+}
+
+.tax-hint {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.tax-switch {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.tax-switch:has(input:checked) {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.tax-switch:has(input:checked) strong {
+  color: #166534;
+}
+
+.tax-result {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  background: #eff6ff;
+}
+
+.tax-result-header {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #1e3a8a;
+}
+
+.tax-result-body {
+  display: grid;
+  gap: 12px;
+  font-size: 0.9rem;
+  line-height: 1.65;
+}
+
+.tax-result-section {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid rgba(30, 58, 138, 0.12);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.tax-result-section strong {
+  color: #1e3a8a;
+}
+
+.tax-result-section .tax-label {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tax-result-section .tax-value {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.tax-result-section .tax-note {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.tax-result-section .tax-warning {
+  color: #b45309;
+  font-weight: 700;
+}
+
+.tax-result-section .tax-success {
+  color: #166534;
+  font-weight: 700;
+}
+
+.tax-history {
+  display: grid;
+  gap: 12px;
+}
+
+.tax-history table {
+  min-width: 760px;
+}
+
+@media (max-width: 680px) {
+  .tax-form-main {
+    grid-template-columns: 1fr;
+  }
+  .tax-dynamic-fields .tax-field-group {
+    padding: 12px;
+  }
 }
