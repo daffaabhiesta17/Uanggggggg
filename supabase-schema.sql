@@ -24,6 +24,15 @@ create table if not exists public.investment_settings (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.tax_transactions (
+  id text primary key,
+  transaction_type text not null,
+  tahun_pajak integer not null,
+  data jsonb not null default '{}'::jsonb,
+  hasil jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
 alter table public.investment_settings
 add column if not exists simulator_config jsonb not null default '{}'::jsonb;
 
@@ -56,6 +65,7 @@ alter table public.investment_settings enable row level security;
 alter table public.investment_tickers enable row level security;
 alter table public.stock_purchases enable row level security;
 alter table public.rdpu_purchases enable row level security;
+alter table public.tax_transactions enable row level security;
 
 drop policy if exists "public categories read" on public.categories;
 drop policy if exists "public categories write" on public.categories;
@@ -136,6 +146,20 @@ to anon
 using (true)
 with check (true);
 
+drop policy if exists "public tax transactions read" on public.tax_transactions;
+drop policy if exists "public tax transactions write" on public.tax_transactions;
+
+create policy "public tax transactions read"
+on public.tax_transactions for select
+to anon
+using (true);
+
+create policy "public tax transactions write"
+on public.tax_transactions for all
+to anon
+using (true)
+with check (true);
+
 do $$
 begin
   alter publication supabase_realtime add table public.categories;
@@ -178,10 +202,17 @@ exception
   when duplicate_object then null;
 end $$;
 
+do $$
+begin
+  alter publication supabase_realtime add table public.tax_transactions;
+exception
+  when duplicate_object then null;
+end $$;
+
 insert into public.investment_settings (id, horizon_years)
 values ('default', 11)
 on conflict (id) do nothing;
 
 insert into public.investment_tickers (symbol)
-values ('BMRI'), ('ICBP'), ('BBRI')
+values ('BMRI'), ('ASII'), ('BBRI')
 on conflict (symbol) do nothing;
