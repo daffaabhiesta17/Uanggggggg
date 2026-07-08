@@ -1195,10 +1195,14 @@
                       <span class="switch-control" aria-hidden="true"></span>
                     </label>
                     <div class="tax-reinvest-field hidden" id="taxDividenReinvestField">
-                      <label>
-                        Nominal Diinvestasikan (Rp)
-                        <input id="taxDividenReinvestNominal" type="text" inputmode="numeric" placeholder="0" />
-                      </label>
+                      <div class="allocation-head">
+                        <strong>Alokasi Reinvestasi</strong>
+                        <small>Pecah alokasi dana dividen ke beberapa instrumen/aplikasi</small>
+                      </div>
+                      <div class="allocation-list" id="taxReinvestList">
+                        <!-- baris alokasi di-render oleh JS -->
+                      </div>
+                      <button class="ghost-button" id="taxAddAllocation" type="button">+ Tambah Alokasi Investasi</button>
                     </div>
                   </div>
 
