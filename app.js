@@ -3308,15 +3308,50 @@ function calculatePajakDividenDomestik(data) {
 }
 
 function calculatePajakDividenLN(data) {
-  const { etf, brutoUsd, kursKmk, reinvestYa, reinvestNominal } = data;
+  const { etf, brutoUsd, kursKmk, reinvestYa } = data;
   const totalBrutoUsd = Math.max(0, brutoUsd);
   const kurs = Math.max(0, kursKmk);
   const totalBrutoIdr = totalBrutoUsd * kurs;
   const pajakAS = totalBrutoUsd * 0.15;
   const pajakASIdr = pajakAS * kurs;
   const dividenBersihIdr = totalBrutoIdr - pajakASIdr;
-  const totalReinvested = reinvestYa ? Math.min(reinvestNominal || 0, dividenBersihIdr) : 0;
-  const kenaPajakNonFinal = reinvestYa ? 0 : dividenBersihIdr;
+  const netDividenIdr = Math.max(0, dividenBersihIdr);
+
+  if (reinvestYa) {
+    return {
+      jenis: "dividen_ln",
+      aset: etf || "ETF",
+      aplikasi: "Pluang",
+      nominalAsli: totalBrutoUsd,
+      mataUang: "USD",
+      bebasPajak: netDividenIdr,
+      kenaPajak: 0,
+      pajakTerutang: 0,
+      reinvestYa: true,
+      detail: {
+        totalBrutoUsd,
+        kurs,
+        totalBrutoIdr,
+        pajakAS,
+        pajakASIdr,
+        dividenBersihIdr: netDividenIdr,
+        totalReinvested: netDividenIdr,
+        kenaPajakNonFinal: 0,
+        kreditPPh24: false,
+        holdingUntil: `31 Desember ${(data.tahunPajak || new Date().getFullYear()) + 3}`,
+      },
+      panduan: {
+        epelaporan: {
+          jenisPenghasilan: "Dividen Luar Negeri",
+          pemberiPenghasilan: `${etf || "Vanguard Information Technology ETF (VGT)"}`,
+          jumlahDiinvestasikan: netDividenIdr,
+        },
+        spt: { lampiran: "L-2 Bagian B (Penghasilan Tidak Termasuk Objek Pajak)", nominal: netDividenIdr },
+        kodeBilling: null,
+        kreditPajak: null,
+      },
+    };
+  }
 
   return {
     jenis: "dividen_ln",
@@ -3324,31 +3359,27 @@ function calculatePajakDividenLN(data) {
     aplikasi: "Pluang",
     nominalAsli: totalBrutoUsd,
     mataUang: "USD",
-    bebasPajak: reinvestYa ? dividenBersihIdr : 0,
-    kenaPajak: kenaPajakNonFinal,
+    bebasPajak: 0,
+    kenaPajak: netDividenIdr,
     pajakTerutang: 0,
-    reinvestYa,
+    reinvestYa: false,
     detail: {
       totalBrutoUsd,
       kurs,
       totalBrutoIdr,
       pajakAS,
       pajakASIdr,
-      dividenBersihIdr,
-      totalReinvested,
-      kenaPajakNonFinal,
-      kreditPPh24: !reinvestYa,
-      holdingUntil: reinvestYa ? `31 Desember ${(data.tahunPajak || new Date().getFullYear()) + 3}` : "-",
+      dividenBersihIdr: netDividenIdr,
+      totalReinvested: 0,
+      kenaPajakNonFinal: netDividenIdr,
+      kreditPPh24: true,
+      holdingUntil: "-",
     },
     panduan: {
-      epelaporan: reinvestYa
-        ? { jenisPenghasilan: "Dividen Luar Negeri (Reinvestasi)", pemberiPenghasilan: `${etf} - Pluang`, jumlahDiinvestasikan: totalReinvested }
-        : null,
-      spt: reinvestYa
-        ? { lampiran: "L-2 Bagian B", nominal: totalReinvested }
-        : { lampiran: "L-2 Bagian C", nominal: dividenBersihIdr },
+      epelaporan: null,
+      spt: { lampiran: "L-2 Bagian C (Penghasilan Neto Luar Negeri)", nominal: netDividenIdr },
       kodeBilling: null,
-      kreditPajak: !reinvestYa ? { jenis: "PPh Pasal 24", nominal: pajakASIdr } : null,
+      kreditPajak: { jenis: "PPh Pasal 24", nominal: pajakASIdr },
     },
   };
 }
@@ -3476,7 +3507,6 @@ function readTaxForm() {
       brutoUsd: parseDecimalInput(el.taxLNBruto.value),
       kursKmk: parseDecimalInput(el.taxLNKurs.value),
       reinvestYa: el.taxLNReinvest.checked,
-      reinvestNominal: parseNumberInput(el.taxLNReinvestNominal.value),
     };
   }
 
@@ -3555,16 +3585,15 @@ function renderTaxResult(hasil) {
       <div><strong>Withholding Tax AS 15%:</strong> $${d.pajakAS.toFixed(2)} (${formatTaxCurrency(d.pajakASIdr)})</div>`;
     if (d.reinvestYa) {
       statusHtml += `
-        <div class="tax-success">Reinvestasi ke NKRI: ${formatTaxCurrency(hasil.bebasPajak)}</div>
-        <div class="tax-success">Tarif di Indonesia 0% (Bebas Pajak). Holding period s.d ${d.holdingUntil}.</div>
-        <div class="tax-warning">Pajak AS 15% ($${d.pajakAS.toFixed(2)}) <strong>TIDAK DAPAT DIKREDITKAN</strong> PPh 24.</div>
-        <div class="tax-note">Lapor di Form LA.39-10 & SPT Tahunan Lampiran L-2 Bagian B.</div>`;
+        <div class="tax-success">Status Pajak: <strong>Bebas Pajak 0% (Fasilitas UU Cipta Kerja)</strong></div>
+        <div class="tax-success">Pajak Terutang Indonesia: <strong>Rp 0</strong></div>
+        <div class="tax-warning">Pajak AS 15% ($${d.pajakAS.toFixed(2)} / ${formatTaxCurrency(d.pajakASIdr)}) <strong>TIDAK DAPAT DIKREDITKAN</strong> sebagai PPh Pasal 24 karena dividen di NKRI sudah bebas pajak.</div>
+        <div class="tax-note">Holding period s.d ${d.holdingUntil}.</div>`;
     } else {
       statusHtml += `
-        <div class="tax-warning">Objek Pajak Non-Final: ${formatTaxCurrency(d.dividenBersihIdr)} (dividen bersih setelah pajak AS)</div>
-        <div class="tax-note">Digabung ke Penghasilan Progresif PPh Pasal 17 di akhir tahun.</div>
-        <div class="tax-success">Pajak AS ($${d.pajakAS.toFixed(2)} / ${formatTaxCurrency(d.pajakASIdr)}) <strong>DAPAT DIKREDITKAN</strong> sebagai Kredit Pajak PPh Pasal 24.</div>
-        <div class="tax-note">Lapor di Lampiran L-2 Bagian C. Cantumkan kredit PPh 24 di formulir induk Coretax.</div>`;
+        <div class="tax-warning">Status Pajak: <strong>Objek Pajak Non-Final (Tarif Progresif PPh Pasal 17)</strong></div>
+        <div class="tax-warning">Pajak Terutang Indonesia: Dihitung di akhir tahun digabung gaji</div>
+        <div class="tax-success">Pajak AS 15% ($${d.pajakAS.toFixed(2)} / ${formatTaxCurrency(d.pajakASIdr)}) <strong>DAPAT DIKREDITKAN</strong> sebagai pengurang pajak PPh Pasal 24 di formulir induk.</div>`;
     }
   } else if (hasil.jenis === "penjualan") {
     if (d.jenisAset === "Saham Lokal") {
@@ -3637,36 +3666,20 @@ function renderTaxResult(hasil) {
       <div>Gunakan Kode ${p.kodeBilling.kode} sebesar ${formatTaxCurrency(p.kodeBilling.nominal)}.</div>`;
     }
   } else if (hasil.jenis === "dividen_ln") {
-    panduanHtml += `
-      <div><strong>Menu Alur Kasus (e-Pelaporan - Sebelum ${deadline}):</strong></div>
-      <div>Pilih Jenis Penghasilan: ${p.epelaporan.jenisPenghasilan}</div>
-      <div>Pemberi Penghasilan: ${p.epelaporan.pemberiPenghasilan}</div>
-      <div>Jumlah Diinvestasikan: ${formatTaxCurrency(p.epelaporan.jumlahDiinvestasikan)}</div>`;
-    if (p.spt) {
+    if (d.reinvestYa) {
       panduanHtml += `
+      <div><strong>Menu Alur Kasus (e-Pelaporan - Sebelum ${deadline}):</strong></div>
+      <div>- Pilih Jenis Penghasilan: Dividen Luar Negeri</div>
+      <div>- Pemberi Penghasilan: ${p.epelaporan.pemberiPenghasilan}</div>
+      <div>- Jumlah Diinvestasikan: Rp ${formatTaxCurrency(p.epelaporan.jumlahDiinvestasikan).replace('Rp ', '')}</div>
       <div style="margin-top: 6px"><strong>Menu SPT Tahunan (Akhir Tahun):</strong></div>
-      <div>Masukkan ${formatTaxCurrency(p.spt.nominal)} ke Lampiran ${p.spt.lampiran}.</div>`;
-    }
-  } else if (hasil.jenis === "dividen_ln") {
-    if (p.epelaporan) {
-      panduanHtml += `
-      <div><strong>Menu Alur Kasus (e-Pelaporan - Sebelum ${deadline}):</strong></div>
-      <div>Pilih Jenis Penghasilan: ${p.epelaporan.jenisPenghasilan}</div>
-      <div>Pemberi Penghasilan: ${p.epelaporan.pemberiPenghasilan}</div>
-      <div>Jumlah Diinvestasikan: ${formatTaxCurrency(p.epelaporan.jumlahDiinvestasikan)}</div>`;
+      <div>- Masukkan Rp ${formatTaxCurrency(p.spt.nominal).replace('Rp ', '')} ke Lampiran ${p.spt.lampiran}.</div>`;
     } else {
       panduanHtml += `
-      <div><strong>Menu Alur Kasus (e-Pelaporan):</strong> Tidak perlu lapor realisasi (bukan dividen).</div>`;
-    }
-    if (p.spt) {
-      panduanHtml += `
+      <div><strong>Menu Alur Kasus (e-Pelaporan):</strong> Tidak perlu lapor (tidak direinvestasikan).</div>
       <div style="margin-top: 6px"><strong>Menu SPT Tahunan (Akhir Tahun):</strong></div>
-      <div>Masukkan ${formatTaxCurrency(p.spt.nominal)} ke Lampiran ${p.spt.lampiran}.</div>`;
-    }
-    if (p.kreditPajak) {
-      panduanHtml += `
-      <div style="margin-top: 6px"><strong>Kredit Pajak PPh 24:</strong></div>
-      <div>Kredit Pajak ${p.kreditPajak.jenis} sebesar ${formatTaxCurrency(p.kreditPajak.nominal)} dapat dikurangkan dari pajak terutang di formulir induk.</div>`;
+      <div>- Masukkan Rp ${formatTaxCurrency(p.spt.nominal).replace('Rp ', '')} ke Lampiran ${p.spt.lampiran}.</div>
+      <div>- Masukkan Kredit Pajak PPh Pasal 24 sebesar Rp ${formatTaxCurrency(p.kreditPajak.nominal).replace('Rp ', '')} pada Formulir Induk Bagian PPh Setor Sendiri.</div>`;
     }
   } else if (hasil.jenis === "penjualan" && d.isLoss) {
     panduanHtml += `
