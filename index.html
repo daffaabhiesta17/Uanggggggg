@@ -278,7 +278,7 @@
               <form class="surface investment-simulator-form" id="investmentSimulatorForm">
                 <div class="section-head compact">
                   <h3>Program 1: Proyeksi 180 Bulan</h3>
-                  <p>Bola salju saham BMRI, ASII, BBRI, dan RDPU dengan pola beli selang-seling.</p>
+                  <p>Bola salju saham BMRI, ICBP, BBRI, dan RDPU dengan pola beli selang-seling.</p>
                 </div>
                 <div class="simulator-sync-banner hidden" id="simulatorSyncBanner">
                   <strong>Terhubung ke Program 2</strong>
@@ -330,8 +330,8 @@
                       <input id="simBmriPrice" type="number" min="1" step="0.01" value="4130" />
                     </label>
                     <label>
-                      Harga ASII
-                      <input id="simAsiiPrice" type="number" min="1" step="0.01" value="4800" />
+                      Harga ICBP
+                      <input id="simIcbpPrice" type="number" min="1" step="0.01" value="6700" />
                     </label>
                     <label>
                       Harga BBRI
@@ -372,11 +372,11 @@
                     <div class="custom-lot-presets" aria-label="Preset custom lot">
                       <button type="button" data-sim-lot-preset="2-1-1">
                         <strong>2 + 1 + 1</strong>
-                        <span>BMRI 2 lot, ASII 1 lot, BBRI 1 lot</span>
+                        <span>BMRI 2 lot, ICBP 1 lot, BBRI 1 lot</span>
                       </button>
                       <button type="button" data-sim-lot-preset="3-1-1">
                         <strong>3 + 1 + 1</strong>
-                        <span>BMRI 3 lot, ASII 1 lot, BBRI 1 lot</span>
+                        <span>BMRI 3 lot, ICBP 1 lot, BBRI 1 lot</span>
                       </button>
                     </div>
                     <div class="input-pair">
@@ -385,8 +385,8 @@
                         <input id="simBmriMonthlyLots" type="number" min="0" step="1" value="1" />
                       </label>
                       <label>
-                        ASII Lot / Bulan
-                        <input id="simAsiiMonthlyLots" type="number" min="0" step="1" value="1" />
+                        ICBP Lot / Bulan
+                        <input id="simIcbpMonthlyLots" type="number" min="0" step="1" value="1" />
                       </label>
                       <label>
                         BBRI Lot / Bulan
@@ -399,8 +399,8 @@
                         <strong id="simCustomBmriPurchase">0 lot - Rp0</strong>
                       </article>
                       <article>
-                        <span>ASII terbeli</span>
-                        <strong id="simCustomAsiiPurchase">0 lot - Rp0</strong>
+                        <span>ICBP terbeli</span>
+                        <strong id="simCustomIcbpPurchase">0 lot - Rp0</strong>
                       </article>
                       <article>
                         <span>BBRI terbeli</span>
@@ -465,8 +465,8 @@
                         <input id="simBmriPriceChange" type="number" step="0.1" value="5" disabled />
                       </label>
                       <label>
-                        ASII % / Tahun
-                        <input id="simAsiiPriceChange" type="number" step="0.1" value="5" disabled />
+                        ICBP % / Tahun
+                        <input id="simIcbpPriceChange" type="number" step="0.1" value="5" disabled />
                       </label>
                       <label>
                         BBRI % / Tahun
@@ -498,8 +498,8 @@
                       <input id="simBmriYield" type="text" inputmode="decimal" placeholder="206.5" value="206.5" />
                     </label>
                     <label>
-                      Dividen Awal ASII / Lembar
-                      <input id="simAsiiYield" type="text" inputmode="decimal" placeholder="390" value="390" />
+                      Dividen Awal ICBP / Lembar
+                      <input id="simIcbpYield" type="text" inputmode="decimal" placeholder="390" value="390" />
                     </label>
                     <label>
                       Dividen Awal BBRI / Lembar
@@ -562,9 +562,9 @@
                       <small id="simBmriValue">Rp0</small>
                     </div>
                     <div class="composition-item">
-                      <div class="row-between"><strong>ASII</strong><span id="simAsiiLots">0 lot</span></div>
-                      <div class="composition-track"><span id="simAsiiBar"></span></div>
-                      <small id="simAsiiValue">Rp0</small>
+                      <div class="row-between"><strong>ICBP</strong><span id="simIcbpLots">0 lot</span></div>
+                      <div class="composition-track"><span id="simIcbpBar"></span></div>
+                      <small id="simIcbpValue">Rp0</small>
                     </div>
                     <div class="composition-item">
                       <div class="row-between"><strong>BBRI</strong><span id="simBbriLots">0 lot</span></div>
@@ -613,8 +613,8 @@
                       <th>Total Setoran</th>
                       <th>Harga BMRI</th>
                       <th>Lot BMRI</th>
-                      <th>Harga ASII</th>
-                      <th>Lot ASII</th>
+                      <th>Harga ICBP</th>
+                      <th>Lot ICBP</th>
                       <th>Harga BBRI</th>
                       <th>Lot BBRI</th>
                       <th>Dividen Cair</th>
@@ -701,8 +701,8 @@
                           <input id="monthlyStrategyBmriPrice" type="text" inputmode="numeric" value="4.130" />
                         </label>
                         <label>
-                          Harga ASII / Lembar
-                          <input id="monthlyStrategyAsiiPrice" type="text" inputmode="numeric" value="4.800" />
+                          Harga ICBP / Lembar
+                          <input id="monthlyStrategyIcbpPrice" type="text" inputmode="numeric" value="6.700" />
                         </label>
                         <label>
                           Harga BBRI / Lembar
@@ -713,8 +713,8 @@
                           <input id="monthlyStrategyBmriBaseLots" type="number" min="0" step="1" value="2" />
                         </label>
                         <label>
-                          ASII Base Lot
-                          <input id="monthlyStrategyAsiiBaseLots" type="number" min="0" step="1" value="1" />
+                          ICBP Base Lot
+                          <input id="monthlyStrategyIcbpBaseLots" type="number" min="0" step="1" value="1" />
                         </label>
                         <label>
                           BBRI Base Lot
@@ -777,7 +777,7 @@
                       <label class="switch-row monthly-extra-toggle monthly-dividend-gate" id="monthlyStrategyDividendGate">
                         <span>
                           <strong>4. Ada dividen cair bulan ini</strong>
-                          <small>Opsional karena dividen biasanya hanya 1-2x setahun. Rekomendasi mengikuti rasio lot bulan ini BMRI:ASII = 2:1, sisanya RDPU.</small>
+                          <small>Opsional karena dividen biasanya hanya 1-2x setahun. Rekomendasi mengikuti rasio lot bulan ini BMRI:ICBP = 2:1, sisanya RDPU.</small>
                         </span>
                         <input id="monthlyStrategyUseDividend" type="checkbox" />
                         <span class="switch-control" aria-hidden="true"></span>
@@ -812,8 +812,8 @@
                             <strong id="monthlyStrategyBmriBaseResult">0 lot - Rp0</strong>
                           </article>
                           <article>
-                            <span>ASII Base</span>
-                            <strong id="monthlyStrategyAsiiBaseResult">0 lot - Rp0</strong>
+                            <span>ICBP Base</span>
+                            <strong id="monthlyStrategyIcbpBaseResult">0 lot - Rp0</strong>
                           </article>
                           <article>
                             <span>BBRI Base</span>
@@ -895,8 +895,8 @@
                             <strong id="monthlyStrategyTotalBmriLotsResult">0 lot</strong>
                           </article>
                           <article>
-                            <span>Total Lot ASII</span>
-                            <strong id="monthlyStrategyTotalAsiiLotsResult">0 lot</strong>
+                            <span>Total Lot ICBP</span>
+                            <strong id="monthlyStrategyTotalIcbpLotsResult">0 lot</strong>
                           </article>
                           <article>
                             <span>Total Lot BBRI</span>
@@ -957,7 +957,7 @@
               <section class="investment-records-section">
                 <div class="section-head compact">
                   <h3>Pembelian Saham</h3>
-                  <p>Default BMRI, ASII, dan BBRI; saham lain bisa ditambahkan.</p>
+                  <p>Default BMRI, ICBP, dan BBRI; saham lain bisa ditambahkan.</p>
                 </div>
                 <form class="investment-inline-form" id="investmentTickerForm">
                   <label>
@@ -989,7 +989,8 @@
                     Jumlah Lot
                     <input id="investmentStockLots" type="number" min="1" step="1" placeholder="0" />
                   </label>
-                  <button class="primary-button investment-submit" type="submit">Simpan Saham</button>
+                  <button class="primary-button investment-submit" id="investmentStockSubmit" type="submit">Simpan Saham</button>
+                  <button class="icon-button" id="investmentStockCancelEdit" type="button" hidden>Batal Edit</button>
                 </form>
 
                 <div class="table-scroll investment-table-scroll investment-stock-scroll">
@@ -1027,7 +1028,8 @@
                     Nominal RDPU
                     <input id="investmentRdpuAmount" type="text" inputmode="numeric" placeholder="0" />
                   </label>
-                  <button class="primary-button investment-submit" type="submit">Simpan RDPU</button>
+                  <button class="primary-button investment-submit" id="investmentRdpuSubmit" type="submit">Simpan RDPU</button>
+                  <button class="icon-button" id="investmentRdpuCancelEdit" type="button" hidden>Batal Edit</button>
                 </form>
 
                 <div class="table-scroll investment-table-scroll investment-rdpu-scroll">
@@ -1149,152 +1151,151 @@
                 </table>
               </div>
             </section>
-            </section>
 
-            <!-- PAJAK: Simulasi Pajak -->
-            <section class="surface tax-calculator-surface" id="taxCalculatorSurface">
-              <div class="section-head compact">
-                <h3>Simulasi Pajak Investasi</h3>
-                <p>Hitung PPh Final, PPh Progresif, dan panduan pengisian Coretax DJP.</p>
+            <section class="surface hidden" id="taxCalculatorSurface">
+              <div class="section-head">
+                <div>
+                  <h3>Simulasi Pajak</h3>
+                  <p>Hitung pajak dividen domestik, dividen LN, dan penjualan saham.</p>
+                </div>
               </div>
 
-              <form class="tax-form" id="taxForm">
-                <div class="tax-form-main">
-                  <div class="tax-field">
-                    <label>Tahun Pajak</label>
+              <form id="taxForm">
+                <div class="tax-form-grid">
+                  <label>
+                    Tahun Pajak
                     <select id="taxTahunPajak"></select>
-                  </div>
-                  <div class="tax-field">
-                    <label>Jenis Transaksi</label>
+                  </label>
+                  <label>
+                    Jenis Transaksi
                     <select id="taxJenis">
                       <option value="dividen_domestik">Dividen Saham Lokal (Stockbit - Rupiah)</option>
                       <option value="dividen_ln">Dividen ETF Luar Negeri (Pluang - USD)</option>
                       <option value="penjualan">Penjualan Saham/ETF (Capital Gain/Loss)</option>
                     </select>
+                  </label>
+                </div>
+
+                <div id="taxDynamicFields">
+                  <!-- DIVIDEN DOMESTIK -->
+                  <div data-tax-group="dividen_domestik">
+                    <div class="tax-form-grid">
+                      <label>
+                        Nama Emiten
+                        <input id="taxDividenEmiten" type="text" placeholder="Contoh: BMRI" />
+                      </label>
+                      <label>
+                        Total Bruto (Rp)
+                        <input id="taxDividenBruto" type="text" inputmode="numeric" placeholder="0" />
+                      </label>
+                    </div>
+                    <label class="switch-row">
+                      <span><strong>Reinvestasi (Bebas Pajak)</strong></span>
+                      <input id="taxDividenReinvest" type="checkbox" />
+                      <span class="switch-control" aria-hidden="true"></span>
+                    </label>
+                    <div class="tax-reinvest-field hidden" id="taxDividenReinvestField">
+                      <label>
+                        Nominal Diinvestasikan (Rp)
+                        <input id="taxDividenReinvestNominal" type="text" inputmode="numeric" placeholder="0" />
+                      </label>
+                    </div>
+                  </div>
+
+                  <!-- DIVIDEN LN -->
+                  <div data-tax-group="dividen_ln" class="hidden">
+                    <div class="tax-form-grid">
+                      <label>
+                        Nama ETF
+                        <input id="taxLNEtf" type="text" placeholder="Contoh: VOO" />
+                      </label>
+                      <label>
+                        Total Bruto (USD)
+                        <input id="taxLNBruto" type="text" inputmode="decimal" placeholder="0.00" />
+                      </label>
+                      <label>
+                        Kurs KMK (Rp/USD)
+                        <input id="taxLNKurs" type="text" inputmode="decimal" placeholder="Contoh: 16500" />
+                      </label>
+                    </div>
+                    <label class="switch-row">
+                      <span><strong>Reinvestasi ke NKRI (Bebas Pajak)</strong></span>
+                      <input id="taxLNReinvest" type="checkbox" />
+                      <span class="switch-control" aria-hidden="true"></span>
+                    </label>
+                    <div class="tax-reinvest-field hidden" id="taxLNReinvestField">
+                      <label>
+                        Nominal Diinvestasikan (Rp)
+                        <input id="taxLNReinvestNominal" type="text" inputmode="numeric" placeholder="0" />
+                      </label>
+                    </div>
+                  </div>
+
+                  <!-- PENJUALAN -->
+                  <div data-tax-group="penjualan" class="hidden">
+                    <div class="tax-form-grid">
+                      <label>
+                        Jenis Aset
+                        <select id="taxJualJenis">
+                          <option value="saham_lokal">Saham Lokal (Stockbit - IDR)</option>
+                          <option value="etf_ln">ETF Luar Negeri (Pluang - USD)</option>
+                        </select>
+                      </label>
+                      <label>
+                        Nama Aset
+                        <input id="taxJualAset" type="text" placeholder="Contoh: BMRI / VOO" />
+                      </label>
+                      <label>
+                        Harga Beli per Unit
+                        <input id="taxJualHargaBeli" type="text" inputmode="numeric" placeholder="0" />
+                      </label>
+                      <label>
+                        Harga Jual per Unit
+                        <input id="taxJualHargaJual" type="text" inputmode="numeric" placeholder="0" />
+                      </label>
+                      <label>
+                        Jumlah Unit
+                        <input id="taxJualUnit" type="number" min="1" step="1" placeholder="0" />
+                      </label>
+                      <label class="hidden" id="taxJualKursField">
+                        Kurs KMK (Rp/USD)
+                        <input id="taxJualKurs" type="text" inputmode="decimal" placeholder="Contoh: 16500" />
+                      </label>
+                    </div>
                   </div>
                 </div>
 
-                <div class="tax-dynamic-fields" id="taxDynamicFields">
-                  <div class="tax-field-group" data-tax-group="dividen_domestik">
-                    <div class="tax-field-group-head">Data Dividen Domestik</div>
-                    <div class="tax-field">
-                      <label>Nama Emiten</label>
-                      <input id="taxDividenEmiten" type="text" placeholder="Contoh: BBRI" />
-                    </div>
-                    <div class="tax-field">
-                      <label>Total Dividen Bruto (Rp)</label>
-                      <input id="taxDividenBruto" type="text" inputmode="numeric" placeholder="0" />
-                    </div>
-                    <div class="tax-field">
-                      <label class="switch-row tax-switch">
-                        <span>
-                          <strong>Reinvest seluruhnya?</strong>
-                          <small>Dana dipakai beli saham lagi atau investasi lain di NKRI.</small>
-                        </span>
-                        <input id="taxDividenReinvest" type="checkbox" />
-                        <span class="switch-control" aria-hidden="true"></span>
-                      </label>
-                    </div>
-                    <div class="tax-field hidden" id="taxDividenReinvestField">
-                      <label>Nominal yang Diinvestasikan Kembali (Rp)</label>
-                      <input id="taxDividenReinvestNominal" type="text" inputmode="numeric" placeholder="0" />
-                      <small class="tax-hint">Total = (Beli saham lagi) + (Pindah aplikasi investasi NKRI)</small>
-                    </div>
-                  </div>
-
-                  <div class="tax-field-group hidden" data-tax-group="dividen_ln">
-                    <div class="tax-field-group-head">Data Dividen Luar Negeri</div>
-                    <div class="tax-field">
-                      <label>Nama ETF</label>
-                      <input id="taxLNEtf" type="text" value="VGT" />
-                    </div>
-                    <div class="tax-field">
-                      <label>Total Dividen Bruto (USD)</label>
-                      <input id="taxLNBruto" type="text" inputmode="decimal" placeholder="0.00" />
-                    </div>
-                    <div class="tax-field">
-                      <label>Kurs KMK (USD ke IDR)</label>
-                      <input id="taxLNKurs" type="text" inputmode="decimal" placeholder="Contoh: 16300" />
-                      <small class="tax-hint">Gunakan kurs KMK saat tanggal transaksi. Cek di pajak.go.id</small>
-                    </div>
-                    <div class="tax-field">
-                      <label class="switch-row tax-switch">
-                        <span>
-                          <strong>Reinvest / Repatriasi ke NKRI?</strong>
-                          <small>Dana ditarik ke Indonesia dan dibelikan aset di NKRI.</small>
-                        </span>
-                        <input id="taxLNReinvest" type="checkbox" />
-                        <span class="switch-control" aria-hidden="true"></span>
-                      </label>
-                    </div>
-                    <div class="tax-field hidden" id="taxLNReinvestField">
-                      <label>Nominal yang Direpatriasi (Rp)</label>
-                      <input id="taxLNReinvestNominal" type="text" inputmode="numeric" placeholder="0" />
-                    </div>
-                  </div>
-
-                  <div class="tax-field-group hidden" data-tax-group="penjualan">
-                    <div class="tax-field-group-head">Data Penjualan Aset</div>
-                    <div class="tax-field">
-                      <label>Jenis Aset</label>
-                      <select id="taxJualJenis">
-                        <option value="saham_lokal">Saham Lokal (Stockbit)</option>
-                        <option value="etf_ln">ETF Luar Negeri (Pluang)</option>
-                      </select>
-                    </div>
-                    <div class="tax-field">
-                      <label>Nama Aset</label>
-                      <input id="taxJualAset" type="text" placeholder="Contoh: BBRI / VGT" />
-                    </div>
-                    <div class="tax-field">
-                      <label>Harga Beli per Unit</label>
-                      <input id="taxJualHargaBeli" type="text" inputmode="numeric" placeholder="Rp atau USD" />
-                    </div>
-                    <div class="tax-field">
-                      <label>Harga Jual per Unit</label>
-                      <input id="taxJualHargaJual" type="text" inputmode="numeric" placeholder="Rp atau USD" />
-                    </div>
-                    <div class="tax-field">
-                      <label>Jumlah Unit / Lembar</label>
-                      <input id="taxJualUnit" type="number" min="1" step="1" placeholder="100" />
-                    </div>
-                    <div class="tax-field hidden" id="taxJualKursField">
-                      <label>Kurs KMK (USD ke IDR)</label>
-                      <input id="taxJualKurs" type="text" inputmode="decimal" placeholder="Contoh: 16300" />
-                    </div>
-                  </div>
-                </div>
-
-                <button class="primary-button" type="submit">Simulasi & Simpan</button>
+                <button class="primary-button" type="submit">Hitung & Simpan</button>
               </form>
 
-              <div class="tax-result hidden" id="taxResult" aria-live="polite">
-                <div class="tax-result-header" id="taxResultHeader"></div>
-                <div class="tax-result-body" id="taxResultBody"></div>
+              <div class="tax-result hidden" id="taxResult">
+                <strong id="taxResultHeader"></strong>
+                <div id="taxResultBody"></div>
               </div>
 
-              <div class="tax-history" id="taxHistory">
-                <div class="section-head compact">
+              <div class="section-head compact" style="margin-top: 1.5rem">
+                <div>
                   <h3>Riwayat Simulasi</h3>
-                  <p>Transaksi pajak yang sudah dihitung dan disimpan.</p>
+                  <p>Hasil simulasi pajak yang sudah dihitung dan disimpan.</p>
                 </div>
-                <div class="table-scroll">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Tanggal</th>
-                        <th>Tahun</th>
-                        <th>Jenis</th>
-                        <th>Aset</th>
-                        <th>Pajak Terutang</th>
-                        <th>Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody id="taxHistoryTable"></tbody>
-                  </table>
-                </div>
-                <div class="empty-state" id="taxHistoryEmpty">Belum ada simulasi pajak.</div>
               </div>
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Tanggal</th>
+                      <th>Tahun Pajak</th>
+                      <th>Jenis Transaksi</th>
+                      <th>Aset</th>
+                      <th>Pajak Terutang</th>
+                      <th>Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="taxHistoryTable"></tbody>
+                </table>
+              </div>
+              <div class="empty-state hidden" id="taxHistoryEmpty">Belum ada simulasi pajak tersimpan.</div>
+            </section>
             </section>
           </div>
         </section>
