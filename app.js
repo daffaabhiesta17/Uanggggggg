@@ -349,6 +349,8 @@ const el = {
   taxHistoryTable: document.querySelector("#taxHistoryTable"),
   taxHistoryEmpty: document.querySelector("#taxHistoryEmpty"),
   taxCalculatorSurface: document.querySelector("#taxCalculatorSurface"),
+  taxReinvestList: document.querySelector("#taxReinvestList"),
+  taxAddAllocation: document.querySelector("#taxAddAllocation"),
 };
 
 function loadState() {
@@ -3249,10 +3251,13 @@ function formatTaxCurrency(value) {
 }
 
 function calculatePajakDividenDomestik(data) {
-  const { emiten, bruto, reinvestYa, reinvestNominal } = data;
+  const { emiten, bruto, reinvestYa, reinvestList } = data;
   const totalBruto = Math.max(0, bruto);
-  const totalReinvested = reinvestYa ? totalBruto : Math.min(reinvestNominal || 0, totalBruto);
-  const sisaKenaPajak = totalBruto - totalReinvested;
+  const list = Array.isArray(reinvestList) ? reinvestList : [];
+  const totalReinvested = reinvestYa
+    ? totalBruto
+    : Math.min(list.reduce((sum, item) => sum + (Number(item.nominal) || 0), 0), totalBruto);
+  const sisaKenaPajak = Math.max(0, totalBruto - totalReinvested);
   const pajakTerutang = sisaKenaPajak * 0.1;
 
   return {
@@ -3265,11 +3270,13 @@ function calculatePajakDividenDomestik(data) {
     kenaPajak: sisaKenaPajak,
     pajakTerutang,
     reinvestYa,
+    reinvestList: list.filter((item) => item.nominal > 0),
     detail: {
       totalBruto,
       totalReinvested,
       sisaKenaPajak,
       pajakTerutang,
+      reinvestList: list.filter((item) => item.nominal > 0),
       holdingUntil: reinvestYa ? `31 Desember ${(data.tahunPajak || new Date().getFullYear()) + 3}` : "-",
       kodeBilling: sisaKenaPajak > 0 ? "411128-419" : null,
     },
@@ -3419,12 +3426,21 @@ function readTaxForm() {
   const base = { jenis, tahunPajak };
 
   if (jenis === "dividen_domestik") {
+    const reinvestRows = el.taxReinvestList.querySelectorAll(".allocation-row");
+    const reinvestList = [];
+    reinvestRows.forEach((row) => {
+      const name = row.querySelector(".alloc-name-input")?.value?.trim();
+      const nominal = parseNumberInput(row.querySelector(".alloc-nominal-input")?.value);
+      if (name || nominal > 0) {
+        reinvestList.push({ name: name || "-", nominal });
+      }
+    });
     return {
       ...base,
       emiten: el.taxDividenEmiten.value.trim(),
       bruto: parseNumberInput(el.taxDividenBruto.value),
       reinvestYa: el.taxDividenReinvest.checked,
-      reinvestNominal: parseNumberInput(el.taxDividenReinvestNominal.value),
+      reinvestList,
     };
   }
 
@@ -3479,20 +3495,30 @@ function renderTaxResult(hasil) {
       <div class="tax-note">`;
 
   if (hasil.jenis === "dividen_domestik") {
+    const reinvestItems = d.reinvestList || [];
+    statusHtml += `<div><strong>Total Dividen Bruto:</strong> ${formatTaxCurrency(d.totalBruto)}</div>`;
     if (d.reinvestYa) {
       statusHtml += `
-        <div class="tax-success">Porsi Bebas Pajak (Reinvest Seluruhnya): ${formatTaxCurrency(hasil.bebasPajak)}</div>
+        <div class="tax-success">Reinvestasi Seluruhnya (Bebas Pajak 0%): ${formatTaxCurrency(hasil.bebasPajak)}</div>
         <div class="tax-success">Tarif 0% (Bebas Pajak). Wajib ditahan 3 tahun s.d ${d.holdingUntil}.</div>
         <div class="tax-note">Lapor di Form LA.39-10 & SPT Tahunan Lampiran L-2 Bagian B.</div>`;
     } else {
-      if (hasil.bebasPajak > 0) {
-        statusHtml += `<div class="tax-success">Porsi Bebas Pajak (Reinvest): ${formatTaxCurrency(hasil.bebasPajak)}</div>`;
+      statusHtml += `<div class="tax-success">Rincian Reinvestasi (Bebas Pajak 0%):</div>`;
+      if (reinvestItems.length > 0) {
+        reinvestItems.forEach((item) => {
+          statusHtml += `<div class="tax-note" style="margin-left: 1rem">* ${item.name}: ${formatTaxCurrency(item.nominal)}</div>`;
+        });
       }
       statusHtml += `
-        <div class="tax-warning">Porsi Kena Pajak: ${formatTaxCurrency(hasil.kenaPajak)}</div>
-        <div class="tax-warning">Pajak Terutang: ${formatTaxCurrency(hasil.pajakTerutang)} (PPh Final Pasal 4 ayat 2 tarif 10%)</div>
-        <div class="tax-note">Sisa Kena Pajak = Total Bruto - Total Reinvested = ${formatTaxCurrency(d.totalBruto)} - ${formatTaxCurrency(d.totalReinvested)}</div>
-        ${d.kodeBilling ? `<div class="tax-note">Bayar via kode billing <strong>${d.kodeBilling}</strong> sebesar ${formatTaxCurrency(hasil.pajakTerutang)}</div>` : ""}`;
+        <div class="tax-success">Total Dana Terselamatkan: ${formatTaxCurrency(d.totalReinvested)}</div>`;
+      if (d.sisaKenaPajak > 0) {
+        statusHtml += `
+          <div class="tax-warning">Porsi Tidak Direinvestasikan (Kena Pajak 10%): ${formatTaxCurrency(d.sisaKenaPajak)}</div>
+          <div class="tax-warning">Pajak Terutang Mandiri (PPh Final 4 ayat 2): ${formatTaxCurrency(hasil.pajakTerutang)}</div>
+          ${d.kodeBilling ? `<div class="tax-note">Bayar via kode billing <strong>${d.kodeBilling}</strong> sebesar ${formatTaxCurrency(hasil.pajakTerutang)}</div>` : ""}`;
+      } else {
+        statusHtml += `<div class="tax-success">Seluruh dividen dialokasikan, tidak ada sisa kena pajak.</div>`;
+      }
     }
   } else if (hasil.jenis === "dividen_ln") {
     statusHtml += `
@@ -3613,11 +3639,14 @@ function updateTaxFormVisibility() {
   el.taxDividenReinvestField.classList.toggle("hidden", !el.taxDividenReinvest.checked);
   el.taxLNReinvestField.classList.toggle("hidden", !el.taxLNReinvest.checked);
   el.taxJualKursField.classList.toggle("hidden", el.taxJualJenis.value !== "etf_ln");
+  if (el.taxReinvestList) {
+    el.taxReinvestList.innerHTML = "";
+  }
 }
 
 function initTaxForm() {
   const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 10 }, (_, i) => currentYear - 5 + i);
+  const years = Array.from({ length: 20 }, (_, i) => 2026 + i);
   el.taxTahunPajak.innerHTML = years.map((y) => `<option value="${y}" ${y === currentYear ? "selected" : ""}>${y}</option>`).join("");
   updateTaxFormVisibility();
   renderTaxHistory();
@@ -3687,11 +3716,34 @@ function setupTaxEvents() {
     }
   });
 
+  function createAllocationRow(nameVal, nominalVal) {
+    const row = document.createElement("div");
+    row.className = "allocation-row";
+    row.innerHTML = `
+      <label>
+        Nama Instrumen/Aplikasi
+        <input class="alloc-name-input" type="text" placeholder="Contoh: Beli saham lagi, ETF, Reksa Dana" value="${escapeHtml(nameVal || "")}" />
+      </label>
+      <label>
+        Nominal (Rp)
+        <input class="alloc-nominal-input" type="text" inputmode="numeric" placeholder="0" value="${nominalVal || ""}" />
+      </label>
+      <button class="icon-button alloc-delete-btn" type="button" title="Hapus alokasi">&times;</button>
+    `;
+    row.querySelector(".alloc-delete-btn").addEventListener("click", () => row.remove());
+    row.querySelector(".alloc-nominal-input").addEventListener("input", function () {
+      this.value = formatNumberInput(this.value);
+    });
+    return row;
+  }
+
+  el.taxAddAllocation.addEventListener("click", () => {
+    const row = createAllocationRow("", "");
+    el.taxReinvestList.append(row);
+  });
+
   el.taxDividenBruto.addEventListener("input", () => {
     el.taxDividenBruto.value = formatNumberInput(el.taxDividenBruto.value);
-  });
-  el.taxDividenReinvestNominal.addEventListener("input", () => {
-    el.taxDividenReinvestNominal.value = formatNumberInput(el.taxDividenReinvestNominal.value);
   });
   el.taxLNReinvestNominal.addEventListener("input", () => {
     el.taxLNReinvestNominal.value = formatNumberInput(el.taxLNReinvestNominal.value);
