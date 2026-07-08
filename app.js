@@ -3254,22 +3254,30 @@ function calculatePajakDividenDomestik(data) {
   const { emiten, bruto, reinvestYa, reinvestList } = data;
   const totalBruto = Math.max(0, bruto);
   const list = Array.isArray(reinvestList) ? reinvestList : [];
+  const namaAsetDinamis = [];
+
   const totalReinvested = reinvestYa
     ? totalBruto
-    : Math.min(list.reduce((sum, item) => sum + (Number(item.nominal) || 0), 0), totalBruto);
+    : Math.min(list.reduce((sum, item) => {
+        const nominal = Number(item.nominal) || 0;
+        if (nominal > 0 && item.name && item.name.trim()) {
+          namaAsetDinamis.push(item.name.trim());
+        }
+        return sum + nominal;
+      }, 0), totalBruto);
   const sisaKenaPajak = Math.max(0, totalBruto - totalReinvested);
   const pajakTerutang = sisaKenaPajak * 0.1;
 
-  const listNames = list.filter((item) => item.nominal > 0).map((item) => item.name || "-");
   const asetDisplay = reinvestYa
     ? emiten || "-"
-    : listNames.length > 0
-      ? listNames.join(" / ")
+    : namaAsetDinamis.length > 0
+      ? namaAsetDinamis.join(', ')
       : emiten || "-";
 
   return {
     jenis: "dividen_domestik",
     aset: asetDisplay,
+    namaAsetDinamis,
     aplikasi: "Stockbit",
     nominalAsli: totalBruto,
     mataUang: "IDR",
@@ -3496,12 +3504,16 @@ function renderTaxResult(hasil) {
 
   let bodyHtml = "";
 
+  const asetDisplay = hasil.jenis === "dividen_domestik" && hasil.namaAsetDinamis?.length > 0
+    ? hasil.namaAsetDinamis.join(', ')
+    : hasil.aset;
+
   bodyHtml += `
     <div class="tax-result-section">
       <span class="tax-label">1. Rangkuman Transaksi</span>
       <div class="tax-note">
         <div><strong>Jenis Transaksi:</strong> ${taxJenisLabel(hasil.jenis)}</div>
-        <div><strong>Aset & Aplikasi:</strong> ${hasil.aset} di ${hasil.aplikasi}</div>
+        <div><strong>Aset & Aplikasi:</strong> ${asetDisplay} di ${hasil.aplikasi}</div>
         <div><strong>Nominal Asli:</strong> ${hasil.nominalAsli.toLocaleString("id-ID")} ${hasil.mataUang}</div>
       </div>
     </div>`;
