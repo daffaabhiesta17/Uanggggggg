@@ -2270,12 +2270,19 @@ function renderTaxOutput(result, record) {
 
     if (hasSisaKenaPajak) {
       html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #f59e0b;background:#fff8e1;border-radius:6px;">
-        <strong style="color:#e65100;">Langkah 3: Pembayaran & Pelaporan Sisa Dana yang Tidak Direinvestasikan (Rp ${result.sisaKenaPajak.toLocaleString("id-ID")})</strong>
+        <strong style="color:#e65100;">Langkah 3: Pembayaran Pajak & Wajib Lapor SPT Masa Unifikasi Bulanan (Rp ${result.sisaKenaPajak.toLocaleString("id-ID")})</strong>
         <ul style="margin-top:8px;">
-          <li>Karena dana dividen tidak diinvestasikan kembali, dana tersebut wajib dibayar pajaknya secara mandiri sebesar <strong>10%</strong> yaitu <strong>Rp ${result.pajakTerutang.toLocaleString("id-ID")}</strong>.</li>
-          <li>Buka menu <strong>'Bayar/Billing'</strong> di Coretax, buat kode billing baru dengan kombinasi Kode Akun Pajak: <strong>411128</strong> (PPh Final) dan Kode Jenis Setoran (KJS): <strong>100</strong> (Masa PPh Pasal 25/Final).</li>
-          <li><strong>Catatan Penting:</strong> Di dalam sistem Coretax, kode setoran dividen 419 lama telah dihapus dan dilebur ke KJS 100. Bayar tagihan billing <strong>Rp ${result.pajakTerutang.toLocaleString("id-ID")}</strong> melalui bank atau e-wallet paling lambat tanggal 15 bulan berikutnya setelah dividen cair.</li>
-          <li>Di formulir SPT Tahunan, buka halaman <strong>'Lampiran L-1'</strong> (Penghasilan Dikenakan Pajak Bersifat Final). Tambahkan baris baru, pilih jenis <strong>'Dividen'</strong>, masukkan Nilai Bruto <strong>Rp ${result.sisaKenaPajak.toLocaleString("id-ID")}</strong>, masukkan nominal PPh Terutang <strong>Rp ${result.pajakTerutang.toLocaleString("id-ID")}</strong>, lalu masukkan nomor NTPN (bukti bayar bank) Anda setelah transaksi sukses.</li>
+          <li>Karena ada sisa dana yang tidak diinvestasikan kembali, dana tersebut terutang PPh Final 10% sebesar <strong>Rp ${result.pajakTerutang.toLocaleString("id-ID")}</strong>.</li>
+          <li><strong>PERINGATAN PMK 81/2024:</strong> Di bawah sistem Coretax, validasi pembayaran (NTPN) saja <strong>tidak dianggap sebagai pelaporan</strong>. Anda wajib melaporkan SPT Masa bulanan agar tidak terkena denda telat lapor masa.</li>
+        </ul>
+        <p style="margin:10px 0 6px;font-weight:750;color:#e65100;">Cara Eksekusi di Coretax:</p>
+        <ol style="margin:0 0 8px;padding-left:20px;display:grid;gap:6px;line-height:1.65;">
+          <li>Masuk ke menu <strong>'e-Bupot Unifikasi'</strong> → pilih <strong>'Penyetoran Sendiri (Self Payment)'</strong>. Buat bukti potong baru dengan Jenis Pajak <strong>PPh Final Pasal 4 ayat 2</strong>, Objek Pajak: <strong>Dividen Orang Pribadi Dalam Negeri</strong>. Masukkan nominal bruto <strong>Rp ${result.sisaKenaPajak.toLocaleString("id-ID")}</strong> (Pajak otomatis terhitung <strong>Rp ${result.pajakTerutang.toLocaleString("id-ID")}</strong>).</li>
+          <li>Buka menu <strong>'SPT Masa PPh Unifikasi'</strong>, buat konsep draf untuk Masa Pajak bulan berjalan, lalu klik tombol <strong>'Bayar dan Lapor'</strong>.</li>
+          <li>Bayar kode billing otomatis yang tergenerasi (KAP <strong>411128</strong>, KJS <strong>100</strong>) paling lambat tanggal 15 bulan berikutnya. Setelah dibayar, draf SPT Masa Unifikasi Anda akan otomatis terkirim. Batas akhir lapor masa adalah tanggal <strong>20</strong> bulan berikutnya.</li>
+        </ol>
+        <ul style="margin-top:8px;">
+          <li><strong>Pelaporan Akhir Tahun:</strong> Di formulir SPT Tahunan Anda, buka halaman <strong>'Lampiran L-1'</strong> (Penghasilan Dikenakan Pajak Bersifat Final). Tambahkan baris baru, pilih jenis <strong>'Dividen'</strong>, masukkan Nilai Bruto <strong>Rp ${result.sisaKenaPajak.toLocaleString("id-ID")}</strong>, masukkan nominal PPh Terutang <strong>Rp ${result.pajakTerutang.toLocaleString("id-ID")}</strong>, lalu masukkan nomor NTPN Anda.</li>
         </ul>
       </div>`;
     }
