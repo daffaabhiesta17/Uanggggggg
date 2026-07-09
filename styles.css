@@ -2387,3 +2387,36 @@ input:disabled {
   background: #dbeafe;
   transform: scale(0.97);
 }
+
+/* ============================================================
+   GLOBAL TIME PANEL
+   ============================================================ */
+
+.global-time-panel {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  margin-bottom: 18px;
+  border: 2px dashed #2563eb;
+  border-radius: 10px;
+  background: #f0f4ff;
+}
+
+.global-time-panel > strong {
+  color: #1e3a8a;
+  font-size: 0.88rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.global-time-panel > span {
+  color: #1d4ed8;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.global-time-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}

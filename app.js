@@ -107,7 +107,7 @@ let investmentGrowthChart = null;
 let investmentStockChart = null;
 let investmentStockChartPurchases = [];
 let activeInvestmentTab = "simulator";
-let simulatedYear = new Date().getFullYear();
+let globalSimulatedYear = new Date().getFullYear();
 let remoteStore = {
   enabled: false,
   investmentsEnabled: false,
@@ -2182,26 +2182,31 @@ function renderTaxOutput(result, record) {
   const yearHold = year + 3;
 
   // Smart tracker: hitung selisih tahun untuk status masa tahan dana
-  const currentYear = simulatedYear;
+  const currentYear = globalSimulatedYear;
   const selisihTahun = currentYear - year;
   let statusMasa, laporanKe, statusDana, statusDanaLabel;
-  if (selisihTahun === 1) {
-    statusMasa = "Tahun Ke-1 (Laporan Realisasi Awal)";
+  if (selisihTahun === 0) {
+    statusMasa = "Masa Terima Awal (Dana Baru Masuk di Tahun Kalender " + currentYear + ")";
+    laporanKe = "-";
+    statusDana = "baru";
+    statusDanaLabel = "🆕 DANA BARU (Belum Saatnya Lapor)";
+  } else if (selisihTahun === 1) {
+    statusMasa = "Tahun Ke-1 (Kewajiban Pelaporan Realisasi Awal untuk Dividen Tahun " + year + ")";
     laporanKe = 1;
     statusDana = "terkunci";
     statusDanaLabel = "🔒 TERKUNCI";
   } else if (selisihTahun === 2) {
-    statusMasa = "Tahun Ke-2 (Laporan Pantauan Rutin)";
+    statusMasa = "Tahun Ke-2 (Masa Pantauan Rutin untuk Dividen Tahun " + year + ")";
     laporanKe = 2;
     statusDana = "terkunci";
     statusDanaLabel = "🔒 TERKUNCI";
   } else if (selisihTahun === 3) {
-    statusMasa = "Tahun Ke-3 (Laporan Pantauan Akhir)";
+    statusMasa = "Tahun Ke-3 (Masa Pantauan Rutin untuk Dividen Tahun " + year + ")";
     laporanKe = 3;
     statusDana = "terkunci";
     statusDanaLabel = "🔒 TERKUNCI";
   } else if (selisihTahun >= 4) {
-    statusMasa = `Tahun Ke-${selisihTahun}+ (Sudah Melewati Masa Tahan 3 Tahun)`;
+    statusMasa = "🔓 BEBAS PENUH (Masa Tahan 3 Tahun Selesai)";
     laporanKe = "Selesai";
     statusDana = "bebas";
     statusDanaLabel = "🔓 BEBAS PENUH (Dana Sah Dicairkan)";
@@ -2285,7 +2290,16 @@ function renderTaxOutput(result, record) {
           <ul style="margin-top:8px;">
             <li>Status Pelacakan Waktu: Anda berada pada <strong>${statusMasa}</strong> atas dividen tahun <strong>${year}</strong>.</li>
             <li>Status Dana saat ini: <strong>${statusDanaLabel}</strong></li>
-            <li>Instruksi Coretax: Selamat! Kewajiban menahan dana investasi selama 3 tahun penuh sesuai UU Cipta Kerja telah selesai terlewati. Anda sudah <strong>TIDAK MEMILIKI</strong> kewajiban mengisi e-Pelaporan (AS.39-01) maupun melaporkannya kembali di SPT Tahunan untuk aset dividen ini. Dana investasi Anda kini bebas dicairkan atau dipindahkan tanpa dikenakan pajak.</li>
+            <li>Instruksi Coretax: Selamat! Kewajiban menahan dana investasi selama 3 tahun penuh sesuai UU Cipta Kerja telah selesai terlewati. Dana dividen tahun ${year} sudah melewati batas karantina s.d <strong>31 Desember ${yearHold}</strong>. Anda sudah <strong>TIDAK MEMILIKI</strong> kewajiban mengisi e-Pelaporan (AS.39-01) maupun melaporkannya kembali di SPT Tahunan. Dana bebas dicairkan atau dipindahkan tanpa dikenakan pajak.</li>
+          </ul>
+        </div>`;
+      } else if (statusDana === "baru") {
+        html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #1565c0;background:#e3f2fd;border-radius:6px;">
+          <strong style="color:#0d47a1;">Status Dana: Baru Masuk</strong>
+          <ul style="margin-top:8px;">
+            <li>Status Pelacakan Waktu: <strong>${statusMasa}</strong>.</li>
+            <li>Status Dana saat ini: <strong>${statusDanaLabel}</strong></li>
+            <li>Panduan: Dana dividen ini baru saja diterima di tahun kalender <strong>${globalSimulatedYear}</strong>. Belum waktunya melaporkan e-Pelaporan (AS.39-01). Pastikan dana langsung dibelikan aset investasi lagi di dalam negeri (NKRI) agar masa tahan 3 tahun segera dimulai dan status bebas pajak Anda terjaga. e-Pelaporan pertama akan dimulai paling lambat <strong>31 Maret ${year + 2}</strong> (satu tahun setelah tahun pajak dividen).</li>
           </ul>
         </div>`;
       } else {
@@ -2374,7 +2388,16 @@ function renderTaxOutput(result, record) {
           <ul style="margin-top:8px;">
             <li>Status Pelacakan Waktu: Anda berada pada <strong>${statusMasa}</strong> atas dividen tahun <strong>${year}</strong>.</li>
             <li>Status Dana saat ini: <strong>${statusDanaLabel}</strong></li>
-            <li>Instruksi Coretax: Selamat! Kewajiban menahan dana investasi selama 3 tahun penuh sesuai UU Cipta Kerja telah selesai terlewati. Anda sudah <strong>TIDAK MEMILIKI</strong> kewajiban mengisi e-Pelaporan (AS.39-01) maupun melaporkannya kembali di SPT Tahunan untuk aset dividen ini. Dana investasi Anda kini bebas dicairkan atau dipindahkan tanpa dikenakan pajak.</li>
+            <li>Instruksi Coretax: Selamat! Kewajiban menahan dana investasi selama 3 tahun penuh sesuai UU Cipta Kerja telah selesai terlewati. Dana dividen tahun ${year} sudah melewati batas karantina s.d <strong>31 Desember ${yearHold}</strong>. Anda sudah <strong>TIDAK MEMILIKI</strong> kewajiban mengisi e-Pelaporan (AS.39-01) maupun melaporkannya kembali di SPT Tahunan. Dana bebas dicairkan.</li>
+          </ul>
+        </div>`;
+      } else if (statusDana === "baru") {
+        html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #1565c0;background:#e3f2fd;border-radius:6px;">
+          <strong style="color:#0d47a1;">Status Dana: Baru Masuk</strong>
+          <ul style="margin-top:8px;">
+            <li>Status Pelacakan Waktu: <strong>${statusMasa}</strong>.</li>
+            <li>Status Dana saat ini: <strong>${statusDanaLabel}</strong></li>
+            <li>Panduan: Dana dividen ini baru saja diterima di tahun kalender <strong>${globalSimulatedYear}</strong>. Belum waktunya melaporkan e-Pelaporan (AS.39-01). Pastikan dana langsung direinvestasikan ke instrumen keuangan dalam negeri (NKRI) agar masa tahan 3 tahun segera dimulai dan status bebas pajak Anda terjaga. e-Pelaporan pertama akan dimulai paling lambat <strong>31 Maret ${year + 2}</strong>.</li>
           </ul>
         </div>`;
       } else {
@@ -2536,18 +2559,6 @@ function renderTaxOutput(result, record) {
       </div>`;
     }
   }
-
-  // Panel Kontrol Simulasi Waktu
-  html += `<div style="margin-top:16px;padding:16px;border:2px dashed #9e9e9e;border-radius:10px;background:#f5f5f5;">
-    <strong style="display:block;margin-bottom:10px;color:#424242;">Panel Kontrol Simulasi Waktu (Range 2026-2045)</strong>
-    <span style="display:block;margin-bottom:8px;font-size:0.84rem;color:#616161;">Tahun simulasi saat ini: <strong>${simulatedYear}</strong> &nbsp;|&nbsp; Tahun Pajak: <strong>${year}</strong> &nbsp;|&nbsp; Selisih: <strong>${selisihTahun} tahun</strong> &nbsp;|&nbsp; Status: <strong>${statusDanaLabel}</strong></span>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <button class="sim-time-btn" data-sim-year="2026" type="button">Waktu Riil (2026)</button>
-      <button class="sim-time-btn" data-sim-year="2027" type="button">Maju ke Tahun 2027</button>
-      <button class="sim-time-btn" data-sim-year="2028" type="button">Maju ke Tahun 2028</button>
-      <button class="sim-time-btn" data-sim-year="2030" type="button">Maju ke Tahun 2030</button>
-    </div>
-  </div>`;
 
   html += `</div>`;
 
@@ -2889,6 +2900,17 @@ function setupTaxTabPanel() {
   taxPanel.dataset.investmentTabPanel = "tax";
 
   taxPanel.innerHTML = `
+    <div class="global-time-panel" id="globalTimePanel">
+      <strong>Panel Kontrol Simulasi Waktu (Range 2026-2045)</strong>
+      <span id="globalTimeIndicator">📅 TAHUN KALENDER APLIKASI SAAT INI: <strong>${globalSimulatedYear}</strong></span>
+      <div class="global-time-buttons">
+        <button class="sim-time-btn" data-sim-year="2026" type="button">Tahun Berjalan: 2026</button>
+        <button class="sim-time-btn" data-sim-year="2027" type="button">Maju ke Tahun: 2027</button>
+        <button class="sim-time-btn" data-sim-year="2028" type="button">Maju ke Tahun: 2028</button>
+        <button class="sim-time-btn" data-sim-year="2030" type="button">Maju ke Tahun: 2030</button>
+      </div>
+    </div>
+
     <div class="tax-layout">
       <form class="surface tax-form-panel" id="taxForm">
         <div class="section-head compact">
@@ -3003,15 +3025,20 @@ function initTaxEvents() {
     });
   }
 
-  // Simulasi waktu: delegated click on output box buttons
-  const outputBox = document.querySelector("#taxOutputBox");
-  if (outputBox) {
-    outputBox.addEventListener("click", (event) => {
+  // Simulasi waktu: delegated click on global time panel buttons
+  const globalPanel = document.querySelector("#globalTimePanel");
+  if (globalPanel) {
+    globalPanel.addEventListener("click", (event) => {
       const btn = event.target.closest(".sim-time-btn");
       if (!btn) return;
       const year = Number(btn.dataset.simYear);
       if (!year) return;
-      simulatedYear = year;
+      globalSimulatedYear = year;
+      // Update indicator text
+      const indicator = document.querySelector("#globalTimeIndicator");
+      if (indicator) {
+        indicator.innerHTML = `📅 TAHUN KALENDER APLIKASI SAAT INI: <strong>${globalSimulatedYear}</strong>`;
+      }
       // Re-render current output with new simulated year
       const activeRow = document.querySelector(".tax-history-row.active");
       if (activeRow) {
