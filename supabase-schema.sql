@@ -50,22 +50,12 @@ create table if not exists public.rdpu_purchases (
   created_at timestamptz not null default now()
 );
 
-create table if not exists public.tax_transactions (
-  id text primary key,
-  transaction_type text not null check (transaction_type in ('dividen_domestik', 'dividen_ln', 'penjualan')),
-  tahun_pajak integer not null,
-  data jsonb not null default '{}'::jsonb,
-  hasil jsonb not null default '{}'::jsonb,
-  created_at timestamptz not null default now()
-);
-
 alter table public.categories enable row level security;
 alter table public.transactions enable row level security;
 alter table public.investment_settings enable row level security;
 alter table public.investment_tickers enable row level security;
 alter table public.stock_purchases enable row level security;
 alter table public.rdpu_purchases enable row level security;
-alter table public.tax_transactions enable row level security;
 
 drop policy if exists "public categories read" on public.categories;
 drop policy if exists "public categories write" on public.categories;
@@ -79,8 +69,6 @@ drop policy if exists "public stock purchases read" on public.stock_purchases;
 drop policy if exists "public stock purchases write" on public.stock_purchases;
 drop policy if exists "public rdpu purchases read" on public.rdpu_purchases;
 drop policy if exists "public rdpu purchases write" on public.rdpu_purchases;
-drop policy if exists "public tax transactions read" on public.tax_transactions;
-drop policy if exists "public tax transactions write" on public.tax_transactions;
 
 create policy "public categories read"
 on public.categories for select
@@ -148,17 +136,6 @@ to anon
 using (true)
 with check (true);
 
-create policy "public tax transactions read"
-on public.tax_transactions for select
-to anon
-using (true);
-
-create policy "public tax transactions write"
-on public.tax_transactions for all
-to anon
-using (true)
-with check (true);
-
 do $$
 begin
   alter publication supabase_realtime add table public.categories;
@@ -201,13 +178,6 @@ exception
   when duplicate_object then null;
 end $$;
 
-do $$
-begin
-  alter publication supabase_realtime add table public.tax_transactions;
-exception
-  when duplicate_object then null;
-end $$;
-
 insert into public.investment_settings (id, horizon_years)
 values ('default', 11)
 on conflict (id) do nothing;
@@ -215,3 +185,39 @@ on conflict (id) do nothing;
 insert into public.investment_tickers (symbol)
 values ('BMRI'), ('ICBP'), ('BBRI')
 on conflict (symbol) do nothing;
+
+create table if not exists public.tax_records (
+  id text primary key,
+  year integer not null check (year between 2026 and 2045),
+  type text not null check (type in ('dividen_lokal', 'dividen_ln', 'penjualan')),
+  asset text not null,
+  platform text not null,
+  gross_idr numeric not null default 0,
+  gross_usd numeric not null default 0,
+  kurs_kmk numeric not null default 0,
+  reinvest_idr numeric not null default 0,
+  is_reinvest boolean not null default false,
+  withholding_usd numeric not null default 0,
+  buy_price_idr numeric not null default 0,
+  sell_price_idr numeric not null default 0,
+  note text not null default '',
+  created_at timestamptz not null default now()
+);
+
+alter table public.tax_records enable row level security;
+
+drop policy if exists "public tax records read" on public.tax_records;
+drop policy if exists "public tax records write" on public.tax_records;
+
+create policy "public tax records read"
+on public.tax_records for select to anon using (true);
+
+create policy "public tax records write"
+on public.tax_records for all to anon using (true) with check (true);
+
+do $$
+begin
+  alter publication supabase_realtime add table public.tax_records;
+exception
+  when duplicate_object then null;
+end $$;
