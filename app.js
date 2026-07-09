@@ -2272,9 +2272,10 @@ function renderTaxOutput(result, record) {
       html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #f59e0b;background:#fff8e1;border-radius:6px;">
         <strong style="color:#e65100;">Langkah 3: Pembayaran & Pelaporan Sisa Dana yang Tidak Direinvestasikan (Rp ${result.sisaKenaPajak.toLocaleString("id-ID")})</strong>
         <ul style="margin-top:8px;">
-          <li>Karena ada sisa dana yang tidak diinvestasikan kembali, dana tersebut wajib dibayar pajaknya secara mandiri sebesar <strong>10%</strong> yaitu <strong>Rp ${result.pajakTerutang.toLocaleString("id-ID")}</strong>.</li>
-          <li>Buka menu <strong>'Bayar/Billing'</strong> di Coretax, buat kode billing baru dengan Kode Akun Pajak: <strong>411128</strong> (PPh Final) dan Kode Jenis Setoran: <strong>419</strong> (Dividen OP). Bayar tagihan Rp ${result.pajakTerutang.toLocaleString("id-ID")} ke bank/e-wallet paling lambat tanggal 15 bulan berikutnya.</li>
-          <li>Di formulir SPT Tahunan, buka halaman <strong>'Lampiran L-1'</strong> (Penghasilan Dikenakan Pajak Bersifat Final). Tambahkan baris baru, pilih jenis <strong>'Dividen'</strong>, masukkan Nilai Bruto <strong>Rp ${result.sisaKenaPajak.toLocaleString("id-ID")}</strong>, masukkan nominal PPh Terutang <strong>Rp ${result.pajakTerutang.toLocaleString("id-ID")}</strong>, lalu masukkan nomor NTPN (bukti bayar bank) Anda.</li>
+          <li>Karena dana dividen tidak diinvestasikan kembali, dana tersebut wajib dibayar pajaknya secara mandiri sebesar <strong>10%</strong> yaitu <strong>Rp ${result.pajakTerutang.toLocaleString("id-ID")}</strong>.</li>
+          <li>Buka menu <strong>'Bayar/Billing'</strong> di Coretax, buat kode billing baru dengan kombinasi Kode Akun Pajak: <strong>411128</strong> (PPh Final) dan Kode Jenis Setoran (KJS): <strong>100</strong> (Masa PPh Pasal 25/Final).</li>
+          <li><strong>Catatan Penting:</strong> Di dalam sistem Coretax, kode setoran dividen 419 lama telah dihapus dan dilebur ke KJS 100. Bayar tagihan billing <strong>Rp ${result.pajakTerutang.toLocaleString("id-ID")}</strong> melalui bank atau e-wallet paling lambat tanggal 15 bulan berikutnya setelah dividen cair.</li>
+          <li>Di formulir SPT Tahunan, buka halaman <strong>'Lampiran L-1'</strong> (Penghasilan Dikenakan Pajak Bersifat Final). Tambahkan baris baru, pilih jenis <strong>'Dividen'</strong>, masukkan Nilai Bruto <strong>Rp ${result.sisaKenaPajak.toLocaleString("id-ID")}</strong>, masukkan nominal PPh Terutang <strong>Rp ${result.pajakTerutang.toLocaleString("id-ID")}</strong>, lalu masukkan nomor NTPN (bukti bayar bank) Anda setelah transaksi sukses.</li>
         </ul>
       </div>`;
     }
