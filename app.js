@@ -2224,74 +2224,171 @@ function renderTaxOutput(result, record) {
   }
   html += `</table></div>`;
 
-  // Section 3: Panduan Coretax
+  // Section 3: Panduan Coretax DJP
   html += `<div class="tax-output-section"><h4>3. Panduan Pengisian di Coretax DJP</h4>`;
-  html += `<p style="margin: 0; font-weight: 700;">Menu Alur Kasus / e-Pelaporan (sebelum 31 Maret ${yearNext}):</p><ul>`;
 
+  // --- DIVIDEN SAHAM LOKAL ---
   if (result.type === "dividen_lokal") {
-    if (result.totalBruto > 0) {
-      html += `<li>Pilih Jenis: Dividen Saham</li>`;
-      html += `<li>Isi Nama Pemberi Penghasilan: <strong>${escapeHtml(record.assetName)}</strong></li>`;
-      html += `<li>Jumlah Diinvestasikan: Rp ${result.nominalReinvest.toLocaleString("id-ID")}</li>`;
-    }
-    if (result.pajakTerutang > 0) {
-      html += `<li>Porsi kena pajak (Rp ${result.sisaKenaPajak.toLocaleString("id-ID")}) tidak perlu e-Pelaporan, langsung laporkan di SPT Tahunan.</li>`;
-    }
-  } else if (result.type === "dividen_etf") {
-    if (result.isReinvest) {
-      html += `<li>Laporkan nilai Net Dana Bersih: Rp ${result.netDanaBersihIdr.toLocaleString("id-ID")}</li>`;
-      html += `<li>Pilih Jenis: Dividen ETF Luar Negeri (Reinvestasi)</li>`;
-      html += `<li>Isi Nama Pemberi Penghasilan: <strong>${escapeHtml(record.assetName)}</strong></li>`;
+    const hasReinvest = result.nominalReinvest > 0;
+    const hasSisaKenaPajak = result.pajakTerutang > 0;
+
+    if (hasReinvest) {
+      html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #2e7d32;background:#f1f8e9;border-radius:6px;">
+        <strong style="color:#1b5e20;">Langkah 1: Menu Alur Kasus / e-Pelaporan (Selesaikan sebelum 31 Maret ${yearNext})</strong>
+        <ul style="margin-top:8px;">
+          <li>Login ke portal Coretax DJP, lalu masuk ke menu <strong>'Layanan Wajib Pajak'</strong> → <strong>'Layanan Administrasi'</strong> → <strong>'Buat Permohonan Baru'</strong>.</li>
+          <li>Pilih jenis permohonan <strong>'AS.39 e-Pelaporan'</strong> lalu pilih Formulir <strong>'LA.39-10 (Laporan Realisasi Investasi)'</strong>.</li>
+          <li>Klik tombol <strong>'+ Tambah Data'</strong> dan isi data sebagai berikut:</li>
+        </ul>
+        <table class="tax-breakdown-table" style="margin-left:18px;width:calc(100% - 18px);">
+          <tr><td>Jenis Penghasilan</td><td>Pilih <strong>'Dividen Dalam Negeri'</strong></td></tr>
+          <tr><td>Nama Pemberi Penghasilan</td><td>Ketik nama resmi emiten murni: <strong>${escapeHtml(record.assetName)}</strong></td></tr>
+          <tr><td>Jumlah Diinvestasikan</td><td>Masukkan nilai nominal <strong>Rp ${result.nominalReinvest.toLocaleString("id-ID")}</strong></td></tr>
+          <tr><td>Bentuk Investasi</td><td>Pilih <strong>'Saham'</strong> atau <strong>'Instrumen Pasar Modal Lainnya di NKRI'</strong></td></tr>
+        </table>
+        <ul style="margin-top:8px;">
+          <li>Setelah selesai, masuk ke menu <strong>'Dokumen'</strong>, klik <strong>'Create PDF'</strong>, lakukan Tanda Tangan Elektronik (TTE) dengan kode OTP, lalu klik <strong>'Submit/Kirim Laporan'</strong>.</li>
+        </ul>
+      </div>`;
+
+      html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #1565c0;background:#e3f2fd;border-radius:6px;">
+        <strong style="color:#0d47a1;">Langkah 2: Menu SPT Tahunan PPh Orang Pribadi (Akhir Tahun)</strong>
+        <ul style="margin-top:8px;">
+          <li>Buka formulir SPT Tahunan Anda di portal Coretax, lanjutkan pengisian hingga masuk ke halaman <strong>'Lampiran L-2'</strong> (Halaman Penghasilan Bukan Objek Pajak).</li>
+          <li>Cari <strong>'Bagian B'</strong> nomor khusus untuk <em>'Dividen yang diinvestasikan di wilayah NKRI dalam jangka waktu tertentu'</em>.</li>
+          <li>Masukkan angka nominal sebesar <strong>Rp ${result.nominalReinvest.toLocaleString("id-ID")}</strong> ke kolom tersebut. Nilai ini harus sama dengan yang Anda laporkan di e-Pelaporan agar sistem tidak eror.</li>
+        </ul>
+      </div>`;
     } else {
-      html += `<li>Tidak perlu lapor e-Pelaporan. Dividen non-reinvestasi langsung masuk SPT Tahunan.</li>`;
+      html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #64748b;background:#f8fafc;border-radius:6px;">
+        <strong style="color:#475569;">Langkah 1 & 2: e-Pelaporan & SPT Tahunan</strong>
+        <ul style="margin-top:8px;">
+          <li>Karena tidak ada dana yang direinvestasikan (Rp 0), Anda <strong>tidak perlu melaporkan</strong> ke menu e-Pelaporan LA.39-10.</li>
+          <li>Seluruh dividen bruto Anda langsung masuk ke <strong>SPT Tahunan</strong> (lihat Langkah 3 di bawah).</li>
+        </ul>
+      </div>`;
     }
-  } else if (result.type === "penjualan") {
-    if (result.isLocal) {
-      html += `<li>Tidak perlu lapor e-Pelaporan. PPh Final sudah dipotong sekuritas.</li>`;
-    } else if (result.isUntung) {
-      html += `<li>Tidak perlu lapor e-Pelaporan. Capital gain luar negeri masuk SPT Tahunan.</li>`;
-    } else {
-      html += `<li>Tidak perlu lapor e-Pelaporan.</li>`;
+
+    if (hasSisaKenaPajak) {
+      html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #f59e0b;background:#fff8e1;border-radius:6px;">
+        <strong style="color:#e65100;">Langkah 3: Pembayaran & Pelaporan Sisa Dana yang Tidak Direinvestasikan (Rp ${result.sisaKenaPajak.toLocaleString("id-ID")})</strong>
+        <ul style="margin-top:8px;">
+          <li>Karena ada sisa dana yang tidak diinvestasikan kembali, dana tersebut wajib dibayar pajaknya secara mandiri sebesar <strong>10%</strong> yaitu <strong>Rp ${result.pajakTerutang.toLocaleString("id-ID")}</strong>.</li>
+          <li>Buka menu <strong>'Bayar/Billing'</strong> di Coretax, buat kode billing baru dengan Kode Akun Pajak: <strong>411128</strong> (PPh Final) dan Kode Jenis Setoran: <strong>419</strong> (Dividen OP). Bayar tagihan Rp ${result.pajakTerutang.toLocaleString("id-ID")} ke bank/e-wallet paling lambat tanggal 15 bulan berikutnya.</li>
+          <li>Di formulir SPT Tahunan, buka halaman <strong>'Lampiran L-1'</strong> (Penghasilan Dikenakan Pajak Bersifat Final). Tambahkan baris baru, pilih jenis <strong>'Dividen'</strong>, masukkan Nilai Bruto <strong>Rp ${result.sisaKenaPajak.toLocaleString("id-ID")}</strong>, masukkan nominal PPh Terutang <strong>Rp ${result.pajakTerutang.toLocaleString("id-ID")}</strong>, lalu masukkan nomor NTPN (bukti bayar bank) Anda.</li>
+        </ul>
+      </div>`;
+    }
+
+    // Holding period (only if reinvest > 0)
+    if (hasReinvest) {
+      html += `<div class="tax-lock-icon"><strong>Holding Period (Masa Tahan Dana):</strong> Berdasarkan UU Cipta Kerja, dana bruto sebesar Rp ${result.nominalReinvest.toLocaleString("id-ID")} wajib diendapkan dan tidak boleh ditarik dari ekosistem investasi Indonesia selama minimal 3 tahun (Terhitung resmi dikunci s.d <strong>31 Desember ${yearHold}</strong>).</div>`;
     }
   }
 
-  html += `</ul>`;
-  html += `<p style="margin: 10px 0 0; font-weight: 700;">Menu SPT Tahunan (Akhir Tahun):</p><ul>`;
-
-  if (result.type === "dividen_lokal") {
-    if (result.pajakTerutang > 0) {
-      html += `<li>Porsi reinvestasi → <strong>Lampiran L-2 Bagian B</strong></li>`;
-      html += `<li>Sisa kotor kena pajak → <strong>Lampiran L-1</strong>, PPh 10%, kode billing <strong>411128-419</strong></li>`;
-    }
-    if (result.isBebas) {
-      html += `<li>Seluruh dividen → <strong>Lampiran L-2 Bagian B</strong> (e-Pelaporan)</li>`;
-    }
-  } else if (result.type === "dividen_etf") {
+  // --- DIVIDEN ETF LUAR NEGERI ---
+  else if (result.type === "dividen_etf") {
     if (result.isReinvest) {
-      html += `<li>Net Dana Bersih → <strong>Lampiran L-2 Bagian B</strong></li>`;
+      html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #2e7d32;background:#f1f8e9;border-radius:6px;">
+        <strong style="color:#1b5e20;">Langkah 1: Menu Alur Kasus / e-Pelaporan (Selesaikan sebelum 31 Maret ${yearNext})</strong>
+        <ul style="margin-top:8px;">
+          <li>Login ke portal Coretax DJP, lalu masuk ke menu <strong>'Layanan Wajib Pajak'</strong> → <strong>'Layanan Administrasi'</strong> → <strong>'Buat Permohonan Baru'</strong>.</li>
+          <li>Pilih jenis permohonan <strong>'AS.39 e-Pelaporan'</strong> lalu pilih Formulir <strong>'LA.39-10 (Laporan Realisasi Investasi)'</strong>.</li>
+          <li>Klik tombol <strong>'+ Tambah Data'</strong> dan isi data:</li>
+        </ul>
+        <table class="tax-breakdown-table" style="margin-left:18px;width:calc(100% - 18px);">
+          <tr><td>Jenis Penghasilan</td><td>Pilih <strong>'Dividen Luar Negeri'</strong></td></tr>
+          <tr><td>Nama Pemberi Penghasilan</td><td>Ketik: <strong>${escapeHtml(record.assetName)}</strong></td></tr>
+          <tr><td>Jumlah Diinvestasikan</td><td>Masukkan nilai <strong>Rp ${result.netDanaBersihIdr.toLocaleString("id-ID")}</strong></td></tr>
+          <tr><td>Bentuk Investasi</td><td>Pilih <strong>'Instrumen Pasar Modal Lainnya di NKRI'</strong></td></tr>
+        </table>
+        <ul style="margin-top:8px;">
+          <li>Setelah selesai, masuk ke menu <strong>'Dokumen'</strong>, klik <strong>'Create PDF'</strong>, lakukan TTE dengan kode OTP, lalu klik <strong>'Submit/Kirim Laporan'</strong>.</li>
+        </ul>
+      </div>`;
+
+      html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #1565c0;background:#e3f2fd;border-radius:6px;">
+        <strong style="color:#0d47a1;">Langkah 2: Menu SPT Tahunan PPh Orang Pribadi (Akhir Tahun)</strong>
+        <ul style="margin-top:8px;">
+          <li>Buka formulir SPT Tahunan Anda di portal Coretax, lanjutkan hingga halaman <strong>'Lampiran L-2'</strong>.</li>
+          <li>Cari <strong>'Bagian B'</strong> untuk 'Dividen yang diinvestasikan di wilayah NKRI dalam jangka waktu tertentu'.</li>
+          <li>Masukkan nilai <strong>Rp ${result.netDanaBersihIdr.toLocaleString("id-ID")}</strong> (Net Dana Bersih setelah potongan WHT AS).</li>
+        </ul>
+      </div>`;
+
+      html += `<div class="tax-lock-icon"><strong>Holding Period:</strong> Dana sebesar Rp ${result.netDanaBersihIdr.toLocaleString("id-ID")} wajib ditahan s.d <strong>31 Desember ${yearHold}</strong> (minimal 3 tahun).</div>`;
     } else {
-      html += `<li>Net Dana Bersih → <strong>Lampiran L-2 Bagian C</strong> (digabung dengan penghasilan progresif PPh 17)</li>`;
-      html += `<li>Kredit Pajak PPh 24 sebesar Rp ${result.kreditPajakPph24.toLocaleString("id-ID")} dapat dikreditkan di formulir induk.</li>`;
-    }
-  } else if (result.type === "penjualan") {
-    if (result.isLocal) {
-      html += `<li>Total Bruto Jual → <strong>Lampiran L-1</strong> (PPh Final 0,1% final)</li>`;
-    } else if (result.isUntung) {
-      html += `<li>Net Gain → <strong>Lampiran L-2 Bagian C</strong> (digabung tarif progresif PPh 17)</li>`;
-    } else {
-      html += `<li>Tidak perlu dimasukkan ke Lampiran L-2 Bagian C (Biarkan Rp0).</li>`;
-      html += `<li>Catatan: Kerugian aset luar negeri tidak dikenakan pajak dan tidak dapat mengurangi penghasilan dalam negeri Anda.</li>`;
+      html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #64748b;background:#f8fafc;border-radius:6px;">
+        <strong style="color:#475569;">Langkah 1: Menu Alur Kasus / e-Pelaporan (LA.39-10)</strong>
+        <ul style="margin-top:8px;">
+          <li><strong>TIDAK PERLU LAPOR.</strong> Karena dividen dari ${escapeHtml(record.platform)} ini tidak diinvestasikan kembali ke instrumen keuangan dalam negeri (NKRI), Anda bebas dari kewajiban melaporkan laporan realisasi investasi tahunan di menu e-Pelaporan Coretax.</li>
+        </ul>
+      </div>`;
+
+      html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #1565c0;background:#e3f2fd;border-radius:6px;">
+        <strong style="color:#0d47a1;">Langkah 2: Menu SPT Tahunan PPh Orang Pribadi - Penggabungan Pajak Progresif</strong>
+        <ul style="margin-top:8px;">
+          <li>Buka formulir SPT Tahunan Anda di portal Coretax, lanjutkan pengisian hingga Anda masuk ke halaman <strong>'Lampiran L-2'</strong> lalu pilih <strong>'Bagian C'</strong> (Penghasilan Neto Luar Negeri).</li>
+          <li>Klik <strong>'+ Tambah Baris Baru'</strong>, masukkan detail asal pendapatan: <strong>${escapeHtml(record.platform)}</strong>, lalu pada kolom Nominal Penghasilan Bersih, masukkan nilai dalam Rupiah sebesar <strong>Rp ${result.netDanaBersihIdr.toLocaleString("id-ID")}</strong>.</li>
+          <li>Nilai ini otomatis akan ditarik oleh sistem Coretax ke halaman <strong>'Formulir Induk'</strong> untuk digabungkan dengan penghasilan utama Anda (gaji/omset) agar dikenakan tarif progresif PPh Pasal 17 (tarif 5% s.d 35%).</li>
+        </ul>
+      </div>`;
+
+      html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #f59e0b;background:#fff8e1;border-radius:6px;">
+        <strong style="color:#e65100;">Langkah 3: Klaim Diskon Pajak / Kredit Pajak PPh Pasal 24 (Sangat Penting!)</strong>
+        <ul style="margin-top:8px;">
+          <li>Uang Anda sudah dipotong pajak otomatis di Amerika Serikat sebesar 15% (yaitu senilai <strong>Rp ${result.whtAsIdr.toLocaleString("id-ID")}</strong>). Agar Anda tidak terkena pajak ganda di Indonesia, Anda wajib mengklaim potongan tersebut sebagai diskon pajak.</li>
+          <li>Pada halaman <strong>'Formulir Induk SPT'</strong> di bagian Pajak yang Dibayar Sendiri / Kredit Pajak, cari kolom <strong>'PPh Pasal 24 Luar Negeri'</strong>.</li>
+          <li>Masukkan nilai nominal <strong>Rp ${result.whtAsIdr.toLocaleString("id-ID")}</strong> ke kolom tersebut. Nilai ini akan langsung mengurangi (memotong) total tagihan pajak progresif akhir tahun Anda di Indonesia sehingga pengisian SPT Anda tetap aman dan adil.</li>
+        </ul>
+      </div>`;
     }
   }
 
-  html += `</ul>`;
+  // --- PENJUALAN SAHAM/ETF ---
+  else if (result.type === "penjualan") {
+    if (result.isLocal) {
+      html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #64748b;background:#f8fafc;border-radius:6px;">
+        <strong style="color:#475569;">Langkah 1: e-Pelaporan</strong>
+        <ul style="margin-top:8px;">
+          <li><strong>TIDAK PERLU LAPOR.</strong> PPh Final 0,1% atas bruto penjualan sudah dipotong otomatis oleh sekuritas saat transaksi terjadi. Anda tidak perlu melaporkan ke e-Pelaporan.</li>
+        </ul>
+      </div>`;
 
-  // Holding period
-  if (result.holdingPeriod) {
-    const lockText = result.holdingPeriodReinvestOnly
-      ? `Porsi dana yang direinvestasikan wajib ditahan`
-      : `Dana wajib ditahan`;
-    html += `<div class="tax-lock-icon">Lock ${lockText} s.d 31 Desember ${yearHold}</div>`;
+      html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #1565c0;background:#e3f2fd;border-radius:6px;">
+        <strong style="color:#0d47a1;">Langkah 2: SPT Tahunan</strong>
+        <ul style="margin-top:8px;">
+          <li>Buka formulir SPT Tahunan di Coretax, lanjutkan ke halaman <strong>'Lampiran L-1'</strong> (Penghasilan Dikenakan Pajak Bersifat Final).</li>
+          <li>Tambahkan baris baru, pilih jenis <strong>'Penjualan Saham di Bursa Efek'</strong>, masukkan Total Bruto Jual sebesar <strong>Rp ${result.totalJualIdr.toLocaleString("id-ID")}</strong>, dan masukkan PPh Terutang <strong>Rp ${result.pajakFinal.toLocaleString("id-ID")}</strong> (0,1%).</li>
+          <li>Pajak ini bersifat final dan sudah lunas melalui potongan sekuritas. Tidak ada kewajiban bayar tambahan.</li>
+        </ul>
+      </div>`;
+    } else if (result.isUntung) {
+      html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #64748b;background:#f8fafc;border-radius:6px;">
+        <strong style="color:#475569;">Langkah 1: e-Pelaporan</strong>
+        <ul style="margin-top:8px;">
+          <li><strong>TIDAK PERLU LAPOR.</strong> Capital gain dari penjualan aset luar negeri tidak masuk ke e-Pelaporan. Data ini akan langsung dilaporkan di SPT Tahunan.</li>
+        </ul>
+      </div>`;
+
+      html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #1565c0;background:#e3f2fd;border-radius:6px;">
+        <strong style="color:#0d47a1;">Langkah 2: Menu SPT Tahunan PPh Orang Pribadi - Penggabungan Pajak Progresif</strong>
+        <ul style="margin-top:8px;">
+          <li>Buka formulir SPT Tahunan di Coretax, lanjutkan hingga halaman <strong>'Lampiran L-2'</strong> lalu pilih <strong>'Bagian C'</strong> (Penghasilan Neto Luar Negeri).</li>
+          <li>Klik <strong>'+ Tambah Baris Baru'</strong>, masukkan detail asal: <strong>${escapeHtml(record.assetName)} (Luar Negeri)</strong>, lalu pada kolom Nominal Penghasilan Bersih, masukkan nilai <strong>Rp ${result.netGainLoss.toLocaleString("id-ID")}</strong>.</li>
+          <li>Nilai ini otomatis akan ditarik ke halaman <strong>'Formulir Induk'</strong> untuk digabungkan dengan penghasilan Anda dan dikenakan tarif progresif PPh Pasal 17 (tarif 5% s.d 35%).</li>
+        </ul>
+      </div>`;
+    } else {
+      html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #64748b;background:#f8fafc;border-radius:6px;">
+        <strong style="color:#475569;">Langkah 1: e-Pelaporan & SPT Tahunan</strong>
+        <ul style="margin-top:8px;">
+          <li><strong>TIDAK PERLU LAPOR.</strong> Aset luar negeri mengalami Capital Loss sebesar <strong>Rp ${Math.abs(result.netGainLoss).toLocaleString("id-ID")}</strong>.</li>
+          <li>Pajak Terutang = Rp 0. Nilai objek pajak dikunci ke Rp 0 — jangan masukkan angka minus pada kolom penghasilan.</li>
+          <li><strong>PENTING:</strong> Kerugian aset luar negeri tidak dikenakan pajak dan <strong>tidak dapat mengurangi</strong> penghasilan dalam negeri Anda. Biarkan Lampiran L-2 Bagian C tetap kosong (Rp 0) untuk transaksi ini.</li>
+        </ul>
+      </div>`;
+    }
   }
 
   html += `</div>`;
