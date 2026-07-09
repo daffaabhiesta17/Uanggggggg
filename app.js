@@ -2134,7 +2134,8 @@ function calculateTax(record) {
       ? r.hargaBeli * r.jumlahUnit
       : r.hargaBeli * r.jumlahUnit * r.kursKmk;
     const netGainLoss = totalJualIdr - totalBeliIdr;
-    const isUntung = netGainLoss >= 0;
+    const isUntung = netGainLoss > 0;
+    const isImpas = netGainLoss === 0;
 
     if (isLocal) {
       return {
@@ -2159,10 +2160,11 @@ function calculateTax(record) {
       totalBeliIdr,
       netGainLoss,
       isUntung,
+      isImpas,
       isLocal: false,
       kursKmk: r.kursKmk,
-      statusLabel: isUntung ? "Capital Gain (Non-Final)" : "Capital Loss (Rugi Bersih)",
-      statusBadge: isUntung ? "tax-badge-nonfinal" : "tax-badge-bebas",
+      statusLabel: isImpas ? "Impas / No Gain (Non-Final)" : isUntung ? "Capital Gain (Non-Final)" : "Capital Loss (Rugi Bersih)",
+      statusBadge: isImpas ? "tax-badge-nonfinal" : isUntung ? "tax-badge-nonfinal" : "tax-badge-bebas",
       holdingPeriod: false,
       holdingPeriodReinvestOnly: false,
     };
@@ -2226,6 +2228,10 @@ function renderTaxOutput(result, record) {
     html += `<tr><td>Net Gain/Loss</td><td>${result.netGainLoss >= 0 ? "Rp " + result.netGainLoss.toLocaleString("id-ID") : "-Rp " + Math.abs(result.netGainLoss).toLocaleString("id-ID")}</td></tr>`;
     if (result.isLocal) {
       html += `<tr><td><strong>PPh Final 0,1%</strong></td><td><strong>Rp ${result.pajakFinal.toLocaleString("id-ID")} (dipotong sekuritas)</strong></td></tr>`;
+    }
+    if (!result.isLocal && result.isImpas) {
+      html += `<tr><td>Kategori Pajak</td><td><strong>Objek Pajak Non-Final (Tarif Progresif PPh 17)</strong></td></tr>`;
+      html += `<tr><td>Pajak Terutang di Indonesia</td><td>Rp 0 (Tidak ada tambahan kemampuan ekonomis, sehingga bebas pajak)</td></tr>`;
     }
   }
   html += `</table></div>`;
@@ -2384,6 +2390,32 @@ function renderTaxOutput(result, record) {
           <li>Nilai ini otomatis akan ditarik ke halaman <strong>'Formulir Induk'</strong> untuk digabungkan dengan penghasilan Anda dan dikenakan tarif progresif PPh Pasal 17 (tarif 5% s.d 35%).</li>
         </ul>
       </div>`;
+    } else if (result.isImpas) {
+      html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #64748b;background:#f8fafc;border-radius:6px;">
+        <strong style="color:#475569;">Langkah 1: e-Pelaporan</strong>
+        <ul style="margin-top:8px;">
+          <li><strong>TIDAK PERLU LAPOR.</strong> Keuntungan atau kerugian dari penjualan aset luar negeri tidak termasuk objek yang wajib dilaporkan di menu permohonan e-Pelaporan (AS.39-01).</li>
+        </ul>
+      </div>`;
+
+      html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #1565c0;background:#e3f2fd;border-radius:6px;">
+        <strong style="color:#0d47a1;">Langkah 2: Menu SPT Tahunan PPh Orang Pribadi (Bagian Penghasilan)</strong>
+        <ul style="margin-top:8px;">
+          <li><strong>KOSONGKAN LAMPIRAN PENGHASILAN LUAR NEGERI.</strong> Karena hasil bersih transaksi adalah Rp 0, Anda tidak perlu mengeklik <strong>'+ Tambah Baris Baru'</strong> di Lampiran L-2 Bagian C.</li>
+          <li>Lewati halaman ini karena sistem validasi formulir Coretax DJP tidak menerima input angka nol atau minus untuk penghasilan neto luar negeri. Memaksakan input Rp 0 hanya akan memicu pesan error system.</li>
+        </ul>
+      </div>`;
+
+      html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #dc2626;background:#fef2f2;border-radius:6px;">
+        <strong style="color:#991b1b;">Langkah 3: Pembaruan Daftar Harta (Sangat Krusial untuk Transaksi Jumbo)</strong>
+        <ul style="margin-top:8px;">
+          <li>Meskipun pajaknya Rp 0, nominal raksasa <strong>Rp ${result.totalJualIdr.toLocaleString("id-ID")}</strong> ini wajib dilaporkan perubahannya di Lampiran Daftar Harta SPT Tahunan Coretax Anda agar terhindar dari indikasi 'Harta Siluman':</li>
+        </ul>
+        <ol style="margin:0;padding-left:20px;display:grid;gap:6px;line-height:1.65;">
+          <li>Kurangi atau hapus saldo aset instrumen investasi ETF/Saham luar negeri Anda senilai <strong>Rp ${result.totalBeliIdr.toLocaleString("id-ID")}</strong> pada daftar harta akhir tahun karena barangnya sudah terjual.</li>
+          <li>Pindahkan atau tambahkan nominal cash hasil penjualan tersebut sebesar <strong>Rp ${result.totalJualIdr.toLocaleString("id-ID")}</strong> ke kategori harta Kas / Setara Kas / RDN (Gunakan Kode Harta: <strong>012</strong> atau <strong>019</strong>) jika uang hasil penjualan tersebut masih disimpan di dalam platform akun ${escapeHtml(record.platform)} Anda per 31 Desember ${year}.</li>
+        </ol>
+      </div>`;
     } else {
       html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #64748b;background:#f8fafc;border-radius:6px;">
         <strong style="color:#475569;">Langkah 1: Menu Alur Kasus / e-Pelaporan (AS.39-01)</strong>
@@ -2395,8 +2427,8 @@ function renderTaxOutput(result, record) {
       html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #1565c0;background:#e3f2fd;border-radius:6px;">
         <strong style="color:#0d47a1;">Langkah 2: Menu SPT Tahunan PPh Orang Pribadi - Bagian Penghasilan</strong>
         <ul style="margin-top:8px;">
-          <li><strong>LEWATKAN / KOSONGKAN.</strong> Karena transaksi Anda berstatus Impas/Rugi (Net Gain/Loss ≤ 0), Anda <strong>TIDAK PERLU</strong> menambahkan baris baru di Lampiran L-2 Bagian C (Penghasilan Neto Luar Negeri).</li>
-          <li><strong>Catatan Teknis:</strong> Sistem form Coretax DJP akan memunculkan error jika Anda menginput angka 0 atau minus pada kolom penghasilan neto luar negeri. Cukup biarkan kosong karena transaksi impas/rugi tidak menambah kemampuan ekonomis Anda.</li>
+          <li><strong>LEWATKAN / KOSONGKAN.</strong> Karena transaksi Anda berstatus Rugi (Net Gain/Loss < 0), Anda <strong>TIDAK PERLU</strong> menambahkan baris baru di Lampiran L-2 Bagian C (Penghasilan Neto Luar Negeri).</li>
+          <li><strong>Catatan Teknis:</strong> Sistem form Coretax DJP akan memunculkan error jika Anda menginput angka 0 atau minus pada kolom penghasilan neto luar negeri. Cukup biarkan kosong karena transaksi rugi tidak menambah kemampuan ekonomis Anda.</li>
         </ul>
       </div>`;
 
