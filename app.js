@@ -2236,17 +2236,17 @@ function renderTaxOutput(result, record) {
         <strong style="color:#1b5e20;">Langkah 1: Menu Alur Kasus / e-Pelaporan (Selesaikan sebelum 31 Maret ${yearNext})</strong>
         <ul style="margin-top:8px;">
           <li>Login ke portal Coretax DJP, lalu masuk ke menu <strong>'Layanan Wajib Pajak'</strong> → <strong>'Layanan Administrasi'</strong> → <strong>'Buat Permohonan Baru'</strong>.</li>
-          <li>Pilih jenis permohonan <strong>'AS.39 e-Pelaporan'</strong> lalu pilih Formulir <strong>'LA.39-10 (Laporan Realisasi Investasi)'</strong>.</li>
-          <li>Klik tombol <strong>'+ Tambah Data'</strong> dan isi data sebagai berikut:</li>
+          <li>Pada kolom Jenis Pelayanan, pilih <strong>'AS.39 e-Pelaporan'</strong> lalu klik sub-menu dokumen <strong>'AS.39-01 LA.39-01 Laporan Realisasi Investasi'</strong>.</li>
+          <li>Klik sub-menu <strong>'Alur Kasus'</strong>, lalu klik tombol <strong>'+ Tambah Data'</strong> dan isi data sebagai berikut:</li>
         </ul>
         <table class="tax-breakdown-table" style="margin-left:18px;width:calc(100% - 18px);">
           <tr><td>Jenis Penghasilan</td><td>Pilih <strong>'Dividen Dalam Negeri'</strong></td></tr>
           <tr><td>Nama Pemberi Penghasilan</td><td>Ketik nama resmi emiten murni: <strong>${escapeHtml(record.assetName)}</strong></td></tr>
-          <tr><td>Jumlah Diinvestasikan</td><td>Masukkan nilai nominal <strong>Rp ${result.nominalReinvest.toLocaleString("id-ID")}</strong></td></tr>
+          <tr><td>Jumlah Diinvestasikan</td><td>Masukkan nilai nominal rupiah yang diinvestasikan kembali</td></tr>
           <tr><td>Bentuk Investasi</td><td>Pilih <strong>'Saham'</strong> atau <strong>'Instrumen Pasar Modal Lainnya di NKRI'</strong></td></tr>
         </table>
         <ul style="margin-top:8px;">
-          <li>Setelah selesai, masuk ke menu <strong>'Dokumen'</strong>, klik <strong>'Create PDF'</strong>, lakukan Tanda Tangan Elektronik (TTE) dengan kode OTP, lalu klik <strong>'Submit/Kirim Laporan'</strong>.</li>
+          <li>Setelah selesai, masuk ke tab <strong>'Dokumen'</strong>, klik <strong>'Create PDF'</strong>, lakukan Tanda Tangan Elektronik (TTE) dengan kode OTP, lalu klik <strong>'Submit/Kirim Laporan'</strong>.</li>
         </ul>
       </div>`;
 
@@ -2262,7 +2262,7 @@ function renderTaxOutput(result, record) {
       html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #64748b;background:#f8fafc;border-radius:6px;">
         <strong style="color:#475569;">Langkah 1 & 2: e-Pelaporan & SPT Tahunan</strong>
         <ul style="margin-top:8px;">
-          <li>Karena tidak ada dana yang direinvestasikan (Rp 0), Anda <strong>tidak perlu melaporkan</strong> ke menu e-Pelaporan LA.39-10.</li>
+          <li>Karena tidak ada dana yang direinvestasikan (Rp 0), Anda <strong>tidak perlu melaporkan</strong> ke menu e-Pelaporan AS.39-01.</li>
           <li>Seluruh dividen bruto Anda langsung masuk ke <strong>SPT Tahunan</strong> (lihat Langkah 3 di bawah).</li>
         </ul>
       </div>`;
@@ -2300,17 +2300,17 @@ function renderTaxOutput(result, record) {
         <strong style="color:#1b5e20;">Langkah 1: Menu Alur Kasus / e-Pelaporan (Selesaikan sebelum 31 Maret ${yearNext})</strong>
         <ul style="margin-top:8px;">
           <li>Login ke portal Coretax DJP, lalu masuk ke menu <strong>'Layanan Wajib Pajak'</strong> → <strong>'Layanan Administrasi'</strong> → <strong>'Buat Permohonan Baru'</strong>.</li>
-          <li>Pilih jenis permohonan <strong>'AS.39 e-Pelaporan'</strong> lalu pilih Formulir <strong>'LA.39-10 (Laporan Realisasi Investasi)'</strong>.</li>
-          <li>Klik tombol <strong>'+ Tambah Data'</strong> dan isi data:</li>
+          <li>Pada kolom Jenis Pelayanan, pilih <strong>'AS.39 e-Pelaporan'</strong> lalu klik sub-menu dokumen <strong>'AS.39-01 LA.39-01 Laporan Realisasi Investasi'</strong>.</li>
+          <li>Klik sub-menu <strong>'Alur Kasus'</strong>, lalu klik tombol <strong>'+ Tambah Data'</strong> dan isi data:</li>
         </ul>
         <table class="tax-breakdown-table" style="margin-left:18px;width:calc(100% - 18px);">
           <tr><td>Jenis Penghasilan</td><td>Pilih <strong>'Dividen Luar Negeri'</strong></td></tr>
           <tr><td>Nama Pemberi Penghasilan</td><td>Ketik: <strong>${escapeHtml(record.assetName)}</strong></td></tr>
-          <tr><td>Jumlah Diinvestasikan</td><td>Masukkan nilai <strong>Rp ${result.netDanaBersihIdr.toLocaleString("id-ID")}</strong></td></tr>
+          <tr><td>Jumlah Diinvestasikan</td><td>Masukkan nilai nominal rupiah yang diinvestasikan kembali</td></tr>
           <tr><td>Bentuk Investasi</td><td>Pilih <strong>'Instrumen Pasar Modal Lainnya di NKRI'</strong></td></tr>
         </table>
         <ul style="margin-top:8px;">
-          <li>Setelah selesai, masuk ke menu <strong>'Dokumen'</strong>, klik <strong>'Create PDF'</strong>, lakukan TTE dengan kode OTP, lalu klik <strong>'Submit/Kirim Laporan'</strong>.</li>
+          <li>Setelah selesai, masuk ke tab <strong>'Dokumen'</strong>, klik <strong>'Create PDF'</strong>, lakukan TTE dengan kode OTP, lalu klik <strong>'Submit/Kirim Laporan'</strong>.</li>
         </ul>
       </div>`;
 
@@ -2326,7 +2326,7 @@ function renderTaxOutput(result, record) {
       html += `<div class="tax-lock-icon"><strong>Holding Period:</strong> Dana sebesar Rp ${result.netDanaBersihIdr.toLocaleString("id-ID")} wajib ditahan s.d <strong>31 Desember ${yearHold}</strong> (minimal 3 tahun).</div>`;
     } else {
       html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #64748b;background:#f8fafc;border-radius:6px;">
-        <strong style="color:#475569;">Langkah 1: Menu Alur Kasus / e-Pelaporan (LA.39-10)</strong>
+        <strong style="color:#475569;">Langkah 1: Menu Alur Kasus / e-Pelaporan (AS.39-01)</strong>
         <ul style="margin-top:8px;">
           <li><strong>TIDAK PERLU LAPOR.</strong> Karena dividen dari ${escapeHtml(record.platform)} ini tidak diinvestasikan kembali ke instrumen keuangan dalam negeri (NKRI), Anda bebas dari kewajiban melaporkan laporan realisasi investasi tahunan di menu e-Pelaporan Coretax.</li>
         </ul>
