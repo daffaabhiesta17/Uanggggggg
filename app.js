@@ -2180,6 +2180,39 @@ function renderTaxOutput(result, record) {
   const yearNext = year + 1;
   const yearHold = year + 3;
 
+  // Smart tracker: hitung selisih tahun untuk status masa tahan dana
+  const currentYear = new Date().getFullYear();
+  const selisihTahun = currentYear - year;
+  let statusMasa, laporanKe, statusDana, statusDanaLabel;
+  if (selisihTahun === 1) {
+    statusMasa = "Tahun Ke-1 (Laporan Realisasi Awal)";
+    laporanKe = 1;
+    statusDana = "terkunci";
+    statusDanaLabel = "🔒 TERKUNCI";
+  } else if (selisihTahun === 2) {
+    statusMasa = "Tahun Ke-2 (Laporan Pantauan Rutin)";
+    laporanKe = 2;
+    statusDana = "terkunci";
+    statusDanaLabel = "🔒 TERKUNCI";
+  } else if (selisihTahun === 3) {
+    statusMasa = "Tahun Ke-3 (Laporan Pantauan Akhir)";
+    laporanKe = 3;
+    statusDana = "terkunci";
+    statusDanaLabel = "🔒 TERKUNCI";
+  } else if (selisihTahun >= 4) {
+    statusMasa = `Tahun Ke-${selisihTahun}+ (Sudah Melewati Masa Tahan 3 Tahun)`;
+    laporanKe = "Selesai";
+    statusDana = "bebas";
+    statusDanaLabel = "🔓 BEBAS PENUH (Dana Sah Dicairkan)";
+  } else {
+    // Tahun pajak di masa depan atau tahun berjalan (selisih <= 0)
+    statusMasa = "Menunggu Masa Tahan (Dividen Belum Genap 1 Tahun)";
+    laporanKe = "-";
+    statusDana = "terkunci";
+    statusDanaLabel = "🔒 TERKUNCI (Masa Tahan Aktif)";
+  }
+  const tahunLapor = year + (selisihTahun > 0 ? selisihTahun : 1);
+
   let html = `<h3>Hasil Simulasi Pajak - Tahun Pajak ${year}</h3>`;
 
   // Section 1: Rangkuman
@@ -2245,32 +2278,53 @@ function renderTaxOutput(result, record) {
     const hasSisaKenaPajak = result.pajakTerutang > 0;
 
     if (hasReinvest) {
-      html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #2e7d32;background:#f1f8e9;border-radius:6px;">
-        <strong style="color:#1b5e20;">Langkah 1: Menu Alur Kasus / e-Pelaporan (Selesaikan sebelum 31 Maret ${yearNext})</strong>
-        <ul style="margin-top:8px;">
-          <li>Login ke portal Coretax DJP, lalu masuk ke menu <strong>'Layanan Wajib Pajak'</strong> → <strong>'Layanan Administrasi'</strong> → <strong>'Buat Permohonan Baru'</strong>.</li>
-          <li>Pada kolom Jenis Pelayanan, pilih <strong>'AS.39 e-Pelaporan'</strong> lalu klik sub-menu dokumen <strong>'AS.39-01 LA.39-01 Laporan Realisasi Investasi'</strong>.</li>
-          <li>Klik sub-menu <strong>'Alur Kasus'</strong>, lalu klik tombol <strong>'+ Tambah Data'</strong> dan isi data sebagai berikut:</li>
-        </ul>
-        <table class="tax-breakdown-table" style="margin-left:18px;width:calc(100% - 18px);">
-          <tr><td>Jenis Penghasilan</td><td>Pilih <strong>'Dividen Dalam Negeri'</strong></td></tr>
-          <tr><td>Nama Pemberi Penghasilan</td><td>Ketik nama resmi emiten murni: <strong>${escapeHtml(record.assetName)}</strong></td></tr>
-          <tr><td>Jumlah Diinvestasikan</td><td>Masukkan nilai nominal rupiah yang diinvestasikan kembali</td></tr>
-          <tr><td>Bentuk Investasi</td><td>Pilih <strong>'Saham'</strong> atau <strong>'Instrumen Pasar Modal Lainnya di NKRI'</strong></td></tr>
-        </table>
-        <ul style="margin-top:8px;">
-          <li>Setelah selesai, masuk ke tab <strong>'Dokumen'</strong>, klik <strong>'Create PDF'</strong>, lakukan Tanda Tangan Elektronik (TTE) dengan kode OTP, lalu klik <strong>'Submit/Kirim Laporan'</strong>.</li>
-        </ul>
-      </div>`;
+      if (statusDana === "bebas") {
+        html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #2e7d32;background:#f1f8e9;border-radius:6px;">
+          <strong style="color:#1b5e20;">Status Holding Period: Selesai</strong>
+          <ul style="margin-top:8px;">
+            <li>Status Pelacakan Waktu: Anda berada pada <strong>${statusMasa}</strong> atas dividen tahun <strong>${year}</strong>.</li>
+            <li>Status Dana saat ini: <strong>${statusDanaLabel}</strong></li>
+            <li>Instruksi Coretax: Selamat! Kewajiban menahan dana investasi selama 3 tahun penuh sesuai UU Cipta Kerja telah selesai terlewati. Anda sudah <strong>TIDAK MEMILIKI</strong> kewajiban mengisi e-Pelaporan (AS.39-01) maupun melaporkannya kembali di SPT Tahunan untuk aset dividen ini. Dana investasi Anda kini bebas dicairkan atau dipindahkan tanpa dikenakan pajak.</li>
+          </ul>
+        </div>`;
+      } else {
+        html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #1b5e20;background:#e8f5e9;border-radius:6px;">
+          <strong style="color:#1b5e20;">Status Pelacakan Waktu</strong>
+          <ul style="margin-top:6px;">
+            <li>Anda saat ini berada pada <strong>${statusMasa}</strong> atas dividen tahun <strong>${year}</strong>.</li>
+            <li>Status Dana saat ini: <strong>${statusDanaLabel}</strong> s.d 31 Desember <strong>${yearHold}</strong>.</li>
+          </ul>
+        </div>`;
 
-      html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #1565c0;background:#e3f2fd;border-radius:6px;">
-        <strong style="color:#0d47a1;">Langkah 2: Menu SPT Tahunan PPh Orang Pribadi (Akhir Tahun)</strong>
-        <ul style="margin-top:8px;">
-          <li>Buka formulir SPT Tahunan Anda di portal Coretax, lanjutkan pengisian hingga masuk ke halaman <strong>'Lampiran L-2'</strong> (Halaman Penghasilan Bukan Objek Pajak).</li>
-          <li>Cari <strong>'Bagian B'</strong> nomor khusus untuk <em>'Dividen yang diinvestasikan di wilayah NKRI dalam jangka waktu tertentu'</em>.</li>
-          <li>Masukkan angka nominal sebesar <strong>Rp ${result.nominalReinvest.toLocaleString("id-ID")}</strong> ke kolom tersebut. Nilai ini harus sama dengan yang Anda laporkan di e-Pelaporan agar sistem tidak eror.</li>
-        </ul>
-      </div>`;
+        html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #2e7d32;background:#f1f8e9;border-radius:6px;">
+          <strong style="color:#1b5e20;">Langkah 1: Menu Alur Kasus / e-Pelaporan (Selesaikan sebelum 31 Maret ${tahunLapor + 1})</strong>
+          <ul style="margin-top:8px;">
+            <li>Login ke portal Coretax DJP, masuk ke menu <strong>'Layanan Wajib Pajak'</strong> → <strong>'Layanan Administrasi'</strong> → <strong>'Buat Permohonan Baru'</strong>.</li>
+            <li>Pilih Jenis Pelayanan <strong>'AS.39 e-Pelaporan'</strong> lalu klik sub-menu dokumen <strong>'AS.39-01 LA.39-01 Laporan Realisasi Investasi'</strong>.</li>
+            <li>Di dalam formulir, pastikan Anda mengisi kolom <strong>'Pelaporan Ke-'</strong> dengan angka: <strong>${laporanKe}</strong>.</li>
+            <li>Klik sub-menu <strong>'Alur Kasus'</strong> → klik <strong>'+ Tambah Data'</strong>. Masukkan Jenis Penghasilan: <strong>'Dividen Dalam Negeri'</strong>, Nama Emiten murni: <strong>${escapeHtml(record.assetName)}</strong>, dan Jumlah Diinvestasikan sebesar <strong>Rp ${result.nominalReinvest.toLocaleString("id-ID")}</strong>.</li>
+            <li>Masuk ke tab <strong>'Dokumen'</strong>, klik <strong>'Create PDF'</strong>, lakukan TTE dengan kode OTP, lalu klik <strong>'Submit'</strong>.</li>
+          </ul>
+        </div>`;
+
+        if (selisihTahun === 1 || selisihTahun <= 0) {
+          html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #1565c0;background:#e3f2fd;border-radius:6px;">
+            <strong style="color:#0d47a1;">Langkah 2: Menu SPT Tahunan PPh Orang Pribadi (Akhir Tahun)</strong>
+            <ul style="margin-top:8px;">
+              <li>Buka formulir SPT Tahunan Anda di portal Coretax, lanjutkan pengisian hingga masuk ke halaman <strong>'Lampiran L-2'</strong> (Halaman Penghasilan Bukan Objek Pajak).</li>
+              <li>Cari <strong>'Bagian B'</strong> nomor khusus untuk <em>'Dividen yang diinvestasikan di wilayah NKRI dalam jangka waktu tertentu'</em>.</li>
+              <li>Masukkan angka nominal sebesar <strong>Rp ${result.nominalReinvest.toLocaleString("id-ID")}</strong> ke kolom tersebut. Nilai ini harus sama dengan yang Anda laporkan di e-Pelaporan agar sistem tidak eror.</li>
+            </ul>
+          </div>`;
+        } else {
+          html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #1565c0;background:#e3f2fd;border-radius:6px;">
+            <strong style="color:#0d47a1;">Langkah 2: Menu SPT Tahunan — TIDAK PERLU DIINPUT LAGI</strong>
+            <ul style="margin-top:8px;">
+              <li><strong>TIDAK PERLU DIINPUT LAGI DI SPT TAHUNAN.</strong> Nilai dividen ini sudah dilaporkan pada SPT tahun pertama. Di tahun ke-${selisihTahun} ini, Anda <strong>CUKUP</strong> menyelesaikan Langkah 1 (e-Pelaporan Laporan Pantauan) saja sebelum tanggal 31 Maret.</li>
+            </ul>
+          </div>`;
+        }
+      }
     } else {
       html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #64748b;background:#f8fafc;border-radius:6px;">
         <strong style="color:#475569;">Langkah 1 & 2: e-Pelaporan & SPT Tahunan</strong>
@@ -2302,32 +2356,68 @@ function renderTaxOutput(result, record) {
 
     // Holding period (only if reinvest > 0)
     if (hasReinvest) {
-      html += `<div class="tax-lock-icon"><strong>Holding Period (Masa Tahan Dana):</strong> Berdasarkan UU Cipta Kerja, dana bruto sebesar Rp ${result.nominalReinvest.toLocaleString("id-ID")} wajib diendapkan dan tidak boleh ditarik dari ekosistem investasi Indonesia selama minimal 3 tahun (Terhitung resmi dikunci s.d <strong>31 Desember ${yearHold}</strong>).</div>`;
+      if (statusDana === "bebas") {
+        html += `<div style="margin-top:8px;padding:10px 14px;border:1px solid #a5d6a7;border-radius:6px;background:#e8f5e9;color:#1b5e20;font-weight:700;">${statusDanaLabel} — Dana investasi sudah melewati masa tahan 3 tahun. Dana aman dicairkan tanpa pajak.</div>`;
+      } else {
+        html += `<div class="tax-lock-icon"><strong>Holding Period (Masa Tahan Dana):</strong> ${statusDanaLabel} s.d <strong>31 Desember ${yearHold}</strong>. Berdasarkan UU Cipta Kerja, dana bruto sebesar Rp ${result.nominalReinvest.toLocaleString("id-ID")} wajib diendapkan dan tidak boleh ditarik dari ekosistem investasi Indonesia selama minimal 3 tahun.</div>`;
+      }
     }
   }
 
   // --- DIVIDEN ETF LUAR NEGERI ---
   else if (result.type === "dividen_etf") {
     if (result.isReinvest) {
-      html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #2e7d32;background:#f1f8e9;border-radius:6px;">
-        <strong style="color:#1b5e20;">Langkah 1: Menu Alur Kasus / e-Pelaporan (Selesaikan sebelum 31 Maret ${yearNext})</strong>
-        <ul style="margin-top:8px;">
-          <li>Login ke portal Coretax DJP, masuk ke menu <strong>'Layanan Wajib Pajak'</strong> → <strong>'Layanan Administrasi'</strong> → <strong>'Buat Permohonan Baru'</strong>.</li>
-          <li>Pada kolom Jenis Pelayanan, pilih <strong>'AS.39 e-Pelaporan'</strong> lalu klik sub-menu dokumen <strong>'AS.39-01 LA.39-01 Laporan Realisasi Investasi'</strong>.</li>
-          <li>Klik sub-menu <strong>'Alur Kasus'</strong> → klik <strong>'+ Tambah Data'</strong>. Isi Jenis Penghasilan: <strong>'Dividen Luar Negeri'</strong>, Nama Pemberi: <strong>${escapeHtml(record.assetName)} - ${escapeHtml(record.platform)}</strong>, dan Jumlah Diinvestasikan: Masukkan nilai <strong>BRUTO penuh</strong> yaitu <strong>Rp ${result.totalBrutoIdr.toLocaleString("id-ID")}</strong>.</li>
-          <li>Masuk ke tab <strong>'Dokumen'</strong>, klik <strong>'Create PDF'</strong>, lakukan TTE dengan kode OTP, lalu klik <strong>'Submit'</strong>.</li>
-        </ul>
-      </div>`;
+      if (statusDana === "bebas") {
+        html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #2e7d32;background:#f1f8e9;border-radius:6px;">
+          <strong style="color:#1b5e20;">Status Holding Period: Selesai</strong>
+          <ul style="margin-top:8px;">
+            <li>Status Pelacakan Waktu: Anda berada pada <strong>${statusMasa}</strong> atas dividen tahun <strong>${year}</strong>.</li>
+            <li>Status Dana saat ini: <strong>${statusDanaLabel}</strong></li>
+            <li>Instruksi Coretax: Selamat! Kewajiban menahan dana investasi selama 3 tahun penuh sesuai UU Cipta Kerja telah selesai terlewati. Anda sudah <strong>TIDAK MEMILIKI</strong> kewajiban mengisi e-Pelaporan (AS.39-01) maupun melaporkannya kembali di SPT Tahunan untuk aset dividen ini. Dana investasi Anda kini bebas dicairkan atau dipindahkan tanpa dikenakan pajak.</li>
+          </ul>
+        </div>`;
+      } else {
+        html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #1b5e20;background:#e8f5e9;border-radius:6px;">
+          <strong style="color:#1b5e20;">Status Pelacakan Waktu</strong>
+          <ul style="margin-top:6px;">
+            <li>Anda saat ini berada pada <strong>${statusMasa}</strong> atas dividen tahun <strong>${year}</strong>.</li>
+            <li>Status Dana saat ini: <strong>${statusDanaLabel}</strong> s.d 31 Desember <strong>${yearHold}</strong>.</li>
+          </ul>
+        </div>`;
 
-      html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #1565c0;background:#e3f2fd;border-radius:6px;">
-        <strong style="color:#0d47a1;">Langkah 2: Menu SPT Tahunan PPh Orang Pribadi (Akhir Tahun)</strong>
-        <ul style="margin-top:8px;">
-          <li>Buka formulir SPT Tahunan di portal Coretax, masuk ke halaman <strong>'Lampiran L-2'</strong> Bagian B (Penghasilan Bukan Objek Pajak).</li>
-          <li>Masukkan nilai nominal bruto sebesar <strong>Rp ${result.totalBrutoIdr.toLocaleString("id-ID")}</strong> (Nilai harus sama dengan yang diinput di e-Pelaporan).</li>
-        </ul>
-      </div>`;
+        html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #2e7d32;background:#f1f8e9;border-radius:6px;">
+          <strong style="color:#1b5e20;">Langkah 1: Menu Alur Kasus / e-Pelaporan (Selesaikan sebelum 31 Maret ${tahunLapor + 1})</strong>
+          <ul style="margin-top:8px;">
+            <li>Login ke portal Coretax DJP, masuk ke menu <strong>'Layanan Wajib Pajak'</strong> → <strong>'Layanan Administrasi'</strong> → <strong>'Buat Permohonan Baru'</strong>.</li>
+            <li>Pilih Jenis Pelayanan <strong>'AS.39 e-Pelaporan'</strong> lalu klik sub-menu dokumen <strong>'AS.39-01 LA.39-01 Laporan Realisasi Investasi'</strong>.</li>
+            <li>Di dalam formulir, pastikan Anda mengisi kolom <strong>'Pelaporan Ke-'</strong> dengan angka: <strong>${laporanKe}</strong>.</li>
+            <li>Klik sub-menu <strong>'Alur Kasus'</strong> → klik <strong>'+ Tambah Data'</strong>. Isi Jenis Penghasilan: <strong>'Dividen Luar Negeri'</strong>, Nama Pemberi: <strong>${escapeHtml(record.assetName)} - ${escapeHtml(record.platform)}</strong>, dan Jumlah Diinvestasikan: Masukkan nilai <strong>BRUTO penuh</strong> yaitu <strong>Rp ${result.totalBrutoIdr.toLocaleString("id-ID")}</strong>.</li>
+            <li>Masuk ke tab <strong>'Dokumen'</strong>, klik <strong>'Create PDF'</strong>, lakukan TTE dengan kode OTP, lalu klik <strong>'Submit'</strong>.</li>
+          </ul>
+        </div>`;
 
-      html += `<div class="tax-lock-icon"><strong>Holding Period (Masa Tahan Dana):</strong> Dana investasi bruto sebesar Rp ${result.totalBrutoIdr.toLocaleString("id-ID")} tersebut wajib diendapkan di ekosistem keuangan NKRI minimal 3 tahun s.d <strong>31 Desember ${yearHold}</strong>.</div>`;
+        if (selisihTahun === 1 || selisihTahun <= 0) {
+          html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #1565c0;background:#e3f2fd;border-radius:6px;">
+            <strong style="color:#0d47a1;">Langkah 2: Menu SPT Tahunan PPh Orang Pribadi (Akhir Tahun)</strong>
+            <ul style="margin-top:8px;">
+              <li>Buka formulir SPT Tahunan di portal Coretax, masuk ke halaman <strong>'Lampiran L-2'</strong> Bagian B (Penghasilan Bukan Objek Pajak).</li>
+              <li>Masukkan nilai nominal bruto sebesar <strong>Rp ${result.totalBrutoIdr.toLocaleString("id-ID")}</strong> (Nilai harus sama dengan yang diinput di e-Pelaporan).</li>
+            </ul>
+          </div>`;
+        } else {
+          html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #1565c0;background:#e3f2fd;border-radius:6px;">
+            <strong style="color:#0d47a1;">Langkah 2: Menu SPT Tahunan — TIDAK PERLU DIINPUT LAGI</strong>
+            <ul style="margin-top:8px;">
+              <li><strong>TIDAK PERLU DIINPUT LAGI DI SPT TAHUNAN.</strong> Nilai dividen ini sudah dilaporkan pada SPT tahun pertama. Di tahun ke-${selisihTahun} ini, Anda <strong>CUKUP</strong> menyelesaikan Langkah 1 (e-Pelaporan Laporan Pantauan) saja sebelum tanggal 31 Maret.</li>
+            </ul>
+          </div>`;
+        }
+      }
+      if (statusDana === "bebas") {
+        html += `<div style="margin-top:8px;padding:10px 14px;border:1px solid #a5d6a7;border-radius:6px;background:#e8f5e9;color:#1b5e20;font-weight:700;">${statusDanaLabel} — Dana investasi sudah melewati masa tahan 3 tahun. Dana aman dicairkan tanpa pajak.</div>`;
+      } else {
+        html += `<div class="tax-lock-icon"><strong>Holding Period (Masa Tahan Dana):</strong> ${statusDanaLabel} s.d <strong>31 Desember ${yearHold}</strong>. Dana investasi bruto sebesar Rp ${result.totalBrutoIdr.toLocaleString("id-ID")} wajib diendapkan di ekosistem keuangan NKRI minimal 3 tahun.</div>`;
+      }
     } else {
       html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #64748b;background:#f8fafc;border-radius:6px;">
         <strong style="color:#475569;">Langkah 1: Menu Alur Kasus / e-Pelaporan (AS.39-01)</strong>
