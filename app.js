@@ -2386,12 +2386,30 @@ function renderTaxOutput(result, record) {
       </div>`;
     } else {
       html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #64748b;background:#f8fafc;border-radius:6px;">
-        <strong style="color:#475569;">Langkah 1: e-Pelaporan & SPT Tahunan</strong>
+        <strong style="color:#475569;">Langkah 1: Menu Alur Kasus / e-Pelaporan (AS.39-01)</strong>
         <ul style="margin-top:8px;">
-          <li><strong>TIDAK PERLU LAPOR.</strong> Aset luar negeri mengalami Capital Loss sebesar <strong>Rp ${Math.abs(result.netGainLoss).toLocaleString("id-ID")}</strong>.</li>
-          <li>Pajak Terutang = Rp 0. Nilai objek pajak dikunci ke Rp 0 — jangan masukkan angka minus pada kolom penghasilan.</li>
-          <li><strong>PENTING:</strong> Kerugian aset luar negeri tidak dikenakan pajak dan <strong>tidak dapat mengurangi</strong> penghasilan dalam negeri Anda. Biarkan Lampiran L-2 Bagian C tetap kosong (Rp 0) untuk transaksi ini.</li>
+          <li><strong>TIDAK PERLU LAPOR.</strong> Capital gain/loss dari aktivitas penjualan aset luar negeri tidak masuk ke menu e-Pelaporan.</li>
         </ul>
+      </div>`;
+
+      html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #1565c0;background:#e3f2fd;border-radius:6px;">
+        <strong style="color:#0d47a1;">Langkah 2: Menu SPT Tahunan PPh Orang Pribadi - Bagian Penghasilan</strong>
+        <ul style="margin-top:8px;">
+          <li><strong>LEWATKAN / KOSONGKAN.</strong> Karena transaksi Anda berstatus Impas/Rugi (Net Gain/Loss ≤ 0), Anda <strong>TIDAK PERLU</strong> menambahkan baris baru di Lampiran L-2 Bagian C (Penghasilan Neto Luar Negeri).</li>
+          <li><strong>Catatan Teknis:</strong> Sistem form Coretax DJP akan memunculkan error jika Anda menginput angka 0 atau minus pada kolom penghasilan neto luar negeri. Cukup biarkan kosong karena transaksi impas/rugi tidak menambah kemampuan ekonomis Anda.</li>
+        </ul>
+      </div>`;
+
+      html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #dc2626;background:#fef2f2;border-radius:6px;">
+        <strong style="color:#991b1b;">Langkah 3: Menu SPT Tahunan PPh Orang Pribadi - Bagian Daftar Harta (SANGAT KRUSIAL!)</strong>
+        <ul style="margin-top:8px;">
+          <li><strong>⚠️ PERINGATAN KEPATUHAN:</strong> Transaksi penjualan ini mengubah profil kekayaan Anda per 31 Desember. Anda wajib memperbarui Lampiran Daftar Harta di SPT Tahunan Coretax agar terhindar dari audit pajak akibat adanya harta siluman.</li>
+        </ul>
+        <p style="margin:10px 0 6px;font-weight:750;color:#991b1b;">Cara Eksekusi:</p>
+        <ol style="margin:0;padding-left:20px;display:grid;gap:6px;line-height:1.65;">
+          <li>Hapus atau kurangi nilai saldo pada kolom instrumen investasi ETF/Saham luar negeri Anda senilai <strong>Rp ${result.totalBeliIdr.toLocaleString("id-ID")}</strong> karena aset tersebut sudah terjual.</li>
+          <li>Jika uang hasil penjualan tersebut masih mengendap dalam bentuk tunai di saldo platform/akun ${escapeHtml(record.platform)} Anda per 31 Desember, tambahkan baris harta baru dengan Kode Harta <strong>012</strong> (Uang Tunai) atau <strong>019</strong> (Kas/Setara Kas Lainnya), lalu masukkan nominal penuh sebesar <strong>Rp ${result.totalJualIdr.toLocaleString("id-ID")}</strong>.</li>
+        </ol>
       </div>`;
     }
   }
