@@ -2211,8 +2211,15 @@ function renderTaxOutput(result, record) {
     html += `<tr><td>Kurs KMK</td><td>Rp ${result.kursKmk.toLocaleString("id-ID")}</td></tr>`;
     html += `<tr><td>Total Bruto IDR (Asas Worldwide Income)</td><td>Rp ${result.totalBrutoIdr.toLocaleString("id-ID")}</td></tr>`;
     html += `<tr><td>Potongan Pajak AS (Withholding Tax 15%)</td><td>-Rp ${result.whtAsIdr.toLocaleString("id-ID")}</td></tr>`;
-    html += `<tr><td>Pajak Terutang di Indonesia</td><td>Ditentukan di Akhir Tahun via Tarif Progresif PPh Pasal 17 (Digabung dengan Gaji/Omset)</td></tr>`;
-    html += `<tr><td>Kredit Pajak PPh Pasal 24</td><td>Maksimal Rp ${result.kreditPajakPph24.toLocaleString("id-ID")} (Dapat menjadi pengurang pajak ganda, mengikuti nilai terendah antara pajak senyatanya di AS vs batas plafon PPh 24 domestik)</td></tr>`;
+    if (result.isReinvest) {
+      html += `<tr><td>Status Pajak di Indonesia</td><td><strong>Bukan Objek Pajak (Bebas Pajak 0% Karena Reinvestasi Penuh)</strong></td></tr>`;
+      html += `<tr><td>Nominal Wajib Direinvestasikan di NKRI</td><td>Rp ${result.totalBrutoIdr.toLocaleString("id-ID")} <br><small style="color:#e65100;">⚠️ Catatan: Anda wajib menambahkan dana mandiri sebesar Rp ${result.whtAsIdr.toLocaleString("id-ID")} untuk menggenapi potongan pajak AS agar investasi genap senilai bruto dan berstatus bebas pajak 100%.</small></td></tr>`;
+      html += `<tr><td>Pajak Terutang di Indonesia</td><td>Rp 0 (Tidak digabung ke penghasilan progresif akhir tahun)</td></tr>`;
+      html += `<tr><td>Kredit Pajak PPh Pasal 24</td><td>Rp 0 (Hangus, tidak dapat diklaim karena tagihan pajak domestik Anda sudah Rp0)</td></tr>`;
+    } else {
+      html += `<tr><td>Pajak Terutang di Indonesia</td><td>Ditentukan di Akhir Tahun via Tarif Progresif PPh Pasal 17 (Digabung dengan Gaji/Omset)</td></tr>`;
+      html += `<tr><td>Kredit Pajak PPh Pasal 24</td><td>Maksimal Rp ${result.kreditPajakPph24.toLocaleString("id-ID")} (Dapat menjadi pengurang pajak ganda, mengikuti nilai terendah antara pajak senyatanya di AS vs batas plafon PPh 24 domestik)</td></tr>`;
+    }
   } else if (result.type === "penjualan") {
     html += `<tr><td>Total Jual</td><td>Rp ${result.totalJualIdr.toLocaleString("id-ID")}</td></tr>`;
     html += `<tr><td>Total Beli</td><td>Rp ${result.totalBeliIdr.toLocaleString("id-ID")}</td></tr>`;
@@ -2299,31 +2306,22 @@ function renderTaxOutput(result, record) {
       html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #2e7d32;background:#f1f8e9;border-radius:6px;">
         <strong style="color:#1b5e20;">Langkah 1: Menu Alur Kasus / e-Pelaporan (Selesaikan sebelum 31 Maret ${yearNext})</strong>
         <ul style="margin-top:8px;">
-          <li>Login ke portal Coretax DJP, lalu masuk ke menu <strong>'Layanan Wajib Pajak'</strong> → <strong>'Layanan Administrasi'</strong> → <strong>'Buat Permohonan Baru'</strong>.</li>
+          <li>Login ke portal Coretax DJP, masuk ke menu <strong>'Layanan Wajib Pajak'</strong> → <strong>'Layanan Administrasi'</strong> → <strong>'Buat Permohonan Baru'</strong>.</li>
           <li>Pada kolom Jenis Pelayanan, pilih <strong>'AS.39 e-Pelaporan'</strong> lalu klik sub-menu dokumen <strong>'AS.39-01 LA.39-01 Laporan Realisasi Investasi'</strong>.</li>
-          <li>Klik sub-menu <strong>'Alur Kasus'</strong>, lalu klik tombol <strong>'+ Tambah Data'</strong> dan isi data:</li>
-        </ul>
-        <table class="tax-breakdown-table" style="margin-left:18px;width:calc(100% - 18px);">
-          <tr><td>Jenis Penghasilan</td><td>Pilih <strong>'Dividen Luar Negeri'</strong></td></tr>
-          <tr><td>Nama Pemberi Penghasilan</td><td>Ketik: <strong>${escapeHtml(record.assetName)}</strong></td></tr>
-          <tr><td>Jumlah Diinvestasikan</td><td>Masukkan nilai nominal rupiah yang diinvestasikan kembali</td></tr>
-          <tr><td>Bentuk Investasi</td><td>Pilih <strong>'Instrumen Pasar Modal Lainnya di NKRI'</strong></td></tr>
-        </table>
-        <ul style="margin-top:8px;">
-          <li>Setelah selesai, masuk ke tab <strong>'Dokumen'</strong>, klik <strong>'Create PDF'</strong>, lakukan TTE dengan kode OTP, lalu klik <strong>'Submit/Kirim Laporan'</strong>.</li>
+          <li>Klik sub-menu <strong>'Alur Kasus'</strong> → klik <strong>'+ Tambah Data'</strong>. Isi Jenis Penghasilan: <strong>'Dividen Luar Negeri'</strong>, Nama Pemberi: <strong>${escapeHtml(record.assetName)} - ${escapeHtml(record.platform)}</strong>, dan Jumlah Diinvestasikan: Masukkan nilai <strong>BRUTO penuh</strong> yaitu <strong>Rp ${result.totalBrutoIdr.toLocaleString("id-ID")}</strong>.</li>
+          <li>Masuk ke tab <strong>'Dokumen'</strong>, klik <strong>'Create PDF'</strong>, lakukan TTE dengan kode OTP, lalu klik <strong>'Submit'</strong>.</li>
         </ul>
       </div>`;
 
       html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #1565c0;background:#e3f2fd;border-radius:6px;">
         <strong style="color:#0d47a1;">Langkah 2: Menu SPT Tahunan PPh Orang Pribadi (Akhir Tahun)</strong>
         <ul style="margin-top:8px;">
-          <li>Buka formulir SPT Tahunan Anda di portal Coretax, lanjutkan hingga halaman <strong>'Lampiran L-2'</strong>.</li>
-          <li>Cari <strong>'Bagian B'</strong> untuk 'Dividen yang diinvestasikan di wilayah NKRI dalam jangka waktu tertentu'.</li>
-          <li>Masukkan nilai <strong>Rp ${result.netDanaBersihIdr.toLocaleString("id-ID")}</strong> (Net Dana Bersih setelah potongan WHT AS).</li>
+          <li>Buka formulir SPT Tahunan di portal Coretax, masuk ke halaman <strong>'Lampiran L-2'</strong> Bagian B (Penghasilan Bukan Objek Pajak).</li>
+          <li>Masukkan nilai nominal bruto sebesar <strong>Rp ${result.totalBrutoIdr.toLocaleString("id-ID")}</strong> (Nilai harus sama dengan yang diinput di e-Pelaporan).</li>
         </ul>
       </div>`;
 
-      html += `<div class="tax-lock-icon"><strong>Holding Period:</strong> Dana sebesar Rp ${result.netDanaBersihIdr.toLocaleString("id-ID")} wajib ditahan s.d <strong>31 Desember ${yearHold}</strong> (minimal 3 tahun).</div>`;
+      html += `<div class="tax-lock-icon"><strong>Holding Period (Masa Tahan Dana):</strong> Dana investasi bruto sebesar Rp ${result.totalBrutoIdr.toLocaleString("id-ID")} tersebut wajib diendapkan di ekosistem keuangan NKRI minimal 3 tahun s.d <strong>31 Desember ${yearHold}</strong>.</div>`;
     } else {
       html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #64748b;background:#f8fafc;border-radius:6px;">
         <strong style="color:#475569;">Langkah 1: Menu Alur Kasus / e-Pelaporan (AS.39-01)</strong>
