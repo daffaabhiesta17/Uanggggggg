@@ -2365,3 +2365,25 @@ input:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+.sim-time-btn {
+  min-height: 36px;
+  padding: 7px 14px;
+  border: 1px solid #9e9e9e;
+  border-radius: 6px;
+  background: #fff;
+  color: #424242;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.sim-time-btn:hover {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+.sim-time-btn:active {
+  background: #dbeafe;
+  transform: scale(0.97);
+}

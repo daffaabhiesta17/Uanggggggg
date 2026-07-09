@@ -107,6 +107,7 @@ let investmentGrowthChart = null;
 let investmentStockChart = null;
 let investmentStockChartPurchases = [];
 let activeInvestmentTab = "simulator";
+let simulatedYear = new Date().getFullYear();
 let remoteStore = {
   enabled: false,
   investmentsEnabled: false,
@@ -2181,7 +2182,7 @@ function renderTaxOutput(result, record) {
   const yearHold = year + 3;
 
   // Smart tracker: hitung selisih tahun untuk status masa tahan dana
-  const currentYear = new Date().getFullYear();
+  const currentYear = simulatedYear;
   const selisihTahun = currentYear - year;
   let statusMasa, laporanKe, statusDana, statusDanaLabel;
   if (selisihTahun === 1) {
@@ -2535,6 +2536,18 @@ function renderTaxOutput(result, record) {
       </div>`;
     }
   }
+
+  // Panel Kontrol Simulasi Waktu
+  html += `<div style="margin-top:16px;padding:16px;border:2px dashed #9e9e9e;border-radius:10px;background:#f5f5f5;">
+    <strong style="display:block;margin-bottom:10px;color:#424242;">Panel Kontrol Simulasi Waktu (Range 2026-2045)</strong>
+    <span style="display:block;margin-bottom:8px;font-size:0.84rem;color:#616161;">Tahun simulasi saat ini: <strong>${simulatedYear}</strong> &nbsp;|&nbsp; Tahun Pajak: <strong>${year}</strong> &nbsp;|&nbsp; Selisih: <strong>${selisihTahun} tahun</strong> &nbsp;|&nbsp; Status: <strong>${statusDanaLabel}</strong></span>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="sim-time-btn" data-sim-year="2026" type="button">Waktu Riil (2026)</button>
+      <button class="sim-time-btn" data-sim-year="2027" type="button">Maju ke Tahun 2027</button>
+      <button class="sim-time-btn" data-sim-year="2028" type="button">Maju ke Tahun 2028</button>
+      <button class="sim-time-btn" data-sim-year="2030" type="button">Maju ke Tahun 2030</button>
+    </div>
+  </div>`;
 
   html += `</div>`;
 
@@ -2984,6 +2997,25 @@ function initTaxEvents() {
       const row = event.target.closest("[data-tax-row]");
       if (row) {
         const id = row.dataset.taxRow;
+        const record = state.investments.taxRecords.find((r) => r.id === id);
+        if (record) showTaxOutput(record);
+      }
+    });
+  }
+
+  // Simulasi waktu: delegated click on output box buttons
+  const outputBox = document.querySelector("#taxOutputBox");
+  if (outputBox) {
+    outputBox.addEventListener("click", (event) => {
+      const btn = event.target.closest(".sim-time-btn");
+      if (!btn) return;
+      const year = Number(btn.dataset.simYear);
+      if (!year) return;
+      simulatedYear = year;
+      // Re-render current output with new simulated year
+      const activeRow = document.querySelector(".tax-history-row.active");
+      if (activeRow) {
+        const id = activeRow.dataset.taxRow;
         const record = state.investments.taxRecords.find((r) => r.id === id);
         if (record) showTaxOutput(record);
       }
