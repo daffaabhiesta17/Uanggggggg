@@ -2209,11 +2209,10 @@ function renderTaxOutput(result, record) {
   } else if (result.type === "dividen_etf") {
     html += `<tr><td>Bruto USD</td><td>$ ${result.brutoUsd.toLocaleString("id-ID", { maximumFractionDigits: 2 })}</td></tr>`;
     html += `<tr><td>Kurs KMK</td><td>Rp ${result.kursKmk.toLocaleString("id-ID")}</td></tr>`;
-    html += `<tr><td>Total Bruto IDR</td><td>Rp ${result.totalBrutoIdr.toLocaleString("id-ID")}</td></tr>`;
-    html += `<tr><td>WHT AS (15%)</td><td>-Rp ${result.whtAsIdr.toLocaleString("id-ID")}</td></tr>`;
-    html += `<tr><td>Net Dana Bersih</td><td>Rp ${result.netDanaBersihIdr.toLocaleString("id-ID")}</td></tr>`;
-    html += `<tr><td><strong>Pajak Terutang Indonesia</strong></td><td><strong>Rp ${result.pajakTerutang.toLocaleString("id-ID")}</strong></td></tr>`;
-    html += `<tr><td>Kredit Pajak PPh 24</td><td>${result.kreditPajakPph24 > 0 ? "Rp " + result.kreditPajakPph24.toLocaleString("id-ID") + " (dapat dikreditkan)" : "Rp 0 (tidak dapat diklaim)"}</td></tr>`;
+    html += `<tr><td>Total Bruto IDR (Asas Worldwide Income)</td><td>Rp ${result.totalBrutoIdr.toLocaleString("id-ID")}</td></tr>`;
+    html += `<tr><td>Potongan Pajak AS (Withholding Tax 15%)</td><td>-Rp ${result.whtAsIdr.toLocaleString("id-ID")}</td></tr>`;
+    html += `<tr><td>Pajak Terutang di Indonesia</td><td>Ditentukan di Akhir Tahun via Tarif Progresif PPh Pasal 17 (Digabung dengan Gaji/Omset)</td></tr>`;
+    html += `<tr><td>Kredit Pajak PPh Pasal 24</td><td>Maksimal Rp ${result.kreditPajakPph24.toLocaleString("id-ID")} (Dapat menjadi pengurang pajak ganda, mengikuti nilai terendah antara pajak senyatanya di AS vs batas plafon PPh 24 domestik)</td></tr>`;
   } else if (result.type === "penjualan") {
     html += `<tr><td>Total Jual</td><td>Rp ${result.totalJualIdr.toLocaleString("id-ID")}</td></tr>`;
     html += `<tr><td>Total Beli</td><td>Rp ${result.totalBeliIdr.toLocaleString("id-ID")}</td></tr>`;
@@ -2329,17 +2328,17 @@ function renderTaxOutput(result, record) {
         <strong style="color:#0d47a1;">Langkah 2: Menu SPT Tahunan PPh Orang Pribadi - Penggabungan Pajak Progresif</strong>
         <ul style="margin-top:8px;">
           <li>Buka formulir SPT Tahunan Anda di portal Coretax, lanjutkan pengisian hingga Anda masuk ke halaman <strong>'Lampiran L-2'</strong> lalu pilih <strong>'Bagian C'</strong> (Penghasilan Neto Luar Negeri).</li>
-          <li>Klik <strong>'+ Tambah Baris Baru'</strong>, masukkan detail asal pendapatan: <strong>${escapeHtml(record.platform)}</strong>, lalu pada kolom Nominal Penghasilan Bersih, masukkan nilai dalam Rupiah sebesar <strong>Rp ${result.netDanaBersihIdr.toLocaleString("id-ID")}</strong>.</li>
-          <li>Nilai ini otomatis akan ditarik oleh sistem Coretax ke halaman <strong>'Formulir Induk'</strong> untuk digabungkan dengan penghasilan utama Anda (gaji/omset) agar dikenakan tarif progresif PPh Pasal 17 (tarif 5% s.d 35%).</li>
+          <li>Klik <strong>'+ Tambah Baris Baru'</strong>, masukkan detail asal pendapatan: <strong>${escapeHtml(record.platform)}</strong>, lalu pada kolom Nominal Penghasilan, masukkan <strong>NILAI BRUTO</strong> sebesar <strong>Rp ${result.totalBrutoIdr.toLocaleString("id-ID")}</strong> (Bukan nilai bersih setelah potong pajak AS).</li>
+          <li>Nilai bruto ini otomatis akan ditarik oleh sistem Coretax ke halaman <strong>'Formulir Induk'</strong> untuk digabungkan dengan penghasilan utama Anda (gaji/omset) agar dikenakan tarif progresif PPh Pasal 17 (tarif 5% s.d 35%).</li>
         </ul>
       </div>`;
 
       html += `<div style="margin-bottom:14px;padding:12px;border-left:3px solid #f59e0b;background:#fff8e1;border-radius:6px;">
-        <strong style="color:#e65100;">Langkah 3: Klaim Diskon Pajak / Kredit Pajak PPh Pasal 24 (Sangat Penting!)</strong>
+        <strong style="color:#e65100;">Langkah 3: Klaim Kredit Pajak PPh Pasal 24</strong>
         <ul style="margin-top:8px;">
-          <li>Uang Anda sudah dipotong pajak otomatis di Amerika Serikat sebesar 15% (yaitu senilai <strong>Rp ${result.whtAsIdr.toLocaleString("id-ID")}</strong>). Agar Anda tidak terkena pajak ganda di Indonesia, Anda wajib mengklaim potongan tersebut sebagai diskon pajak.</li>
-          <li>Pada halaman <strong>'Formulir Induk SPT'</strong> di bagian Pajak yang Dibayar Sendiri / Kredit Pajak, cari kolom <strong>'PPh Pasal 24 Luar Negeri'</strong>.</li>
-          <li>Masukkan nilai nominal <strong>Rp ${result.whtAsIdr.toLocaleString("id-ID")}</strong> ke kolom tersebut. Nilai ini akan langsung mengurangi (memotong) total tagihan pajak progresif akhir tahun Anda di Indonesia sehingga pengisian SPT Anda tetap aman dan adil.</li>
+          <li>Uang Anda sudah dipotong pajak otomatis di Amerika Serikat sebesar 15% (yaitu senilai <strong>Rp ${result.whtAsIdr.toLocaleString("id-ID")}</strong>). Agar Anda tidak terkena pajak ganda di Indonesia, Anda wajib mengklaim potongan tersebut sebagai kredit pajak.</li>
+          <li>Pada halaman <strong>'Formulir Induk SPT'</strong> di bagian Kredit Pajak, cari kolom <strong>'PPh Pasal 24 Luar Negeri'</strong>.</li>
+          <li>Masukkan nilai Kredit Pajak PPh 24 Anda (<strong>Maksimal sebesar Rp ${result.whtAsIdr.toLocaleString("id-ID")}</strong> atau sesuai batas plafon perhitungan proporsional penghasilan Anda). Nilai final kredit diambil dari nilai terendah antara pajak yang senyatanya dibayar di AS dengan batas atas perhitungan tarif efektif PPh Pasal 24 domestik Anda di akhir tahun.</li>
         </ul>
       </div>`;
     }
