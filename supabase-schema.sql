@@ -50,21 +50,13 @@ create table if not exists public.rdpu_purchases (
   created_at timestamptz not null default now()
 );
 
-create table if not exists public.tax_records (
+create table if not exists public.taxvest_records (
   id text primary key,
-  year integer not null check (year between 2000 and 2100),
-  transaction_type text not null check (transaction_type in ('dividen_lokal', 'dividen_etf', 'penjualan')),
-  asset_name text not null,
-  platform text not null default '',
-  total_bruto_idr numeric not null default 0,
-  nominal_reinvest_idr numeric not null default 0,
-  is_seluruhnya_reinvest boolean not null default false,
-  bruto_usd numeric not null default 0,
-  kurs_kmk numeric not null default 0,
-  jenis_aset text not null default 'lokal' check (jenis_aset in ('lokal', 'luar_negeri')),
-  harga_beli numeric not null default 0,
-  harga_jual numeric not null default 0,
-  jumlah_unit numeric not null default 0,
+  tax_year integer not null check (tax_year between 2026 and 2045),
+  transaction_type text not null check (transaction_type in ('local_dividend', 'foreign_dividend', 'sale')),
+  asset_name text not null default '-',
+  platform text not null check (platform in ('Stockbit', 'Pluang')),
+  payload jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
 );
 
@@ -74,7 +66,7 @@ alter table public.investment_settings enable row level security;
 alter table public.investment_tickers enable row level security;
 alter table public.stock_purchases enable row level security;
 alter table public.rdpu_purchases enable row level security;
-alter table public.tax_records enable row level security;
+alter table public.taxvest_records enable row level security;
 
 drop policy if exists "public categories read" on public.categories;
 drop policy if exists "public categories write" on public.categories;
@@ -88,8 +80,8 @@ drop policy if exists "public stock purchases read" on public.stock_purchases;
 drop policy if exists "public stock purchases write" on public.stock_purchases;
 drop policy if exists "public rdpu purchases read" on public.rdpu_purchases;
 drop policy if exists "public rdpu purchases write" on public.rdpu_purchases;
-drop policy if exists "public tax records read" on public.tax_records;
-drop policy if exists "public tax records write" on public.tax_records;
+drop policy if exists "public taxvest records read" on public.taxvest_records;
+drop policy if exists "public taxvest records write" on public.taxvest_records;
 
 create policy "public categories read"
 on public.categories for select
@@ -157,13 +149,13 @@ to anon
 using (true)
 with check (true);
 
-create policy "public tax records read"
-on public.tax_records for select
+create policy "public taxvest records read"
+on public.taxvest_records for select
 to anon
 using (true);
 
-create policy "public tax records write"
-on public.tax_records for all
+create policy "public taxvest records write"
+on public.taxvest_records for all
 to anon
 using (true)
 with check (true);
@@ -212,7 +204,7 @@ end $$;
 
 do $$
 begin
-  alter publication supabase_realtime add table public.tax_records;
+  alter publication supabase_realtime add table public.taxvest_records;
 exception
   when duplicate_object then null;
 end $$;
