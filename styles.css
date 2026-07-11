@@ -1522,6 +1522,46 @@ input:disabled {
   flex-wrap: wrap;
 }
 
+.investment-records-surface {
+  display: grid;
+  gap: 18px;
+}
+
+.investment-records-section {
+  display: grid;
+  gap: 14px;
+}
+
+.investment-inline-form {
+  align-items: end;
+}
+
+.investment-inline-form button,
+.investment-form button {
+  align-self: end;
+}
+
+.ticker-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.table-actions .icon-button {
+  min-height: 34px;
+  padding: 8px 10px;
+}
+
+.table-actions .icon-button.delete {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.chart-panel {
+  position: relative;
+  min-height: 280px;
+}
+
 .investment-year-control label,
 .investment-filters label,
 .investment-inline-form label {
