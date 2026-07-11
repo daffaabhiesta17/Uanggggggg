@@ -953,41 +953,51 @@
               <section class="investment-records-section">
                 <div class="section-head compact">
                   <h3>Pembelian Saham</h3>
-                  <p>Default BMRI, ICBP, dan BBRI; saham lain bisa ditambahkan.</p>
+                  <p>Tambah atau ubah catatan saham per bulan.</p>
                 </div>
-                <form class="investment-inline-form" id="investmentTickerForm">
-                  <label>
-                    Tambah Saham
-                    <input id="investmentTickerInput" type="text" maxlength="8" placeholder="Kode saham" />
-                  </label>
-                  <button class="primary-button" type="submit">Tambah Saham</button>
-                </form>
-                <div class="ticker-list" id="investmentTickerList"></div>
+                <details class="investment-entry-accordion">
+                  <summary>
+                    <span>
+                      <strong>Input Saham</strong>
+                      <small>Tambah ticker lalu catat pembelian.</small>
+                    </span>
+                  </summary>
+                  <div class="investment-entry-body">
+                    <form class="investment-inline-form" id="investmentTickerForm">
+                      <label>
+                        Kode Saham
+                        <input id="investmentTickerInput" type="text" maxlength="8" placeholder="Kode saham" />
+                      </label>
+                      <button class="primary-button" type="submit">Tambah</button>
+                    </form>
+                    <div class="ticker-list" id="investmentTickerList"></div>
 
-                <form class="investment-form" id="investmentStockForm">
-                  <label>
-                    Saham
-                    <select id="investmentStockTicker"></select>
-                  </label>
-                  <label>
-                    Bulan
-                    <select id="investmentStockMonth"></select>
-                  </label>
-                  <label>
-                    Tahun
-                    <select id="investmentStockYear"></select>
-                  </label>
-                  <label>
-                    Harga / Lot
-                    <input id="investmentStockLotPrice" type="text" inputmode="numeric" placeholder="0" />
-                  </label>
-                  <label>
-                    Jumlah Lot
-                    <input id="investmentStockLots" type="number" min="1" step="1" placeholder="0" />
-                  </label>
-                  <button class="primary-button investment-submit" id="investmentStockSubmit" type="submit">Simpan Saham</button>
-                  <button class="icon-button" id="investmentStockCancelEdit" type="button" hidden aria-label="Batal edit saham">&times;</button>
-                </form>
+                    <form class="investment-form" id="investmentStockForm">
+                      <label>
+                        Saham
+                        <select id="investmentStockTicker"></select>
+                      </label>
+                      <label>
+                        Bulan
+                        <select id="investmentStockMonth"></select>
+                      </label>
+                      <label>
+                        Tahun
+                        <select id="investmentStockYear"></select>
+                      </label>
+                      <label>
+                        Harga / Lot
+                        <input id="investmentStockLotPrice" type="text" inputmode="numeric" placeholder="0" />
+                      </label>
+                      <label>
+                        Jumlah Lot
+                        <input id="investmentStockLots" type="number" min="1" step="1" placeholder="0" />
+                      </label>
+                      <button class="primary-button investment-submit" id="investmentStockSubmit" type="submit">Simpan</button>
+                      <button class="icon-button" id="investmentStockCancelEdit" type="button" hidden aria-label="Batal edit saham">&times;</button>
+                    </form>
+                  </div>
+                </details>
 
                 <div class="table-scroll investment-table-scroll investment-stock-scroll">
                   <table>
@@ -1009,24 +1019,34 @@
               <section class="investment-records-section">
                 <div class="section-head compact">
                   <h3>Pembelian RDPU</h3>
-                  <p>Nominal RDPU dicatat per bulan dan tahun.</p>
+                  <p>Catat nominal RDPU per bulan dan tahun.</p>
                 </div>
-                <form class="investment-form rdpu-form" id="investmentRdpuForm">
-                  <label>
-                    Bulan
-                    <select id="investmentRdpuMonth"></select>
-                  </label>
-                  <label>
-                    Tahun
-                    <select id="investmentRdpuYear"></select>
-                  </label>
-                  <label>
-                    Nominal RDPU
-                    <input id="investmentRdpuAmount" type="text" inputmode="numeric" placeholder="0" />
-                  </label>
-                  <button class="primary-button investment-submit" id="investmentRdpuSubmit" type="submit">Simpan RDPU</button>
-                  <button class="icon-button" id="investmentRdpuCancelEdit" type="button" hidden aria-label="Batal edit RDPU">&times;</button>
-                </form>
+                <details class="investment-entry-accordion">
+                  <summary>
+                    <span>
+                      <strong>Input RDPU</strong>
+                      <small>Buka untuk tambah atau edit catatan.</small>
+                    </span>
+                  </summary>
+                  <div class="investment-entry-body">
+                    <form class="investment-form rdpu-form" id="investmentRdpuForm">
+                      <label>
+                        Bulan
+                        <select id="investmentRdpuMonth"></select>
+                      </label>
+                      <label>
+                        Tahun
+                        <select id="investmentRdpuYear"></select>
+                      </label>
+                      <label>
+                        Nominal RDPU
+                        <input id="investmentRdpuAmount" type="text" inputmode="numeric" placeholder="0" />
+                      </label>
+                      <button class="primary-button investment-submit" id="investmentRdpuSubmit" type="submit">Simpan</button>
+                      <button class="icon-button" id="investmentRdpuCancelEdit" type="button" hidden aria-label="Batal edit RDPU">&times;</button>
+                    </form>
+                  </div>
+                </details>
 
                 <div class="table-scroll investment-table-scroll investment-rdpu-scroll">
                   <table>

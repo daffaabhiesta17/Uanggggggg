@@ -1218,7 +1218,7 @@ th {
 }
 
 .simulator-advanced[open] > summary::after {
-  content: "–";
+  content: "-";
 }
 
 .simulator-advanced-body {
@@ -1624,6 +1624,80 @@ input:disabled {
   gap: 14px;
 }
 
+.investment-entry-accordion {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  overflow: clip;
+}
+
+.investment-entry-accordion > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #f8fafc;
+}
+
+.investment-entry-accordion > summary::-webkit-details-marker {
+  display: none;
+}
+
+.investment-entry-accordion > summary span {
+  display: grid;
+  gap: 2px;
+}
+
+.investment-entry-accordion > summary strong {
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.investment-entry-accordion > summary small {
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+.investment-entry-accordion > summary::after {
+  content: "+";
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.investment-entry-accordion[open] > summary::after {
+  content: "-";
+}
+
+.investment-entry-body {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.investment-entry-body .investment-form {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.investment-entry-body .investment-form.rdpu-form {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.investment-entry-body .investment-inline-form {
+  margin: 0;
+}
+
+.investment-entry-body .ticker-list {
+  margin: 0;
+}
+
+.investment-entry-body .primary-button,
+.investment-entry-body .icon-button {
+  align-self: end;
+}
+
 .investment-records-section {
   display: grid;
   gap: 12px;
@@ -1667,18 +1741,6 @@ input:disabled {
 
 .investment-summary {
   margin-bottom: 0;
-}
-
-.investment-records-surface {
-  display: grid;
-  gap: 18px;
-}
-
-.investment-records-section {
-  display: grid;
-  gap: 14px;
-  padding-top: 18px;
-  border-top: 1px solid var(--line);
 }
 
 .monthly-strategy-calculator {
@@ -2273,3 +2335,4 @@ input:disabled {
   text-align: right;
   color: var(--ink);
 }
+
