@@ -278,17 +278,17 @@
               <form class="surface investment-simulator-form" id="investmentSimulatorForm">
                 <div class="section-head compact">
                   <h3>Program 1: Proyeksi 180 Bulan</h3>
-                  <p>Bola salju saham BMRI, ICBP, BBRI, dan RDPU dengan pola beli selang-seling.</p>
+                  <p>Atur asumsi inti simulator di satu panel.</p>
                 </div>
                 <div class="simulator-sync-banner hidden" id="simulatorSyncBanner">
-                  <strong>Terhubung ke Program 2</strong>
-                  <span id="simulatorSyncBannerText">Strategi bulanan sedang mengendalikan input simulator.</span>
+                  <strong>Sinkron aktif</strong>
+                  <span id="simulatorSyncBannerText">Input bulanan mengikuti Program 2.</span>
                 </div>
 
                 <div class="simulator-setting-group">
                   <div class="simulator-setting-head">
-                    <strong>1. Periode & Modal</strong>
-                    <small>Tentukan kapan simulasi dimulai dan besar setoran rutin.</small>
+                    <strong>Periode & modal</strong>
+                    <small>Mulai simulasi dan setoran rutin.</small>
                   </div>
                   <label>
                     Total Setoran Bulanan
@@ -321,8 +321,8 @@
 
                 <div class="simulator-setting-group">
                   <div class="simulator-setting-head">
-                    <strong>2. Harga & Pola Beli</strong>
-                    <small>Atur harga awal, pola pembelian, dan target lot jika memakai custom.</small>
+                    <strong>Harga & pola beli</strong>
+                    <small>Harga awal, mode beli, dan target lot.</small>
                   </div>
                   <div class="input-pair">
                     <label>
@@ -348,23 +348,23 @@
                   </label>
 
                   <div class="simulator-dividend-note">
-                    <strong>Sistem dividen simulator</strong>
+                    <strong>Catatan dividen</strong>
                     <ul>
-                      <li>Selang-seling: dividen cair menambah kas untuk beli saham sesuai giliran bulan itu.</li>
-                      <li>Custom lot: dividen membantu mencapai target lot bulanan. Jika reinvest ON, sisa dividen setelah target akan membeli lot tambahan.</li>
-                      <li>Jika Program 2 tersambung, simulator memakai custom lot dari Program 2. Dividen manual Program 2 tidak dikirim agar tidak dobel hitung.</li>
+                      <li>Selang-seling: dividen menambah kas beli.</li>
+                      <li>Custom lot: dividen mengejar target lalu sisa ke RDPU.</li>
+                      <li>Program 2 aktif akan mengambil custom lot dari data aktual.</li>
                     </ul>
                   </div>
 
                   <div class="price-change-panel custom-lot-panel hidden" id="simCustomLotPanel">
                     <div class="custom-lot-copy">
-                      <strong>Target lot per bulan</strong>
-                      <small>Seluruh setoran bulanan dipakai untuk target lot dulu, lalu sisa kas masuk RDPU. Jika kas bulan itu tidak cukup, simulator hanya membeli lot yang terjangkau.</small>
+                      <strong>Target custom</strong>
+                      <small>Setoran dipakai ke target lot dulu, lalu sisa masuk RDPU.</small>
                     </div>
                     <label class="switch-row custom-dividend-toggle">
                       <span>
-                        <strong>Reinvest dividen setelah target terpenuhi</strong>
-                        <small>ON: dividen cair tetap dipakai membeli lot tambahan dengan pola target custom. OFF: sisa setelah target masuk RDPU.</small>
+                        <strong>Reinvest dividen</strong>
+                        <small>ON: sisa dividen beli lot tambahan. OFF: sisa ke RDPU.</small>
                       </span>
                       <input id="simReinvestCustomDividends" type="checkbox" />
                       <span class="switch-control" aria-hidden="true"></span>
@@ -446,13 +446,13 @@
 
                 <div class="simulator-setting-group">
                   <div class="simulator-setting-head">
-                    <strong>3. Asumsi Harga</strong>
-                    <small>Aktifkan untuk membuat harga saham bergerak naik atau turun per tahun.</small>
+                    <strong>Asumsi harga</strong>
+                    <small>Opsional untuk simulasi naik turun harga.</small>
                   </div>
                   <div class="price-change-panel" id="simPriceChangePanel">
                     <label class="switch-row" id="simPriceChangeToggle">
                       <span>
-                        <strong>Aktifkan kenaikan / penurunan harga saham</strong>
+                        <strong>Kenaikan / penurunan harga</strong>
                         <small id="simPriceChangeStatus">Mati - harga saham tetap memakai harga awal.</small>
                       </span>
                       <input id="simEnablePriceChange" type="checkbox" />
@@ -478,8 +478,8 @@
 
                 <div class="simulator-setting-group">
                   <div class="simulator-setting-head">
-                    <strong>4. Return & Dividen</strong>
-                    <small>Input asumsi RDPU dan dividen tahunan untuk 180 bulan.</small>
+                    <strong>Return & dividen</strong>
+                    <small>Asumsi RDPU dan dividen tahunan.</small>
                   </div>
                   <div class="input-pair">
                     <label>
@@ -509,7 +509,7 @@
                 </div>
 
                 <p class="simulator-note">
-                  Jalur likuidasi memakai Aset Akhir dan Keuntungan Bersih. Jalur keep lot memakai Gaji Pasif Tahun 15 dan Saldo RDPU Akhir.
+                  Output utama: aset akhir, profit bersih, dan gaji pasif tahun 15.
                 </p>
               </form>
 
