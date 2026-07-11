@@ -36,7 +36,6 @@ const defaultState = {
     activeStocks: ["BMRI", "ICBP", "BBRI"],
     stockPurchases: [],
     rdpuPurchases: [],
-    taxvestRecords: [],
   },
 };
 
@@ -82,10 +81,6 @@ const DEFAULT_SIMULATOR_CONFIG = {
   bbriPriceChangeAnnual: 5,
 };
 
-const TAXVEST_TRANSACTION_TYPES = ["local_dividend", "foreign_dividend", "sale"];
-const TAXVEST_ASSET_TYPES = ["local", "foreign"];
-const TAXVEST_PLATFORMS = ["Stockbit", "Pluang"];
-
 const rupiah = new Intl.NumberFormat("id-ID", {
   style: "currency",
   currency: "IDR",
@@ -111,12 +106,9 @@ let investmentGrowthChart = null;
 let investmentStockChart = null;
 let investmentStockChartPurchases = [];
 let activeInvestmentTab = "simulator";
-let globalSimulatedYear = new Date().getFullYear();
-let taxvestSelectedId = null;
 let remoteStore = {
   enabled: false,
   investmentsEnabled: false,
-  taxvestEnabled: false,
   client: null,
   channel: null,
   refreshing: false,
@@ -405,9 +397,6 @@ function normalizeInvestments(investments = {}) {
         }))
         .filter((purchase) => purchase.amount > 0)
     : [];
-  const taxvestRecords = Array.isArray(investments.taxvestRecords)
-    ? investments.taxvestRecords.map(normalizeTaxvestRecord).filter(Boolean)
-    : [];
 
   const CORE_STOCKS = ["BMRI", "ICBP", "BBRI"];
   const rawActive = Array.isArray(investments.activeStocks) ? investments.activeStocks : CORE_STOCKS;
@@ -421,54 +410,7 @@ function normalizeInvestments(investments = {}) {
     activeStocks: safeActiveStocks,
     stockPurchases,
     rdpuPurchases,
-    taxvestRecords,
   };
-}
-
-function normalizeTaxvestRecord(record = {}) {
-  const transactionType = TAXVEST_TRANSACTION_TYPES.includes(record.transactionType || record.transaction_type)
-    ? record.transactionType || record.transaction_type
-    : "local_dividend";
-  const payload = record.payload && typeof record.payload === "object" ? record.payload : record;
-  const assetType = TAXVEST_ASSET_TYPES.includes(payload.assetType || payload.asset_type)
-    ? payload.assetType || payload.asset_type
-    : "local";
-  const platformValue = record.platform || payload.platform;
-  const platform = TAXVEST_PLATFORMS.includes(platformValue)
-    ? platformValue
-    : transactionType === "foreign_dividend" || assetType === "foreign"
-      ? "Pluang"
-      : "Stockbit";
-
-  const normalized = {
-    id: String(record.id || uid("taxvest")),
-    tahunPajak: clampNumber(Math.round(Number(record.tahunPajak || record.taxYear || record.tax_year) || 2026), 2026, 2045),
-    transactionType,
-    namaAset: String(record.namaAset || record.assetName || record.asset_name || payload.namaAset || "").trim(),
-    platform,
-    bruto: positiveNumber(payload.bruto),
-    nominalReinvest: positiveNumber(payload.nominalReinvest),
-    brutoUSD: positiveNumber(payload.brutoUSD || payload.bruto_usd),
-    kursKMK: positiveNumber(payload.kursKMK || payload.kurs_kmk),
-    isSeluruhnyaReinvest: Boolean(payload.isSeluruhnyaReinvest || payload.is_seluruhnya_reinvest),
-    assetType,
-    hargaBeli: positiveNumber(payload.hargaBeli || payload.harga_beli),
-    hargaJual: positiveNumber(payload.hargaJual || payload.harga_jual),
-    createdAt: record.createdAt || record.created_at || new Date().toISOString(),
-  };
-
-  if (!normalized.namaAset) normalized.namaAset = "-";
-  if (normalized.transactionType === "local_dividend") {
-    normalized.platform = "Stockbit";
-  }
-  if (normalized.transactionType === "foreign_dividend") {
-    normalized.platform = "Pluang";
-  }
-  if (normalized.transactionType === "sale") {
-    normalized.platform = normalized.assetType === "foreign" ? "Pluang" : "Stockbit";
-  }
-
-  return normalized;
 }
 
 function normalizeSimulatorConfig(config = {}) {
@@ -682,40 +624,6 @@ function fromDbRdpuPurchase(purchase) {
   };
 }
 
-function toDbTaxvestRecord(record) {
-  const normalized = normalizeTaxvestRecord(record);
-  return {
-    id: normalized.id,
-    tax_year: normalized.tahunPajak,
-    transaction_type: normalized.transactionType,
-    asset_name: normalized.namaAset,
-    platform: normalized.platform,
-    payload: {
-      bruto: normalized.bruto,
-      nominalReinvest: normalized.nominalReinvest,
-      brutoUSD: normalized.brutoUSD,
-      kursKMK: normalized.kursKMK,
-      isSeluruhnyaReinvest: normalized.isSeluruhnyaReinvest,
-      assetType: normalized.assetType,
-      hargaBeli: normalized.hargaBeli,
-      hargaJual: normalized.hargaJual,
-    },
-    created_at: normalized.createdAt || new Date().toISOString(),
-  };
-}
-
-function fromDbTaxvestRecord(record) {
-  return normalizeTaxvestRecord({
-    id: record.id,
-    tahunPajak: Number(record.tax_year),
-    transactionType: record.transaction_type,
-    namaAset: record.asset_name,
-    platform: record.platform,
-    payload: record.payload || {},
-    createdAt: record.created_at,
-  });
-}
-
 function toDbInvestmentSettings(investments) {
   return {
     id: "default",
@@ -759,7 +667,6 @@ async function initRemoteStore() {
       .on("postgres_changes", { event: "*", schema: "public", table: "investment_tickers" }, refreshFromRemote)
       .on("postgres_changes", { event: "*", schema: "public", table: "stock_purchases" }, refreshFromRemote)
       .on("postgres_changes", { event: "*", schema: "public", table: "rdpu_purchases" }, refreshFromRemote)
-      .on("postgres_changes", { event: "*", schema: "public", table: "taxvest_records" }, refreshFromRemote)
       .subscribe();
   } catch (error) {
     console.error(error);
@@ -797,7 +704,6 @@ function isMissingInvestmentTableError(error) {
 
 async function loadRemoteInvestments(localInvestments = state.investments) {
   try {
-    const localTaxvestRecords = Array.isArray(localInvestments.taxvestRecords) ? localInvestments.taxvestRecords : [];
     const [settingsResult, tickersResult, stockResult, rdpuResult] = await Promise.all([
       remoteStore.client.from("investment_settings").select("*").eq("id", "default").maybeSingle(),
       remoteStore.client.from("investment_tickers").select("*").order("symbol", { ascending: true }),
@@ -833,7 +739,6 @@ async function loadRemoteInvestments(localInvestments = state.investments) {
           tickers: tickersResult.data.map(fromDbInvestmentTicker),
           stockPurchases: stockResult.data.map(fromDbStockPurchase),
           rdpuPurchases: rdpuResult.data.map(fromDbRdpuPurchase),
-          taxvestRecords: localTaxvestRecords,
         })
       : normalizeInvestments(localInvestments);
 
@@ -851,41 +756,10 @@ async function loadRemoteInvestments(localInvestments = state.investments) {
     if (!remoteHasInvestmentData && state.investments.tickers.length) {
       await syncInvestmentsToRemote();
     }
-
-    await loadRemoteTaxvestRecords(localTaxvestRecords);
   } catch (error) {
     remoteStore.investmentsEnabled = false;
-    remoteStore.taxvestEnabled = false;
     if (!isMissingInvestmentTableError(error)) {
       console.warn("Investment cloud sync disabled:", error);
-    }
-  }
-}
-
-async function loadRemoteTaxvestRecords(localRecords = state.investments.taxvestRecords) {
-  try {
-    const result = await remoteStore.client
-      .from("taxvest_records")
-      .select("*")
-      .order("tax_year", { ascending: false })
-      .order("created_at", { ascending: false });
-    if (result.error) throw result.error;
-
-    const remoteRecords = result.data.map(fromDbTaxvestRecord);
-    remoteStore.taxvestEnabled = true;
-    state.investments.taxvestRecords = remoteRecords.length
-      ? remoteRecords
-      : Array.isArray(localRecords)
-        ? localRecords.map(normalizeTaxvestRecord).filter(Boolean)
-        : [];
-
-    if (!remoteRecords.length && state.investments.taxvestRecords.length) {
-      await syncTaxvestRecordsToRemote();
-    }
-  } catch (error) {
-    remoteStore.taxvestEnabled = false;
-    if (!isMissingInvestmentTableError(error)) {
-      console.warn("TaxVest cloud sync disabled:", error);
     }
   }
 }
@@ -934,18 +808,6 @@ async function syncInvestmentsToRemote() {
       .upsert(state.investments.rdpuPurchases.map(toDbRdpuPurchase));
     if (rdpuResult.error) throw rdpuResult.error;
   }
-
-  await syncTaxvestRecordsToRemote();
-}
-
-async function syncTaxvestRecordsToRemote() {
-  saveState();
-  if (!remoteStore.enabled || !remoteStore.taxvestEnabled) return;
-  if (!state.investments.taxvestRecords.length) return;
-  const { error } = await remoteStore.client
-    .from("taxvest_records")
-    .upsert(state.investments.taxvestRecords.map(toDbTaxvestRecord));
-  if (error) throw error;
 }
 
 async function persistInvestmentSettings() {
@@ -994,20 +856,6 @@ async function deleteRdpuPurchaseRemote(id) {
   saveState();
   if (!remoteStore.enabled || !remoteStore.investmentsEnabled) return;
   const { error } = await remoteStore.client.from("rdpu_purchases").delete().eq("id", id);
-  if (error) throw error;
-}
-
-async function persistTaxvestRecord(record) {
-  saveState();
-  if (!remoteStore.enabled || !remoteStore.taxvestEnabled) return;
-  const { error } = await remoteStore.client.from("taxvest_records").upsert(toDbTaxvestRecord(record));
-  if (error) throw error;
-}
-
-async function deleteTaxvestRecordRemote(id) {
-  saveState();
-  if (!remoteStore.enabled || !remoteStore.taxvestEnabled) return;
-  const { error } = await remoteStore.client.from("taxvest_records").delete().eq("id", id);
   if (error) throw error;
 }
 
@@ -1084,11 +932,6 @@ async function resetRemoteData() {
       .from("investment_tickers")
       .upsert(defaultState.investments.tickers.map(toDbInvestmentTicker));
     if (defaultTickerResult.error) throw defaultTickerResult.error;
-  }
-
-  if (remoteStore.taxvestEnabled) {
-    const taxvestResult = await remoteStore.client.from("taxvest_records").delete().neq("id", "__never__");
-    if (taxvestResult.error) throw taxvestResult.error;
   }
 }
 
@@ -3265,581 +3108,6 @@ function initKalkulatorPorsi() {
   renderKalkulatorPorsi();
 }
 
-function taxvestOptions(start, end) {
-  return Array.from({ length: end - start + 1 }, (_, index) => {
-    const year = start + index;
-    return `<option value="${year}">${year}</option>`;
-  }).join("");
-}
-
-function createTaxvestPanel() {
-  const panel = document.createElement("div");
-  panel.id = "investmentTabTaxvest";
-  panel.className = "investment-tab-panel";
-  panel.dataset.investmentTabPanel = "taxvest";
-  panel.innerHTML = `
-    <div class="taxvest-app">
-      <section class="taxvest-card taxvest-card-pad taxvest-time-card">
-        <div class="taxvest-time-head">
-          <div>
-            <h3>Pusat Kontrol Simulasi Waktu Aplikasi</h3>
-            <p class="taxvest-subcopy">Ubah tahun global untuk memperbarui hasil simulasi semua riwayat yang sedang ditampilkan.</p>
-          </div>
-          <div class="taxvest-year-badge" id="taxvestYearBadge">TAHUN SIMULASI SAAT INI: ${globalSimulatedYear}</div>
-        </div>
-        <div class="taxvest-year-buttons" id="taxvestYearButtons">
-          ${[2026, 2027, 2028, 2029, 2030].map((year, index) => `
-            <button data-taxvest-year="${year}" type="button">${index === 0 ? `Tahun ${year}` : `Maju ke ${year}`}</button>
-          `).join("")}
-        </div>
-      </section>
-
-      <div class="taxvest-layout">
-        <section class="taxvest-card taxvest-card-pad taxvest-panel">
-          <div>
-            <h3 class="taxvest-section-title">Smart TaxVest Manager 2026-2045</h3>
-            <p class="taxvest-subcopy">Input transaksi dividen dan penjualan aset untuk simulasi pajak edukatif.</p>
-          </div>
-          <form class="taxvest-form" id="taxvestForm">
-            <div class="taxvest-grid-2">
-              <label class="taxvest-field">Tahun Pajak
-                <select id="taxvestTaxYear">${taxvestOptions(2026, 2045)}</select>
-              </label>
-              <label class="taxvest-field">Jenis Transaksi
-                <select id="taxvestTransactionType">
-                  <option value="local_dividend">Dividen Saham Lokal (Stockbit)</option>
-                  <option value="foreign_dividend">Dividen ETF Luar Negeri (Pluang - USD)</option>
-                  <option value="sale">Penjualan Saham/ETF</option>
-                </select>
-              </label>
-            </div>
-            <div class="taxvest-grid-2">
-              <label class="taxvest-field">Nama Aset
-                <input id="taxvestAssetName" type="text" placeholder="BBRI, BMRI, VGT, ..." />
-              </label>
-              <label class="taxvest-field">Platform
-                <select id="taxvestPlatform">
-                  <option>Stockbit</option>
-                  <option>Pluang</option>
-                </select>
-              </label>
-            </div>
-
-            <div class="taxvest-fieldset" id="taxvestLocalFields">
-              <label class="taxvest-field">Total Dividen Bruto (Rp)
-                <input id="taxvestLocalBruto" type="text" inputmode="numeric" placeholder="0" />
-              </label>
-              <label class="taxvest-checkbox">
-                <input id="taxvestLocalFullReinvest" type="checkbox" />
-                <span>Seluruhnya direinvestasikan</span>
-              </label>
-              <label class="taxvest-field">Nominal Direinvestasikan (Rp)
-                <input id="taxvestLocalReinvest" type="text" inputmode="numeric" placeholder="0" />
-              </label>
-            </div>
-
-            <div class="taxvest-fieldset taxvest-hidden" id="taxvestForeignFields">
-              <div class="taxvest-grid-2">
-                <label class="taxvest-field">Dividen Bruto (USD)
-                  <input id="taxvestForeignBrutoUsd" type="number" min="0" step="0.01" placeholder="0" />
-                </label>
-                <label class="taxvest-field">Kurs KMK saat transaksi (Rp per 1 USD)
-                  <input id="taxvestForeignKurs" type="text" inputmode="numeric" placeholder="Contoh: 15800" />
-                </label>
-              </div>
-              <label class="taxvest-checkbox">
-                <input id="taxvestForeignFullReinvest" type="checkbox" />
-                <span>Seluruhnya direinvestasikan ke aset di Indonesia (repatriasi)</span>
-              </label>
-            </div>
-
-            <div class="taxvest-fieldset taxvest-hidden" id="taxvestSaleFields">
-              <label class="taxvest-field">Jenis Aset
-                <select id="taxvestAssetType">
-                  <option value="local">Lokal (Stockbit)</option>
-                  <option value="foreign">Luar Negeri (Pluang)</option>
-                </select>
-              </label>
-              <div class="taxvest-grid-2">
-                <label class="taxvest-field">Harga Beli Total (Rp)
-                  <input id="taxvestHargaBeli" type="text" inputmode="numeric" placeholder="0" />
-                </label>
-                <label class="taxvest-field">Harga Jual Total (Rp)
-                  <input id="taxvestHargaJual" type="text" inputmode="numeric" placeholder="0" />
-                </label>
-              </div>
-              <label class="taxvest-field taxvest-hidden" id="taxvestSaleKursWrap">Kurs KMK (Rp/USD)
-                <input id="taxvestSaleKurs" type="text" inputmode="numeric" placeholder="Contoh: 15800" />
-              </label>
-            </div>
-
-            <div class="taxvest-actions">
-              <button class="taxvest-primary" type="submit">Simpan & Simulasikan</button>
-              <button class="taxvest-secondary" id="taxvestReset" type="button">Reset Form</button>
-            </div>
-          </form>
-        </section>
-
-        <section class="taxvest-right">
-          <div class="taxvest-result-card">
-            <h3 id="taxvestResultTitle">HASIL SIMULASI PAJAK - TAHUN PAJAK -</h3>
-            <p class="taxvest-result-meta" id="taxvestResultMeta">[Dianalisis pada Tahun Simulasi: ${globalSimulatedYear}]</p>
-            <pre class="taxvest-output" id="taxvestOutput">Pilih atau simpan transaksi untuk melihat hasil simulasi.</pre>
-          </div>
-          <div class="taxvest-card taxvest-card-pad">
-            <div class="taxvest-history-head">
-              <div>
-                <h3 class="taxvest-section-title">Tabel Riwayat</h3>
-                <p class="taxvest-subcopy">Klik baris untuk menampilkan ulang simulasi.</p>
-              </div>
-              <span class="taxvest-sync-pill" id="taxvestSyncPill">Local + Supabase jika tersedia</span>
-            </div>
-            <div class="taxvest-table-wrap">
-              <table class="taxvest-history-table">
-                <thead>
-                  <tr><th>No</th><th>Tahun Pajak</th><th>Jenis</th><th>Aset</th><th>Platform</th><th>Nominal</th><th>Aksi</th></tr>
-                </thead>
-                <tbody id="taxvestHistoryTable"></tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <footer class="taxvest-card taxvest-card-pad taxvest-law">
-        <h4>Dasar Hukum:</h4>
-        <ul>
-          <li>UU No. 11 Tahun 2020 (UU Cipta Kerja) - Pasal tentang PPh Dividen</li>
-          <li>PMK No. 18/PMK.03/2021 - Pelaksanaan UU Cipta Kerja bidang PPh (Reinvestasi Dividen)</li>
-          <li>PMK No. 81 Tahun 2024 - Ketentuan Perpajakan PSIAP (pengganti PMK lama)</li>
-          <li>PER-10/PJ/2024 - KAP dan KJS Terbaru (411128-100 untuk dividen tidak direinvestasi)</li>
-          <li>P3B Indonesia-AS - WHT Dividen 15% untuk Wajib Pajak Indonesia</li>
-        </ul>
-        <p>Disclaimer: Simulator ini bersifat edukatif. Konsultasikan kondisi spesifik Anda kepada konsultan pajak terdaftar (USKP) untuk kepastian hukum.</p>
-      </footer>
-    </div>
-  `;
-  return panel;
-}
-
-function formatTaxvestUsd(value) {
-  return `$${Number(value || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-function taxvestNominal(record) {
-  if (record.transactionType === "local_dividend") return record.bruto;
-  if (record.transactionType === "foreign_dividend") return record.brutoUSD * record.kursKMK;
-  return record.hargaJual;
-}
-
-function taxvestTypeLabel(record) {
-  if (record.transactionType === "local_dividend") return "Dividen Saham Lokal";
-  if (record.transactionType === "foreign_dividend") return "Dividen ETF Luar Negeri";
-  return record.assetType === "foreign" ? "Penjualan ETF Luar Negeri" : "Penjualan Saham Lokal";
-}
-
-function taxvestCoretaxDividendGuide(record, values) {
-  const selisihTahun = globalSimulatedYear - record.tahunPajak;
-  const year = record.tahunPajak;
-  if (record.transactionType === "foreign_dividend" && !record.isSeluruhnyaReinvest) {
-    return `Menu e-Pelaporan: TIDAK PERLU lapor Laporan Realisasi Investasi
-                     (tidak ada reinvestasi, tidak ada holding period).
-    Teks holding period 3 tahun TIDAK BOLEH muncul di sini.
-
-   Langkah 1 - SPT Tahunan ${year} (Akhir Tahun):
-   - Masukkan nilai BRUTO ${formatMoney(values.brutoIdr)} ke Lampiran L-2 Bagian C
-     (Penghasilan Neto Luar Negeri).
-   - Yang diinput adalah nilai BRUTO (bukan net), sesuai asas
-     Worldwide Income Indonesia. Pajak AS diklaim terpisah di bawah.
-
-   Langkah 2 - Klaim Kredit Pajak PPh Pasal 24:
-   - Klaim kredit pajak sebesar ${formatMoney(values.whtIdr)} pada halaman
-     Formulir Induk Coretax (bagian Kredit Pajak Luar Negeri PPh 24).
-   - Ini adalah diskon atas pajak berganda - pastikan tidak melebihi
-     batas kredit PPh 24 yang diperbolehkan (dihitung dari proporsi
-     penghasilan LN terhadap total penghasilan neto).`;
-  }
-
-  const invested = record.transactionType === "local_dividend" ? values.porsiBebas : values.brutoIdr;
-  const kind = record.transactionType === "local_dividend" ? "Dividen Dalam Negeri" : "Dividen Luar Negeri";
-  let guide = "";
-  if (selisihTahun === 0) {
-    guide = record.transactionType === "local_dividend"
-      ? `Status:  Masa Terima Awal (Dana Baru Masuk)
-   Belum wajib lapor tahun ini, namun:
-   - Pastikan dana sudah diinvestasikan ke instrumen yang sah
-     paling lambat 31 Maret ${year + 1}.
-     Jika melewati batas ini, fasilitas 0% HANGUS dan dikenai
-     PPh Pasal 17 tarif progresif atas seluruh dividen.
-   - Instrumen sah: saham, reksa dana, obligasi, deposito di bank BUMN,
-     atau SBN (sesuai PMK 18/2021 Pasal 3).`
-      : `Status:  Masa Terima Awal (Dana Baru Masuk)
-   Belum wajib lapor tahun ini. Pastikan dana sejumlah ${formatMoney(values.brutoIdr)}
-   sudah ditarik (repatriasi) ke rekening Indonesia dan diinvestasikan
-   ke instrumen yang sah paling lambat 31 Maret ${year + 1}.`;
-  } else if (selisihTahun === 1) {
-    guide = `Status:  Tahun Ke-1 - Laporan Realisasi Investasi Wajib Disampaikan
-   Langkah 1 - e-Pelaporan Laporan Realisasi Investasi (paling lambat 31 Maret ${globalSimulatedYear}):
-   - Login Coretax di coretaxdjp.pajak.go.id
-   - Pilih menu: e-Pelaporan -> Laporan Realisasi Investasi Dividen
-   - Isi kolom "Pelaporan Ke-": 1
-   - Jumlah Diinvestasikan: ${formatMoney(invested)}
-   - Jenis Penghasilan: ${kind}
-   - Pemberi Penghasilan: ${record.transactionType === "foreign_dividend" ? `${record.namaAset} - Pluang` : record.namaAset}
-   Langkah 2 - SPT Tahunan ${year}:
-   - Masukkan ${formatMoney(record.transactionType === "foreign_dividend" ? values.netIdr : invested)} ke Lampiran L-2 Bagian B
-     (Penghasilan yang Tidak Termasuk Objek Pajak).`;
-  } else if (selisihTahun === 2 || selisihTahun === 3) {
-    guide = `Status:  Tahun Ke-${selisihTahun} - Masa Pantauan Rutin
-   Langkah 1 - e-Pelaporan Laporan Realisasi Investasi (paling lambat 31 Maret ${globalSimulatedYear}):
-   - Pilih menu: e-Pelaporan -> Laporan Realisasi Investasi Dividen
-   - Isi kolom "Pelaporan Ke-": ${selisihTahun}
-   - Konfirmasi dana masih terparkir di instrumen investasi yang sah.
-   Langkah 2 - SPT Tahunan ${year}:
-   JANGAN input ulang nominal di Lampiran L-2 Bagian B.
-   Penghasilan bebas pajak ini sudah dilaporkan di SPT Tahun Ke-1.
-   Cukup pastikan Laporan Realisasi Investasi tersampaikan.`;
-  } else {
-    guide = `Status:  BEBAS PENUH - Masa Karantina Selesai
-   - Kewajiban holding period berakhir per 31 Desember ${year + 3}.
-   - Dana bebas dicairkan atau dipindahkan tanpa konsekuensi pajak tambahan.
-   - Tidak ada lagi kewajiban Laporan Realisasi Investasi untuk dividen ini.`;
-  }
-
-  if (record.transactionType === "local_dividend" && values.sisaKena > 0) {
-    guide += `
-
-   Langkah 3 - Bayar & Lapor PPh Final 10% atas Sisa Tidak Direinvestasikan:
-   - Buka Coretax -> modul e-Bupot -> Penyetoran Sendiri
-     -> klik "+Create e-Bupot SP"
-   - Pilih masa pajak: bulan dividen diterima
-   - Jenis penghasilan: "Dividen yang Diterima/Diperoleh WP OP Dalam Negeri"
-   - DPP (Dasar Pengenaan Pajak): ${formatMoney(values.sisaKena)}
-   - Sistem akan generate kode billing KAP 411128 - KJS 100 secara otomatis.
-   - Bayar paling lambat tanggal 15 bulan berikutnya
-     (Pasal 373 ayat 2 PMK 81/2024).
-   - Sampaikan SPT Masa PPh Unifikasi di e-Bupot paling lambat
-     tanggal 20 bulan berikutnya. Denda keterlambatan Rp 100.000
-     per PMK 81/2024.
-   - Di akhir tahun: laporkan ${formatMoney(values.sisaKena)} ke Lampiran L-1
-     SPT Tahunan (bersifat Final, tidak gabung ke penghasilan progresif).`;
-  }
-  return guide;
-}
-
-function buildTaxvestOutput(record) {
-  const selisihTahun = globalSimulatedYear - record.tahunPajak;
-  if (record.transactionType === "local_dividend") {
-    const nominalReinvest = record.isSeluruhnyaReinvest ? record.bruto : record.nominalReinvest;
-    const porsiBebas = nominalReinvest;
-    const sisaKena = Math.max(0, record.bruto - nominalReinvest);
-    const pajak = sisaKena * 0.1;
-    return `HASIL SIMULASI PAJAK - TAHUN PAJAK ${record.tahunPajak}
-[Dianalisis pada Tahun Simulasi: ${globalSimulatedYear} | selisihTahun = ${selisihTahun} tahun]
-
-1. Rangkuman Transaksi
-   - Jenis Transaksi : Dividen Saham Lokal (Stockbit - Rupiah)
-   - Aset & Platform : ${record.namaAset} di Stockbit
-   - Nominal Asli    : ${formatMoney(record.bruto)}
-
-2. Status Pajak & Perhitungan
-   - Total Dividen Bruto              : ${formatMoney(record.bruto)}
-   - Porsi Bebas Pajak (Reinvest)     : ${formatMoney(porsiBebas)}
-   - Porsi Kena Pajak (Sisa)          : ${formatMoney(sisaKena)}
-   - Pajak Terutang (10%)             : ${formatMoney(pajak)} (PPh Final Pasal 4 ayat 2)
-   - Catatan Status:
-     ${pajak === 0 ? "Seluruh dividen dialokasikan untuk reinvestasi. Tidak ada sisa kena pajak." : `Sisa dana sebesar ${formatMoney(sisaKena)} wajib dibayar pajaknya secara mandiri.`}
-
-3. Panduan Pengisian di Coretax DJP
-   ${taxvestCoretaxDividendGuide(record, { porsiBebas, sisaKena })}`;
-  }
-
-  if (record.transactionType === "foreign_dividend") {
-    const brutoIdr = record.brutoUSD * record.kursKMK;
-    const whtUsd = record.brutoUSD * 0.15;
-    const whtIdr = brutoIdr * 0.15;
-    const netIdr = brutoIdr - whtIdr;
-    const reinvestLabel = record.isSeluruhnyaReinvest ? "REINVESTASI" : "TIDAK DIREINVESTASI";
-    return `HASIL SIMULASI PAJAK - TAHUN PAJAK ${record.tahunPajak}
-[Dianalisis pada Tahun Simulasi: ${globalSimulatedYear} | selisihTahun = ${selisihTahun} tahun]
-
-1. Rangkuman Transaksi
-   - Jenis Transaksi : Dividen ETF Luar Negeri (Pluang - USD) - ${reinvestLabel}
-   - Aset & Platform : ${record.namaAset} di Pluang
-   - Nominal Asli    : ${formatTaxvestUsd(record.brutoUSD)} USD
-
-2. Status Pajak & Perhitungan
-   - Bruto USD                        : ${formatTaxvestUsd(record.brutoUSD)}
-   - Bruto IDR (@ kurs ${formatMoney(record.kursKMK).replace("Rp", "").trim()})     : ${formatMoney(brutoIdr)}
-   - Withholding Tax AS 15%           : ${formatTaxvestUsd(whtUsd)} (${formatMoney(whtIdr)})
-   - Net Dana Bersih Diterima         : ${formatMoney(netIdr)}
-   ${record.isSeluruhnyaReinvest
-      ? `- Status Pajak di Indonesia        : BEBAS PAJAK 0%
-                                        (Fasilitas UU Cipta Kerja - PMK 18/2021)
-   - Jumlah Wajib Direinvestasi       : ${formatMoney(brutoIdr)} (nilai BRUTO penuh)
-   - CATATAN PENTING: Anda wajib menombok dana mandiri sebesar
-     ${formatMoney(whtIdr)} untuk menggenapi potongan pajak AS, agar total
-     yang diinvestasikan mencapai nilai bruto ${formatMoney(brutoIdr)} dan sah
-     berstatus bebas pajak 100% (PMK 18/2021 Pasal 4).
-   - Pajak AS (WHT 15%)               : TIDAK DAPAT dikreditkan ke PPh 24.
-                                        Hangus karena status bebas pajak 0% di Indonesia.`
-      : `- Status Pajak di Indonesia        : OBJEK PAJAK NON-FINAL
-                                        (Digabung ke PPh Pasal 17 Progresif)
-   - Kredit Pajak PPh 24              : ${formatMoney(whtIdr)} DAPAT DIKREDITKAN
-                                        sebagai diskon pajak berganda di formulir induk.`}
-
-3. Panduan Pengisian di Coretax DJP
-   ${taxvestCoretaxDividendGuide(record, { brutoIdr, whtIdr, netIdr })}`;
-  }
-
-  const gainLoss = record.hargaJual - record.hargaBeli;
-  if (record.assetType === "local") {
-    return `HASIL SIMULASI PAJAK - TAHUN PAJAK ${record.tahunPajak}
-
-1. Rangkuman Transaksi
-   - Jenis Transaksi : Penjualan Saham Lokal (Stockbit)
-   - Aset & Platform : ${record.namaAset} di Stockbit
-   - Harga Beli Total: ${formatMoney(record.hargaBeli)}
-   - Harga Jual Total: ${formatMoney(record.hargaJual)}
-
-2. Status Pajak & Perhitungan
-   - Harga Jual Total (Bruto)         : ${formatMoney(record.hargaJual)}
-   - Harga Beli Total                 : ${formatMoney(record.hargaBeli)}
-   - Net Gain/Loss                    : ${formatMoney(gainLoss)}
-                                        (${gainLoss >= 0 ? "Untung" : "Rugi"})
-   - PPh Final 0.1% dari nilai jual   : ${formatMoney(record.hargaJual * 0.001)}
-   - Status                           : DIPOTONG OTOMATIS oleh Stockbit
-                                        saat transaksi berlangsung.
-   - Catatan: Pajak 0.1% dihitung dari NILAI JUAL BRUTO,
-     bukan dari keuntungan. Berlaku baik saat untung maupun rugi.
-
-3. Panduan Pengisian di Coretax DJP
-   Menu e-Pelaporan: TIDAK PERLU.
-   Langkah 1 - SPT Tahunan ${record.tahunPajak}:
-   - Masukkan total nilai penjualan bruto ${formatMoney(record.hargaJual)}
-     ke Lampiran L-1 (PPh Final - Bersifat Final).
-   - PPh 0.1% sudah dipotong otomatis, tidak perlu bayar manual.
-   Langkah 2 - Update Lampiran Daftar Harta:
-   - Hapus saham ${record.namaAset} senilai ${formatMoney(record.hargaBeli)} dari daftar harta.
-   - Tambahkan kas hasil penjualan ${formatMoney(record.hargaJual)} ke kategori
-     Kas/RDN (Kode Harta 012 atau 019) per 31 Desember ${record.tahunPajak}.`;
-  }
-
-  return gainLoss >= 0
-    ? `HASIL SIMULASI PAJAK - TAHUN PAJAK ${record.tahunPajak}
-
-1. Rangkuman Transaksi
-   - Jenis Transaksi : Penjualan ETF Luar Negeri (Pluang) - CAPITAL GAIN
-   - Aset & Platform : ${record.namaAset} di Pluang
-   - Harga Beli Total: ${formatMoney(record.hargaBeli)}
-   - Harga Jual Total: ${formatMoney(record.hargaJual)}
-
-2. Status Pajak & Perhitungan
-   - Harga Jual Total                 : ${formatMoney(record.hargaJual)}
-   - Harga Beli Total                 : ${formatMoney(record.hargaBeli)}
-   - Net Gain / Loss                  : ${formatMoney(gainLoss)}  (Capital Gain)
-   - Objek Pajak Non-Final            : ${formatMoney(gainLoss)}
-   - Status                           : Digabung ke Penghasilan Progresif
-                                        PPh Pasal 17 di akhir tahun.
-
-3. Panduan Pengisian di Coretax DJP
-   Menu e-Pelaporan: TIDAK PERLU.
-   Langkah 1 - SPT Tahunan ${record.tahunPajak}:
-   - Masukkan keuntungan bersih ${formatMoney(gainLoss)} ke Lampiran L-2 Bagian C
-     (Penghasilan Neto Luar Negeri).
-   - Gabungkan dengan penghasilan lain di formulir induk untuk
-     dihitung tarif progresif PPh Pasal 17.
-   Langkah 2 - Update Lampiran Daftar Harta (WAJIB untuk semua penjualan):
-   - Hapus ETF ${record.namaAset} senilai ${formatMoney(record.hargaBeli)} dari daftar harta.
-   - Tambahkan kas hasil penjualan ${formatMoney(record.hargaJual)} ke kategori
-     Kas/Setara Kas/RDN (Kode Harta 012 atau 019)
-     per 31 Desember ${record.tahunPajak}.
-   Langkah ini wajib dilakukan agar tidak terdapat "aset siluman"
-   yang bisa memicu pemeriksaan DJP.`
-    : `HASIL SIMULASI PAJAK - TAHUN PAJAK ${record.tahunPajak}
-
-1. Rangkuman Transaksi
-   - Jenis Transaksi : Penjualan ETF Luar Negeri (Pluang) - CAPITAL LOSS
-   - Aset & Platform : ${record.namaAset} di Pluang
-   - Harga Beli Total: ${formatMoney(record.hargaBeli)}
-   - Harga Jual Total: ${formatMoney(record.hargaJual)}
-
-2. Status Pajak & Perhitungan
-   - Harga Jual Total                 : ${formatMoney(record.hargaJual)}
-   - Harga Beli Total                 : ${formatMoney(record.hargaBeli)}
-   - Net Gain / Loss                  : ${formatMoney(gainLoss)}  (Capital Loss / Rugi Bersih)
-   - Objek Pajak                      : Rp 0
-                                        (Nilai dikunci ke Rp 0 - tidak boleh minus)
-   - Status                           : TIDAK ADA PAJAK TERUTANG
-
-3. Panduan Pengisian di Coretax DJP
-   Menu e-Pelaporan: TIDAK PERLU.
-   Langkah 1 - SPT Tahunan ${record.tahunPajak}:
-   JANGAN masukkan apapun ke Lampiran L-2 Bagian C.
-   Sistem Coretax menolak validasi angka Rp 0 dan angka minus
-   di lampiran penghasilan luar negeri. Biarkan kolom ini kosong.
-   Langkah 2 - Update Lampiran Daftar Harta (WAJIB):
-   - Hapus ETF ${record.namaAset} senilai ${formatMoney(record.hargaBeli)} dari daftar harta.
-   - Tambahkan kas hasil penjualan ${formatMoney(record.hargaJual)} ke kategori
-     Kas/Setara Kas/RDN (Kode Harta 012 atau 019)
-     per 31 Desember ${record.tahunPajak}.
-   PENTING: Langkah Daftar Harta ini wajib dilakukan meskipun rugi.
-   Jika diabaikan, aset ETF lama masih tercatat di SPT sementara sudah
-   dijual - ini dapat memicu pertanyaan DJP soal aset yang tidak konsisten.`;
-}
-
-function renderTaxvest() {
-  const table = document.querySelector("#taxvestHistoryTable");
-  const badge = document.querySelector("#taxvestYearBadge");
-  const output = document.querySelector("#taxvestOutput");
-  const title = document.querySelector("#taxvestResultTitle");
-  const meta = document.querySelector("#taxvestResultMeta");
-  if (!table || !badge || !output) return;
-
-  badge.textContent = `TAHUN SIMULASI SAAT INI: ${globalSimulatedYear}`;
-  document.querySelectorAll("[data-taxvest-year]").forEach((button) => {
-    button.classList.toggle("active", Number(button.dataset.taxvestYear) === globalSimulatedYear);
-  });
-
-  const records = state.investments.taxvestRecords || [];
-  if (records.length && !records.some((record) => record.id === taxvestSelectedId)) {
-    taxvestSelectedId = records[0].id;
-  }
-  if (!records.length) taxvestSelectedId = null;
-  table.innerHTML = records.map((record, index) => `
-    <tr class="${record.id === taxvestSelectedId ? "active" : ""}" data-taxvest-row="${record.id}">
-      <td>${index + 1}</td>
-      <td>${record.tahunPajak}</td>
-      <td>${escapeHtml(taxvestTypeLabel(record))}</td>
-      <td>${escapeHtml(record.namaAset)}</td>
-      <td>${escapeHtml(record.platform)}</td>
-      <td>${formatMoney(taxvestNominal(record))}</td>
-      <td>
-        <div class="taxvest-row-actions">
-          <button class="taxvest-action" data-taxvest-view="${record.id}" type="button">Lihat</button>
-          <button class="taxvest-danger" data-taxvest-delete="${record.id}" type="button">Hapus</button>
-        </div>
-      </td>
-    </tr>
-  `).join("");
-
-  const selected = records.find((record) => record.id === taxvestSelectedId);
-  if (!selected) {
-    title.textContent = "HASIL SIMULASI PAJAK - TAHUN PAJAK -";
-    meta.textContent = `[Dianalisis pada Tahun Simulasi: ${globalSimulatedYear}]`;
-    output.textContent = "Pilih atau simpan transaksi untuk melihat hasil simulasi.";
-    return;
-  }
-  title.textContent = `HASIL SIMULASI PAJAK - TAHUN PAJAK ${selected.tahunPajak}`;
-  meta.textContent = `[Dianalisis pada Tahun Simulasi: ${globalSimulatedYear} | selisihTahun = ${globalSimulatedYear - selected.tahunPajak} tahun]`;
-  output.textContent = buildTaxvestOutput(selected);
-}
-
-function updateTaxvestConditionalFields() {
-  const type = document.querySelector("#taxvestTransactionType")?.value || "local_dividend";
-  const assetType = document.querySelector("#taxvestAssetType")?.value || "local";
-  document.querySelector("#taxvestLocalFields")?.classList.toggle("taxvest-hidden", type !== "local_dividend");
-  document.querySelector("#taxvestForeignFields")?.classList.toggle("taxvest-hidden", type !== "foreign_dividend");
-  document.querySelector("#taxvestSaleFields")?.classList.toggle("taxvest-hidden", type !== "sale");
-  document.querySelector("#taxvestSaleKursWrap")?.classList.toggle("taxvest-hidden", type !== "sale" || assetType !== "foreign");
-  const platform = document.querySelector("#taxvestPlatform");
-  if (platform) platform.value = type === "foreign_dividend" || (type === "sale" && assetType === "foreign") ? "Pluang" : "Stockbit";
-  const reinvestInput = document.querySelector("#taxvestLocalReinvest");
-  const fullLocal = document.querySelector("#taxvestLocalFullReinvest")?.checked;
-  if (reinvestInput) reinvestInput.disabled = Boolean(fullLocal);
-}
-
-function readTaxvestForm() {
-  const type = document.querySelector("#taxvestTransactionType").value;
-  const record = {
-    id: uid("taxvest"),
-    tahunPajak: Number(document.querySelector("#taxvestTaxYear").value),
-    transactionType: type,
-    namaAset: document.querySelector("#taxvestAssetName").value.trim() || "-",
-    platform: document.querySelector("#taxvestPlatform").value,
-    createdAt: new Date().toISOString(),
-  };
-  if (type === "local_dividend") {
-    record.bruto = parseNumberInput(document.querySelector("#taxvestLocalBruto").value);
-    record.isSeluruhnyaReinvest = document.querySelector("#taxvestLocalFullReinvest").checked;
-    record.nominalReinvest = record.isSeluruhnyaReinvest ? record.bruto : parseNumberInput(document.querySelector("#taxvestLocalReinvest").value);
-  } else if (type === "foreign_dividend") {
-    record.brutoUSD = Number(document.querySelector("#taxvestForeignBrutoUsd").value) || 0;
-    record.kursKMK = parseNumberInput(document.querySelector("#taxvestForeignKurs").value);
-    record.isSeluruhnyaReinvest = document.querySelector("#taxvestForeignFullReinvest").checked;
-  } else {
-    record.assetType = document.querySelector("#taxvestAssetType").value;
-    record.hargaBeli = parseNumberInput(document.querySelector("#taxvestHargaBeli").value);
-    record.hargaJual = parseNumberInput(document.querySelector("#taxvestHargaJual").value);
-    record.kursKMK = parseNumberInput(document.querySelector("#taxvestSaleKurs").value);
-  }
-  return normalizeTaxvestRecord(record);
-}
-
-function setupTaxvestEvents() {
-  const panel = document.querySelector("#investmentTabTaxvest");
-  if (!panel || panel.dataset.taxvestReady === "true") return;
-  panel.dataset.taxvestReady = "true";
-  updateTaxvestConditionalFields();
-
-  panel.querySelectorAll("input[inputmode='numeric']").forEach((input) => {
-    input.addEventListener("input", () => {
-      input.value = formatNumberInput(input.value);
-    });
-  });
-
-  panel.querySelector("#taxvestTransactionType")?.addEventListener("change", updateTaxvestConditionalFields);
-  panel.querySelector("#taxvestAssetType")?.addEventListener("change", updateTaxvestConditionalFields);
-  panel.querySelector("#taxvestLocalFullReinvest")?.addEventListener("change", updateTaxvestConditionalFields);
-  panel.querySelector("#taxvestYearButtons")?.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-taxvest-year]");
-    if (!button) return;
-    globalSimulatedYear = Number(button.dataset.taxvestYear);
-    renderTaxvest();
-  });
-  panel.querySelector("#taxvestReset")?.addEventListener("click", () => {
-    panel.querySelector("#taxvestForm")?.reset();
-    updateTaxvestConditionalFields();
-  });
-  panel.querySelector("#taxvestForm")?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const record = readTaxvestForm();
-    state.investments.taxvestRecords = [record, ...(state.investments.taxvestRecords || [])];
-    taxvestSelectedId = record.id;
-    saveState();
-    renderTaxvest();
-    try {
-      await persistTaxvestRecord(record);
-    } catch (error) {
-      setSyncStatus("Simpan TaxVest cloud gagal", "error");
-    }
-  });
-  panel.querySelector("#taxvestHistoryTable")?.addEventListener("click", async (event) => {
-    const deleteButton = event.target.closest("[data-taxvest-delete]");
-    const viewButton = event.target.closest("[data-taxvest-view]");
-    const row = event.target.closest("[data-taxvest-row]");
-    if (deleteButton) {
-      event.stopPropagation();
-      const id = deleteButton.dataset.taxvestDelete;
-      state.investments.taxvestRecords = (state.investments.taxvestRecords || []).filter((record) => record.id !== id);
-      if (taxvestSelectedId === id) taxvestSelectedId = state.investments.taxvestRecords[0]?.id || null;
-      saveState();
-      renderTaxvest();
-      try {
-        await deleteTaxvestRecordRemote(id);
-      } catch (error) {
-        setSyncStatus("Hapus TaxVest cloud gagal", "error");
-      }
-      return;
-    }
-    const id = viewButton?.dataset.taxvestView || row?.dataset.taxvestRow;
-    if (id) {
-      taxvestSelectedId = id;
-      renderTaxvest();
-    }
-  });
-}
-
 
 function setupInvestmentTabs() {
   const stack = document.querySelector(".investment-stack");
@@ -3849,7 +3117,6 @@ function setupInvestmentTabs() {
   const simulatorPanel = document.createElement("div");
   const actualPanel = document.createElement("div");
   const analysisPanel = document.createElement("div");
-  const taxvestPanel = createTaxvestPanel();
   simulatorPanel.id = "investmentTabSimulator";
   actualPanel.id = "investmentTabActual";
   analysisPanel.id = "investmentTabAnalysis";
@@ -3876,7 +3143,7 @@ function setupInvestmentTabs() {
   stack.insertBefore(stockToggles, stack.firstChild);
 
   const tabs = document.createElement("nav");
-  tabs.className = "investment-subtabs";
+  tabs.className = "investment-tabs";
   tabs.setAttribute("aria-label", "Sub-tab investasi");
   tabs.innerHTML = `
     <button class="active" data-investment-tab-button="simulator" type="button" aria-controls="investmentTabSimulator" aria-selected="true">
@@ -3887,9 +3154,6 @@ function setupInvestmentTabs() {
     </button>
     <button data-investment-tab-button="analysis" type="button" aria-controls="investmentTabAnalysis" aria-selected="false">
       Analisis Pembelian
-    </button>
-    <button data-investment-tab-button="taxvest" type="button" aria-controls="investmentTabTaxvest" aria-selected="false">
-      Smart TaxVest
     </button>
   `;
 
@@ -3957,7 +3221,7 @@ function setupInvestmentTabs() {
   const strategySurface = document.querySelector(".monthly-strategy-calculator")?.closest(".surface");
   const recordsSurface = document.querySelector(".investment-records-surface");
   stack.insertBefore(tabs, stack.firstElementChild);
-  stack.append(simulatorPanel, actualPanel, analysisPanel, taxvestPanel);
+  stack.append(simulatorPanel, actualPanel, analysisPanel);
   simulatorPanel.append(actualSyncBanner);
   [simulatorGrid, historySurface, dividendSurface].filter(Boolean).forEach((node) => simulatorPanel.append(node));
   divider?.remove();
@@ -3999,8 +3263,6 @@ function setupInvestmentTabs() {
   `;
   analysisPanel.append(rebalancingSurface);
   initKalkulatorPorsi();
-  setupTaxvestEvents();
-  renderTaxvest();
 
   el.programActualSyncBanner = document.querySelector("#programActualSyncBanner");
   el.programActualSyncTitle = document.querySelector("#programActualSyncTitle");
@@ -4037,7 +3299,7 @@ function setupInvestmentTabs() {
 }
 
 function switchInvestmentTab(tab) {
-  activeInvestmentTab = ["simulator", "actual", "analysis", "taxvest"].includes(tab) ? tab : "simulator";
+  activeInvestmentTab = ["simulator", "actual", "analysis"].includes(tab) ? tab : "simulator";
   document.querySelectorAll("[data-investment-tab-button]").forEach((button) => {
     const active = button.dataset.investmentTabButton === activeInvestmentTab;
     button.classList.toggle("active", active);
@@ -4058,9 +3320,6 @@ function switchInvestmentTab(tab) {
     }
     updateInvestmentInfo();
     updateInvestmentStockChart();
-  }
-  if (activeInvestmentTab === "taxvest") {
-    renderTaxvest();
   }
 }
 
@@ -4174,7 +3433,6 @@ function renderInvestments() {
   renderInvestmentSummary();
   updateInvestmentInfo();
   updateInvestmentStockChart();
-  renderTaxvest();
   investmentsDirty = false;
 }
 

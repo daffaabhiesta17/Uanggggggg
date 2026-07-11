@@ -55,7 +55,7 @@ button {
 }
 
 .sidebar {
-  background: #111827;
+  background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
   color: #f8fafc;
   padding: 24px;
   display: flex;
@@ -103,17 +103,34 @@ button {
 
 .nav-item {
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 12px 14px;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.02);
   color: #d1d5db;
   text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
 }
 
 .nav-item:hover,
 .nav-item.active {
-  background: #1f2937;
-  border-color: #334155;
+  background: rgba(37, 99, 235, 0.18);
+  border-color: rgba(96, 165, 250, 0.26);
+  color: #ffffff;
+}
+
+.nav-icon {
+  width: 24px;
+  display: inline-grid;
+  place-items: center;
+  color: #93c5fd;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.nav-item.active .nav-icon {
   color: #ffffff;
 }
 
@@ -153,7 +170,7 @@ button {
   background: transparent;
   border: 1px solid var(--line, #e2e8f0);
   color: var(--muted, #64748b);
-  font-size: 1.2rem;
+  font-size: 1rem;
   cursor: pointer;
   padding: 6px 11px;
   border-radius: 8px;
@@ -308,7 +325,7 @@ textarea:focus {
 .surface {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
   box-shadow: var(--shadow);
 }
 
@@ -683,7 +700,7 @@ th {
 
 .investment-stack {
   display: grid;
-  gap: 18px;
+  gap: 16px;
 }
 
 /* stock toggles */
@@ -691,12 +708,12 @@ th {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 14px;
+  padding: 12px 14px;
   border: 1px solid var(--line);
-  border-radius: 10px;
-  background: #fff;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #fff, #f8fbff);
   flex-wrap: wrap;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
 }
 
 .stock-toggles-label {
@@ -714,11 +731,11 @@ th {
 }
 
 .stock-toggle-btn {
-  min-height: 34px;
-  padding: 6px 16px;
-  border: 1.5px solid var(--line);
-  border-radius: 20px;
-  background: #f1f5f9;
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #f8fafc;
   color: var(--muted);
   font-size: 0.85rem;
   font-weight: 700;
@@ -774,7 +791,7 @@ th {
   gap: 8px;
   padding: 8px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 12px;
   background: #fff;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
   overflow-x: auto;
@@ -803,6 +820,40 @@ th {
   color: #1d4ed8;
 }
 
+.investment-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fff, #f8fbff);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+  overflow-x: auto;
+}
+
+.investment-tabs button {
+  min-height: 42px;
+  padding: 10px 14px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.investment-tabs button:hover {
+  border-color: var(--line);
+  background: #f8fafc;
+  color: var(--text);
+}
+
+.investment-tabs button.active {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
 .investment-tab-panel {
   display: none;
   gap: 18px;
@@ -817,7 +868,7 @@ th {
   gap: 6px;
   padding: 14px;
   border: 1px solid #bfdbfe;
-  border-radius: 8px;
+  border-radius: 12px;
   background: #eff6ff;
   color: #1d4ed8;
 }
@@ -851,7 +902,7 @@ th {
   gap: 12px;
   padding: 14px;
   border: 1px solid #bbf7d0;
-  border-radius: 8px;
+  border-radius: 12px;
   background: #f0fdf4;
 }
 
@@ -902,7 +953,7 @@ th {
   margin: 0;
   padding: 12px 14px;
   border: 1px solid #bfdbfe;
-  border-radius: 8px;
+  border-radius: 12px;
   background: #eff6ff;
   color: #1d4ed8;
   font-weight: 750;
@@ -996,7 +1047,7 @@ th {
   min-width: min(420px, 100%);
   padding: 12px 18px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 14px;
   background: linear-gradient(180deg, #ffffff, #f8fafc);
   box-shadow: 0 12px 26px rgba(15, 23, 42, 0.06);
   text-align: center;
@@ -1017,7 +1068,7 @@ th {
 
 .investment-simulator-grid {
   display: grid;
-  grid-template-columns: minmax(300px, 390px) minmax(0, 1fr);
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
   gap: 18px;
   align-items: start;
 }
@@ -1119,7 +1170,7 @@ th {
   gap: 10px;
   padding: 14px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 12px;
   background: #f8fafc;
 }
 

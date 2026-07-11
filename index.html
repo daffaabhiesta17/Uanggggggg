@@ -5,366 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Catatan Kas</title>
     <link rel="stylesheet" href="./styles.css" />
-    <style>
-      .taxvest-app {
-        --taxvest-navy: #0f172a;
-        --taxvest-indigo: #3730a3;
-        --taxvest-indigo-soft: #eef2ff;
-        --taxvest-emerald: #059669;
-        --taxvest-emerald-dark: #047857;
-        --taxvest-emerald-soft: #ecfdf5;
-        --taxvest-line: #cbd5e1;
-        --taxvest-muted: #64748b;
-        --taxvest-text: #111827;
-        --taxvest-danger: #dc2626;
-        display: grid;
-        gap: 18px;
-      }
-
-      .taxvest-card {
-        border: 1px solid var(--taxvest-line);
-        border-radius: 8px;
-        background: #ffffff;
-        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.07);
-      }
-
-      .taxvest-card-pad {
-        padding: 18px;
-      }
-
-      .taxvest-time-card {
-        display: grid;
-        gap: 14px;
-        border-color: #c7d2fe;
-        background: linear-gradient(135deg, #ffffff 0%, #eef2ff 100%);
-      }
-
-      .taxvest-time-head {
-        display: flex;
-        justify-content: space-between;
-        gap: 14px;
-        align-items: start;
-      }
-
-      .taxvest-time-head h3,
-      .taxvest-section-title,
-      .taxvest-result-card h3,
-      .taxvest-law h4 {
-        margin: 0;
-      }
-
-      .taxvest-time-head p,
-      .taxvest-law p,
-      .taxvest-law ul {
-        margin: 0;
-      }
-
-      .taxvest-year-badge {
-        padding: 10px 14px;
-        border-radius: 8px;
-        background: var(--taxvest-navy);
-        color: #ffffff;
-        font-size: clamp(1.05rem, 2vw, 1.45rem);
-        font-weight: 900;
-        letter-spacing: 0;
-        text-align: center;
-      }
-
-      .taxvest-year-buttons {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-      }
-
-      .taxvest-year-buttons button,
-      .taxvest-primary,
-      .taxvest-secondary,
-      .taxvest-action,
-      .taxvest-danger {
-        min-height: 40px;
-        border: 1px solid transparent;
-        border-radius: 8px;
-        padding: 10px 13px;
-        font-weight: 850;
-      }
-
-      .taxvest-year-buttons button {
-        background: #ffffff;
-        border-color: #c7d2fe;
-        color: var(--taxvest-indigo);
-      }
-
-      .taxvest-year-buttons button.active {
-        background: var(--taxvest-indigo);
-        color: #ffffff;
-      }
-
-      .taxvest-layout {
-        display: grid;
-        grid-template-columns: minmax(300px, 0.8fr) minmax(440px, 1.2fr);
-        gap: 18px;
-        align-items: start;
-      }
-
-      .taxvest-panel {
-        display: grid;
-        gap: 16px;
-      }
-
-      .taxvest-section-title {
-        color: var(--taxvest-navy);
-        font-size: 1rem;
-        font-weight: 900;
-      }
-
-      .taxvest-subcopy {
-        margin: 4px 0 0;
-        color: var(--taxvest-muted);
-        line-height: 1.55;
-      }
-
-      .taxvest-form,
-      .taxvest-fieldset {
-        display: grid;
-        gap: 14px;
-      }
-
-      .taxvest-grid-2 {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 12px;
-      }
-
-      .taxvest-field {
-        display: grid;
-        gap: 7px;
-        color: var(--taxvest-navy);
-        font-size: 0.86rem;
-        font-weight: 850;
-      }
-
-      .taxvest-field input,
-      .taxvest-field select {
-        width: 100%;
-        min-height: 42px;
-        border: 1px solid var(--taxvest-line);
-        border-radius: 8px;
-        padding: 10px 12px;
-        background: #ffffff;
-        color: var(--taxvest-text);
-      }
-
-      .taxvest-field input:focus,
-      .taxvest-field select:focus {
-        outline: 3px solid rgba(79, 70, 229, 0.16);
-        border-color: #818cf8;
-      }
-
-      .taxvest-field input:disabled {
-        background: #f1f5f9;
-        color: #94a3b8;
-      }
-
-      .taxvest-checkbox {
-        display: flex;
-        gap: 10px;
-        align-items: start;
-        padding: 12px;
-        border: 1px solid #dbeafe;
-        border-radius: 8px;
-        background: #f8fafc;
-        color: var(--taxvest-navy);
-        font-weight: 800;
-        line-height: 1.45;
-      }
-
-      .taxvest-checkbox input {
-        width: 18px;
-        height: 18px;
-        margin-top: 2px;
-        accent-color: var(--taxvest-emerald);
-      }
-
-      .taxvest-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-      }
-
-      .taxvest-primary {
-        background: var(--taxvest-emerald);
-        color: #ffffff;
-      }
-
-      .taxvest-primary:hover {
-        background: var(--taxvest-emerald-dark);
-      }
-
-      .taxvest-secondary {
-        background: #f1f5f9;
-        border-color: var(--taxvest-line);
-        color: var(--taxvest-navy);
-      }
-
-      .taxvest-right {
-        display: grid;
-        gap: 16px;
-      }
-
-      .taxvest-result-card {
-        display: grid;
-        gap: 10px;
-        border: 2px solid #4caf50;
-        border-radius: 8px;
-        background: #e8f5e9;
-        padding: 16px;
-      }
-
-      .taxvest-result-card h3 {
-        color: #14532d;
-        font-size: 1.05rem;
-        font-weight: 950;
-      }
-
-      .taxvest-result-meta {
-        margin: 0;
-        color: #166534;
-        font-weight: 800;
-      }
-
-      .taxvest-output {
-        margin: 0;
-        white-space: pre-wrap;
-        word-break: break-word;
-        color: #0f172a;
-        font: 0.9rem/1.55 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      }
-
-      .taxvest-empty {
-        margin: 0;
-        color: #166534;
-        line-height: 1.55;
-      }
-
-      .taxvest-history-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: start;
-        gap: 12px;
-        margin-bottom: 12px;
-      }
-
-      .taxvest-sync-pill {
-        display: inline-flex;
-        align-items: center;
-        min-height: 30px;
-        padding: 6px 10px;
-        border-radius: 8px;
-        background: var(--taxvest-indigo-soft);
-        color: var(--taxvest-indigo);
-        font-size: 0.78rem;
-        font-weight: 850;
-        white-space: nowrap;
-      }
-
-      .taxvest-table-wrap {
-        overflow: auto;
-        border: 1px solid var(--taxvest-line);
-        border-radius: 8px;
-      }
-
-      .taxvest-history-table {
-        width: 100%;
-        min-width: 780px;
-        border-collapse: collapse;
-        background: #ffffff;
-      }
-
-      .taxvest-history-table th,
-      .taxvest-history-table td {
-        padding: 11px 12px;
-        border-bottom: 1px solid #e2e8f0;
-        text-align: left;
-        vertical-align: middle;
-      }
-
-      .taxvest-history-table th {
-        background: #f8fafc;
-        color: var(--taxvest-navy);
-        font-size: 0.78rem;
-        text-transform: uppercase;
-      }
-
-      .taxvest-history-table tbody tr {
-        cursor: pointer;
-      }
-
-      .taxvest-history-table tbody tr:hover {
-        background: #f8fafc;
-      }
-
-      .taxvest-history-table tbody tr.active {
-        background: #ecfdf5;
-        outline: 2px solid #6ee7b7;
-        outline-offset: -2px;
-      }
-
-      .taxvest-row-actions {
-        display: flex;
-        gap: 8px;
-      }
-
-      .taxvest-action {
-        min-height: 34px;
-        padding: 7px 10px;
-        background: #eef2ff;
-        border-color: #c7d2fe;
-        color: var(--taxvest-indigo);
-      }
-
-      .taxvest-danger {
-        min-height: 34px;
-        padding: 7px 10px;
-        background: #fef2f2;
-        border-color: #fecaca;
-        color: var(--taxvest-danger);
-      }
-
-      .taxvest-law {
-        display: grid;
-        gap: 10px;
-        border-left: 4px solid var(--taxvest-indigo);
-        color: #334155;
-        font-size: 0.82rem;
-        line-height: 1.55;
-      }
-
-      .taxvest-law ul {
-        padding-left: 18px;
-      }
-
-      .taxvest-hidden {
-        display: none !important;
-      }
-
-      @media (max-width: 1120px) {
-        .taxvest-layout,
-        .taxvest-grid-2 {
-          grid-template-columns: 1fr;
-        }
-      }
-
-      @media (max-width: 680px) {
-        .taxvest-time-head,
-        .taxvest-history-head {
-          display: grid;
-        }
-
-        .taxvest-year-badge {
-          text-align: left;
-        }
-      }
-    </style>
   </head>
   <body>
     <div class="app-shell">
@@ -378,11 +18,11 @@
         </div>
 
         <nav class="nav-list" aria-label="Menu utama">
-          <button class="nav-item active" data-view="dashboard" type="button">Dashboard</button>
-          <button class="nav-item" data-view="transactions" type="button">Transaksi</button>
-          <button class="nav-item" data-view="categories" type="button">Tab & Jenis</button>
-          <button class="nav-item" data-view="investments" type="button">Investasi</button>
-          <button class="nav-item" data-view="tools" type="button">Tools</button>
+          <button class="nav-item active" data-view="dashboard" type="button"><span class="nav-icon" aria-hidden="true">&#8962;</span><span>Dashboard</span></button>
+          <button class="nav-item" data-view="transactions" type="button"><span class="nav-icon" aria-hidden="true">&#8646;</span><span>Transaksi</span></button>
+          <button class="nav-item" data-view="categories" type="button"><span class="nav-icon" aria-hidden="true">&#9635;</span><span>Tab & Jenis</span></button>
+          <button class="nav-item" data-view="investments" type="button"><span class="nav-icon" aria-hidden="true">&#9675;</span><span>Investasi</span></button>
+          <button class="nav-item" data-view="tools" type="button"><span class="nav-icon" aria-hidden="true">&#9881;</span><span>Tools</span></button>
         </nav>
 
         <div class="sidebar-panel">
@@ -1324,7 +964,7 @@
                     Tambah Saham
                     <input id="investmentTickerInput" type="text" maxlength="8" placeholder="Kode saham" />
                   </label>
-                  <button class="primary-button" type="submit">Tambah</button>
+                  <button class="primary-button" type="submit">Tambah Saham</button>
                 </form>
                 <div class="ticker-list" id="investmentTickerList"></div>
 
@@ -1350,7 +990,7 @@
                     <input id="investmentStockLots" type="number" min="1" step="1" placeholder="0" />
                   </label>
                   <button class="primary-button investment-submit" id="investmentStockSubmit" type="submit">Simpan Saham</button>
-                  <button class="icon-button" id="investmentStockCancelEdit" type="button" hidden>Batal Edit</button>
+                  <button class="icon-button" id="investmentStockCancelEdit" type="button" hidden aria-label="Batal edit saham">&times;</button>
                 </form>
 
                 <div class="table-scroll investment-table-scroll investment-stock-scroll">
@@ -1389,7 +1029,7 @@
                     <input id="investmentRdpuAmount" type="text" inputmode="numeric" placeholder="0" />
                   </label>
                   <button class="primary-button investment-submit" id="investmentRdpuSubmit" type="submit">Simpan RDPU</button>
-                  <button class="icon-button" id="investmentRdpuCancelEdit" type="button" hidden>Batal Edit</button>
+                  <button class="icon-button" id="investmentRdpuCancelEdit" type="button" hidden aria-label="Batal edit RDPU">&times;</button>
                 </form>
 
                 <div class="table-scroll investment-table-scroll investment-rdpu-scroll">
@@ -1510,7 +1150,6 @@
                   <tbody id="investmentSummaryTable"></tbody>
                 </table>
               </div>
-            </section>
             </section>
           </div>
         </section>
