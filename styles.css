@@ -1068,20 +1068,30 @@ th {
 
 .investment-simulator-grid {
   display: grid;
-  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  grid-template-columns: minmax(300px, 330px) minmax(0, 1fr);
   gap: 18px;
   align-items: start;
 }
 
 .investment-simulator-form {
   display: grid;
-  gap: 14px;
+  gap: 10px;
+  align-content: start;
+}
+
+.investment-simulator-form > .section-head {
+  margin-bottom: 0;
+  padding-bottom: 2px;
+}
+
+.investment-simulator-form > .simulator-sync-banner {
+  margin-top: 2px;
 }
 
 .simulator-setting-group {
   display: grid;
-  gap: 12px;
-  padding-top: 14px;
+  gap: 8px;
+  padding-top: 10px;
   border-top: 1px solid var(--line);
 }
 
@@ -1092,17 +1102,17 @@ th {
 
 .simulator-setting-head {
   display: grid;
-  gap: 4px;
+  gap: 1px;
 }
 
 .simulator-setting-head strong {
   color: var(--text);
-  font-size: 0.94rem;
+  font-size: 0.9rem;
 }
 
 .simulator-setting-head small {
   color: var(--muted);
-  line-height: 1.45;
+  line-height: 1.3;
 }
 
 .investment-simulator-form.simulator-linked {
@@ -1112,8 +1122,8 @@ th {
 
 .simulator-sync-banner {
   display: grid;
-  gap: 4px;
-  padding: 12px;
+  gap: 3px;
+  padding: 10px 12px;
   border: 1px solid #bfdbfe;
   border-radius: 8px;
   background: #eff6ff;
@@ -1130,27 +1140,44 @@ th {
 
 .simulator-dividend-note {
   display: grid;
-  gap: 8px;
-  padding: 12px;
+  gap: 5px;
+  padding: 10px;
   border: 1px solid #bfdbfe;
   border-radius: 8px;
   background: #eff6ff;
   color: #1d4ed8;
 }
 
-.simulator-dividend-note strong {
-  color: #1e3a8a;
+.price-change-panel,
+.allocation-control {
+  padding: 12px;
+}
+
+.price-change-panel {
+  gap: 10px;
+}
+
+.custom-lot-presets,
+.custom-lot-summary,
+.allocation-values {
+  gap: 8px;
+}
+
+.custom-lot-presets button,
+.custom-lot-summary article,
+.allocation-values article {
+  padding: 9px 10px;
 }
 
 .simulator-dividend-note ul {
   display: grid;
-  gap: 6px;
+  gap: 3px;
   margin: 0;
   padding-left: 18px;
 }
 
 .simulator-dividend-note li {
-  line-height: 1.45;
+  line-height: 1.3;
 }
 
 .investment-simulator-results {
@@ -1168,7 +1195,7 @@ th {
 .allocation-control {
   display: grid;
   gap: 10px;
-  padding: 14px;
+  padding: 12px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: #f8fafc;
@@ -1524,12 +1551,12 @@ input:disabled {
 
 .investment-records-surface {
   display: grid;
-  gap: 18px;
+  gap: 14px;
 }
 
 .investment-records-section {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .investment-inline-form {
@@ -1586,13 +1613,13 @@ input:disabled {
 
 .monthly-strategy-calculator {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .monthly-strategy-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
-  gap: 16px;
+  gap: 12px;
   align-items: start;
 }
 
@@ -1608,25 +1635,25 @@ input:disabled {
 .monthly-strategy-header p {
   margin-top: 6px;
   color: var(--muted);
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .monthly-strategy-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.75fr);
-  gap: 16px;
+  gap: 12px;
   align-items: start;
 }
 
 .monthly-strategy-controls {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .monthly-strategy-block {
   display: grid;
-  gap: 12px;
-  padding: 14px;
+  gap: 10px;
+  padding: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #f8fafc;
@@ -1656,17 +1683,17 @@ input:disabled {
 
 .monthly-strategy-title small {
   color: var(--muted);
-  line-height: 1.5;
+  line-height: 1.35;
 }
 
 .monthly-strategy-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(140px, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .monthly-extra-toggle {
-  padding: 12px;
+  padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
@@ -1677,7 +1704,7 @@ input:disabled {
 }
 
 .monthly-sync-toggle {
-  padding: 12px;
+  padding: 10px 12px;
   border: 1px solid #bfdbfe;
   border-radius: 8px;
   background: #eff6ff;
@@ -1827,8 +1854,8 @@ input:disabled {
 
 .investment-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.85fr);
+  gap: 14px;
   align-items: start;
 }
 
@@ -1840,7 +1867,7 @@ input:disabled {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 14px 0;
+  margin: 10px 0;
 }
 
 .ticker-chip {
@@ -1869,13 +1896,13 @@ input:disabled {
 
 .investment-form {
   display: grid;
-  grid-template-columns: repeat(5, minmax(120px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(5, minmax(110px, 1fr));
+  gap: 8px;
   align-items: end;
 }
 
 .investment-form.rdpu-form {
-  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  grid-template-columns: repeat(3, minmax(110px, 1fr));
 }
 
 .investment-submit {
@@ -1883,8 +1910,8 @@ input:disabled {
 }
 
 .investment-table-scroll {
-  margin-top: 6px;
-  max-height: 336px;
+  margin-top: 4px;
+  max-height: 300px;
   overflow: auto;
   border-bottom: 1px solid var(--line);
 }
@@ -1914,8 +1941,8 @@ input:disabled {
 
 .investment-info-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
-  gap: 18px;
+  grid-template-columns: minmax(0, 1.25fr) minmax(240px, 0.8fr);
+  gap: 14px;
 }
 
 .investment-info-title {
@@ -1929,7 +1956,7 @@ input:disabled {
 .investment-info-cards {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .rdpu-info-cards {
@@ -1937,7 +1964,7 @@ input:disabled {
 }
 
 .investment-info-cards .metric {
-  padding: 14px;
+  padding: 12px;
 }
 
 .investment-info-cards .metric strong {
