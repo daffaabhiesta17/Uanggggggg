@@ -999,7 +999,7 @@ function formatInvestmentDate(purchase) {
 }
 
 function readNumber(input, fallback = 0) {
-  const value = parseNumberInput(input.value);
+  const value = Number(input.value);
   return Number.isFinite(value) ? value : fallback;
 }
 
@@ -3131,13 +3131,13 @@ function setupInvestmentTabs() {
   stockToggles.className = "stock-toggles";
   stockToggles.setAttribute("aria-label", "Saham aktif");
   stockToggles.innerHTML = `
-    <span class="stock-toggles-label">Filter saham aktif</span>
+    <span class="stock-toggles-label">Saham Aktif</span>
     <div class="stock-toggle-group" id="stockToggleGroup">
       <button class="stock-toggle-btn active" data-stock-toggle="BMRI" type="button" aria-pressed="true">BMRI</button>
       <button class="stock-toggle-btn active" data-stock-toggle="ICBP" type="button" aria-pressed="true">ICBP</button>
       <button class="stock-toggle-btn active" data-stock-toggle="BBRI" type="button" aria-pressed="true">BBRI</button>
     </div>
-    <small class="stock-toggles-hint">Minimal 1 aktif. Data nonaktif tetap tersimpan.</small>
+    <small class="stock-toggles-hint">Minimal 1 saham aktif. Data saham non-aktif tetap tersimpan.</small>
   `;
 
   stack.insertBefore(stockToggles, stack.firstChild);
@@ -3147,13 +3147,13 @@ function setupInvestmentTabs() {
   tabs.setAttribute("aria-label", "Sub-tab investasi");
   tabs.innerHTML = `
     <button class="active" data-investment-tab-button="simulator" type="button" aria-controls="investmentTabSimulator" aria-selected="true">
-      Proyeksi
+      Program 1: Proyeksi 180 Bulan
     </button>
     <button data-investment-tab-button="actual" type="button" aria-controls="investmentTabActual" aria-selected="false">
-      Catatan
+      Catatan Aktual
     </button>
     <button data-investment-tab-button="analysis" type="button" aria-controls="investmentTabAnalysis" aria-selected="false">
-      Analisis
+      Analisis Pembelian
     </button>
   `;
 
@@ -3163,10 +3163,10 @@ function setupInvestmentTabs() {
   actualSyncBanner.setAttribute("aria-live", "polite");
   actualSyncBanner.innerHTML = `
     <div>
-      <strong id="programActualSyncTitle">Sinkron aktif</strong>
-      <span id="programActualSyncText">Data aktual dipakai saat bulan cocok.</span>
+      <strong id="programActualSyncTitle">Sinkron Program 2 aktif</strong>
+      <span id="programActualSyncText">Data aktual Program 2 akan dipakai saat periodenya cocok.</span>
     </div>
-    <small id="programActualSyncMeta">Bulan kosong tetap memakai konfigurasi proyeksi.</small>
+    <small id="programActualSyncMeta">Bulan kosong berikutnya memakai konfigurasi simulator.</small>
   `;
 
   const actualMonthSummary = document.createElement("section");
@@ -3176,12 +3176,12 @@ function setupInvestmentTabs() {
   actualMonthSummary.innerHTML = `
     <div class="actual-month-head">
       <div>
-        <span>Ringkasan bulan ini</span>
+        <span>Aktual bulan ini</span>
         <strong id="investmentActualMonthTitle">Aktual bulan ini</strong>
         <small id="investmentActualMonthMeta">Belum ada catatan aktual untuk bulan ini.</small>
       </div>
       <article>
-        <span>Dipakai proyeksi</span>
+        <span>Dipakai oleh Program 1</span>
         <strong id="investmentActualUsed">Belum ada data aktual</strong>
       </article>
     </div>
@@ -3203,7 +3203,7 @@ function setupInvestmentTabs() {
         <strong id="investmentActualRdpu">Rp0</strong>
       </article>
       <article>
-        <span>Total aktual</span>
+        <span>Total Aktual</span>
         <strong id="investmentActualTotal">Rp0</strong>
       </article>
     </div>
@@ -3238,11 +3238,13 @@ function setupInvestmentTabs() {
   const rebalancingSurface = document.createElement("section");
   rebalancingSurface.className = "surface";
   rebalancingSurface.innerHTML = `
-    <div class="section-head compact">
-      <h3>Analisis Portofolio</h3>
-      <p>Kalkulator komposisi untuk melihat porsi saham dan ETF.</p>
+    <div class="surface-head">
+      <div>
+        <small>Analisis Portofolio</small>
+        <strong>Kalkulator Komposisi Portofolio</strong>
+      </div>
     </div>
-    <p class="kalc-desc">Masukkan nilai saham dan ETF untuk melihat total portofolio dan persentase masing-masing.</p>
+    <p class="kalc-desc">Masukkan nilai saham dan ETF Anda untuk melihat total portofolio dan persentase masing-masing.</p>
     <div class="kalc-layout">
       <div class="kalc-inputs">
         <label>
@@ -3594,14 +3596,8 @@ function initEvents() {
   el.investmentStockLotPrice.addEventListener("input", () => {
     el.investmentStockLotPrice.value = formatNumberInput(el.investmentStockLotPrice.value);
   });
-  el.investmentStockLotPrice.addEventListener("blur", () => {
-    el.investmentStockLotPrice.value = formatNumberInput(el.investmentStockLotPrice.value);
-  });
 
   el.investmentRdpuAmount.addEventListener("input", () => {
-    el.investmentRdpuAmount.value = formatNumberInput(el.investmentRdpuAmount.value);
-  });
-  el.investmentRdpuAmount.addEventListener("blur", () => {
     el.investmentRdpuAmount.value = formatNumberInput(el.investmentRdpuAmount.value);
   });
 
@@ -3701,7 +3697,7 @@ function initEvents() {
     el.investmentStockTicker.value = purchase.ticker;
     el.investmentStockMonth.value = String(purchase.month);
     el.investmentStockYear.value = String(purchase.year);
-    el.investmentStockLotPrice.value = formatNumberInput(purchase.lotPrice);
+    el.investmentStockLotPrice.value = String(purchase.lotPrice);
     el.investmentStockLots.value = String(purchase.lots);
     el.investmentStockSubmit.textContent = "Update Saham";
     el.investmentStockCancelEdit.hidden = false;
@@ -3719,7 +3715,7 @@ function initEvents() {
     editingRdpuPurchaseId = purchase.id;
     el.investmentRdpuMonth.value = String(purchase.month);
     el.investmentRdpuYear.value = String(purchase.year);
-    el.investmentRdpuAmount.value = formatNumberInput(purchase.amount);
+    el.investmentRdpuAmount.value = String(purchase.amount);
     el.investmentRdpuSubmit.textContent = "Update RDPU";
     el.investmentRdpuCancelEdit.hidden = false;
     el.investmentRdpuForm.scrollIntoView({ behavior: "smooth", block: "center" });
