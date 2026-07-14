@@ -18,11 +18,11 @@
         </div>
 
         <nav class="nav-list" aria-label="Menu utama">
-          <button class="nav-item active" data-view="dashboard" type="button"><span class="nav-icon" aria-hidden="true">&#8962;</span><span>Dashboard</span></button>
-          <button class="nav-item" data-view="transactions" type="button"><span class="nav-icon" aria-hidden="true">&#8646;</span><span>Transaksi</span></button>
-          <button class="nav-item" data-view="categories" type="button"><span class="nav-icon" aria-hidden="true">&#9635;</span><span>Tab & Jenis</span></button>
-          <button class="nav-item" data-view="investments" type="button"><span class="nav-icon" aria-hidden="true">&#9675;</span><span>Investasi</span></button>
-          <button class="nav-item" data-view="tools" type="button"><span class="nav-icon" aria-hidden="true">&#9881;</span><span>Tools</span></button>
+          <button class="nav-item active" data-view="dashboard" type="button">Dashboard</button>
+          <button class="nav-item" data-view="transactions" type="button">Transaksi</button>
+          <button class="nav-item" data-view="categories" type="button">Tab & Jenis</button>
+          <button class="nav-item" data-view="investments" type="button">Investasi</button>
+          <button class="nav-item" data-view="tools" type="button">Tools</button>
         </nav>
 
         <div class="sidebar-panel">
@@ -278,17 +278,17 @@
               <form class="surface investment-simulator-form" id="investmentSimulatorForm">
                 <div class="section-head compact">
                   <h3>Program 1: Proyeksi 180 Bulan</h3>
-                  <p>Atur asumsi inti simulator di satu panel.</p>
+                  <p>Bola salju saham BMRI, ICBP, BBRI, dan RDPU dengan pola beli selang-seling.</p>
                 </div>
                 <div class="simulator-sync-banner hidden" id="simulatorSyncBanner">
-                  <strong>Sinkron aktif</strong>
-                  <span id="simulatorSyncBannerText">Input bulanan mengikuti Program 2.</span>
+                  <strong>Terhubung ke Program 2</strong>
+                  <span id="simulatorSyncBannerText">Strategi bulanan sedang mengendalikan input simulator.</span>
                 </div>
 
                 <div class="simulator-setting-group">
                   <div class="simulator-setting-head">
-                    <strong>Periode & modal</strong>
-                    <small>Mulai simulasi dan setoran rutin.</small>
+                    <strong>1. Periode & Modal</strong>
+                    <small>Tentukan kapan simulasi dimulai dan besar setoran rutin.</small>
                   </div>
                   <label>
                     Total Setoran Bulanan
@@ -321,8 +321,8 @@
 
                 <div class="simulator-setting-group">
                   <div class="simulator-setting-head">
-                    <strong>Harga & pola beli</strong>
-                    <small>Harga awal, mode beli, dan target lot.</small>
+                    <strong>2. Harga & Pola Beli</strong>
+                    <small>Atur harga awal, pola pembelian, dan target lot jika memakai custom.</small>
                   </div>
                   <div class="input-pair">
                     <label>
@@ -346,167 +346,171 @@
                       <option value="custom">Custom lot bulanan</option>
                     </select>
                   </label>
+
+                  <div class="simulator-dividend-note">
+                    <strong>Sistem dividen simulator</strong>
+                    <ul>
+                      <li>Selang-seling: dividen cair menambah kas untuk beli saham sesuai giliran bulan itu.</li>
+                      <li>Custom lot: dividen membantu mencapai target lot bulanan. Jika reinvest ON, sisa dividen setelah target akan membeli lot tambahan.</li>
+                      <li>Jika Program 2 tersambung, simulator memakai custom lot dari Program 2. Dividen manual Program 2 tidak dikirim agar tidak dobel hitung.</li>
+                    </ul>
+                  </div>
+
+                  <div class="price-change-panel custom-lot-panel hidden" id="simCustomLotPanel">
+                    <div class="custom-lot-copy">
+                      <strong>Target lot per bulan</strong>
+                      <small>Seluruh setoran bulanan dipakai untuk target lot dulu, lalu sisa kas masuk RDPU. Jika kas bulan itu tidak cukup, simulator hanya membeli lot yang terjangkau.</small>
+                    </div>
+                    <label class="switch-row custom-dividend-toggle">
+                      <span>
+                        <strong>Reinvest dividen setelah target terpenuhi</strong>
+                        <small>ON: dividen cair tetap dipakai membeli lot tambahan dengan pola target custom. OFF: sisa setelah target masuk RDPU.</small>
+                      </span>
+                      <input id="simReinvestCustomDividends" type="checkbox" />
+                      <span class="switch-control" aria-hidden="true"></span>
+                    </label>
+                    <div class="custom-lot-presets" aria-label="Preset custom lot">
+                      <button type="button" data-sim-lot-preset="2-1-1">
+                        <strong>2 + 1 + 1</strong>
+                        <span>BMRI 2 lot, ICBP 1 lot, BBRI 1 lot</span>
+                      </button>
+                      <button type="button" data-sim-lot-preset="3-1-1">
+                        <strong>3 + 1 + 1</strong>
+                        <span>BMRI 3 lot, ICBP 1 lot, BBRI 1 lot</span>
+                      </button>
+                    </div>
+                    <div class="input-pair">
+                      <label>
+                        BMRI Lot / Bulan
+                        <input id="simBmriMonthlyLots" type="number" min="0" step="1" value="1" />
+                      </label>
+                      <label>
+                        ICBP Lot / Bulan
+                        <input id="simIcbpMonthlyLots" type="number" min="0" step="1" value="1" />
+                      </label>
+                      <label>
+                        BBRI Lot / Bulan
+                        <input id="simBbriMonthlyLots" type="number" min="0" step="1" value="1" />
+                      </label>
+                    </div>
+                    <div class="custom-lot-summary" aria-live="polite">
+                      <article>
+                        <span>BMRI terbeli</span>
+                        <strong id="simCustomBmriPurchase">0 lot - Rp0</strong>
+                      </article>
+                      <article>
+                        <span>ICBP terbeli</span>
+                        <strong id="simCustomIcbpPurchase">0 lot - Rp0</strong>
+                      </article>
+                      <article>
+                        <span>BBRI terbeli</span>
+                        <strong id="simCustomBbriPurchase">0 lot - Rp0</strong>
+                      </article>
+                      <article>
+                        <span>Total saham</span>
+                        <strong id="simCustomStockPurchase">Rp0</strong>
+                      </article>
+                      <article>
+                        <span>Masuk RDPU</span>
+                        <strong id="simCustomRdpuPurchase">Rp0</strong>
+                      </article>
+                    </div>
+                    <small class="custom-lot-status" id="simCustomLotStatus">Bulan normal tanpa dividen.</small>
+                  </div>
+
+                  <div class="allocation-control">
+                    <div class="row-between">
+                      <label for="simStockAllocation">Alokasi Saham</label>
+                      <div class="allocation-number">
+                        <input id="simStockAllocationNumber" type="number" min="0" max="100" step="1" value="80" />
+                        <span>%</span>
+                      </div>
+                    </div>
+                    <input id="simStockAllocation" type="range" min="0" max="100" step="1" value="80" />
+                    <div class="row-between allocation-meta">
+                      <span>RDPU otomatis</span>
+                      <strong id="simRdpuAllocationLabel">20%</strong>
+                    </div>
+                    <div class="allocation-values">
+                      <article>
+                        <span>Nominal Saham</span>
+                        <strong id="simStockAllocationAmount">Rp0</strong>
+                      </article>
+                      <article>
+                        <span>Nominal RDPU</span>
+                        <strong id="simRdpuAllocationAmount">Rp0</strong>
+                      </article>
+                    </div>
+                  </div>
                 </div>
 
-                <details class="simulator-advanced">
-                  <summary>
-                    <span>
-                      <strong>Detail simulasi</strong>
-                      <small>Custom lot, alokasi saham, asumsi harga, dan dividen.</small>
-                    </span>
-                  </summary>
-                  <div class="simulator-advanced-body">
-                    <div class="simulator-dividend-note">
-                      <strong>Catatan dividen</strong>
-                      <ul>
-                        <li>Selang-seling: dividen menambah kas beli.</li>
-                        <li>Custom lot: dividen mengejar target lalu sisa ke RDPU.</li>
-                        <li>Program 2 aktif akan mengambil custom lot dari data aktual.</li>
-                      </ul>
-                    </div>
+                <div class="simulator-setting-group">
+                  <div class="simulator-setting-head">
+                    <strong>3. Asumsi Harga</strong>
+                    <small>Aktifkan untuk membuat harga saham bergerak naik atau turun per tahun.</small>
+                  </div>
+                  <div class="price-change-panel" id="simPriceChangePanel">
+                    <label class="switch-row" id="simPriceChangeToggle">
+                      <span>
+                        <strong>Aktifkan kenaikan / penurunan harga saham</strong>
+                        <small id="simPriceChangeStatus">Mati - harga saham tetap memakai harga awal.</small>
+                      </span>
+                      <input id="simEnablePriceChange" type="checkbox" />
+                      <span class="switch-control" aria-hidden="true"></span>
+                    </label>
 
-                    <div class="price-change-panel custom-lot-panel hidden" id="simCustomLotPanel">
-                      <div class="custom-lot-copy">
-                        <strong>Target custom</strong>
-                        <small>Setoran dipakai ke target lot dulu, lalu sisa masuk RDPU.</small>
-                      </div>
-                      <label class="switch-row custom-dividend-toggle">
-                        <span>
-                          <strong>Reinvest dividen</strong>
-                          <small>ON: sisa dividen beli lot tambahan. OFF: sisa ke RDPU.</small>
-                        </span>
-                        <input id="simReinvestCustomDividends" type="checkbox" />
-                        <span class="switch-control" aria-hidden="true"></span>
-                      </label>
-                      <div class="custom-lot-presets" aria-label="Preset custom lot">
-                        <button type="button" data-sim-lot-preset="2-1-1">
-                          <strong>2 + 1 + 1</strong>
-                          <span>BMRI 2 lot, ICBP 1 lot, BBRI 1 lot</span>
-                        </button>
-                        <button type="button" data-sim-lot-preset="3-1-1">
-                          <strong>3 + 1 + 1</strong>
-                          <span>BMRI 3 lot, ICBP 1 lot, BBRI 1 lot</span>
-                        </button>
-                      </div>
-                      <div class="input-pair">
-                        <label>
-                          BMRI Lot / Bulan
-                          <input id="simBmriMonthlyLots" type="number" min="0" step="1" value="1" />
-                        </label>
-                        <label>
-                          ICBP Lot / Bulan
-                          <input id="simIcbpMonthlyLots" type="number" min="0" step="1" value="1" />
-                        </label>
-                        <label>
-                          BBRI Lot / Bulan
-                          <input id="simBbriMonthlyLots" type="number" min="0" step="1" value="1" />
-                        </label>
-                      </div>
-                      <div class="custom-lot-summary" aria-live="polite">
-                        <article>
-                          <span>BMRI terbeli</span>
-                          <strong id="simCustomBmriPurchase">0 lot - Rp0</strong>
-                        </article>
-                        <article>
-                          <span>ICBP terbeli</span>
-                          <strong id="simCustomIcbpPurchase">0 lot - Rp0</strong>
-                        </article>
-                        <article>
-                          <span>BBRI terbeli</span>
-                          <strong id="simCustomBbriPurchase">0 lot - Rp0</strong>
-                        </article>
-                        <article>
-                          <span>Total saham</span>
-                          <strong id="simCustomStockPurchase">Rp0</strong>
-                        </article>
-                        <article>
-                          <span>Masuk RDPU</span>
-                          <strong id="simCustomRdpuPurchase">Rp0</strong>
-                        </article>
-                      </div>
-                      <small class="custom-lot-status" id="simCustomLotStatus">Bulan normal tanpa dividen.</small>
-                    </div>
-
-                    <div class="allocation-control">
-                      <div class="row-between">
-                        <label for="simStockAllocation">Alokasi Saham</label>
-                        <div class="allocation-number">
-                          <input id="simStockAllocationNumber" type="number" min="0" max="100" step="1" value="80" />
-                          <span>%</span>
-                        </div>
-                      </div>
-                      <input id="simStockAllocation" type="range" min="0" max="100" step="1" value="80" />
-                      <div class="row-between allocation-meta">
-                        <span>RDPU otomatis</span>
-                        <strong id="simRdpuAllocationLabel">20%</strong>
-                      </div>
-                      <div class="allocation-values">
-                        <article>
-                          <span>Nominal Saham</span>
-                          <strong id="simStockAllocationAmount">Rp0</strong>
-                        </article>
-                        <article>
-                          <span>Nominal RDPU</span>
-                          <strong id="simRdpuAllocationAmount">Rp0</strong>
-                        </article>
-                      </div>
-                    </div>
-
-                    <div class="price-change-panel" id="simPriceChangePanel">
-                      <label class="switch-row" id="simPriceChangeToggle">
-                        <span>
-                          <strong>Kenaikan / penurunan harga</strong>
-                          <small id="simPriceChangeStatus">Mati - harga saham tetap memakai harga awal.</small>
-                        </span>
-                        <input id="simEnablePriceChange" type="checkbox" />
-                        <span class="switch-control" aria-hidden="true"></span>
-                      </label>
-
-                      <div class="input-pair price-change-fields" id="simPriceChangeFields">
-                        <label>
-                          BMRI % / Tahun
-                          <input id="simBmriPriceChange" type="number" step="0.1" value="5" disabled />
-                        </label>
-                        <label>
-                          ICBP % / Tahun
-                          <input id="simIcbpPriceChange" type="number" step="0.1" value="5" disabled />
-                        </label>
-                        <label>
-                          BBRI % / Tahun
-                          <input id="simBbriPriceChange" type="number" step="0.1" value="5" disabled />
-                        </label>
-                      </div>
-                    </div>
-
-                    <div class="input-pair">
+                    <div class="input-pair price-change-fields" id="simPriceChangeFields">
                       <label>
-                        Return RDPU / Tahun
-                        <input id="simRdpuReturn" type="number" min="0" step="0.01" value="4.14" />
+                        BMRI % / Tahun
+                        <input id="simBmriPriceChange" type="number" step="0.1" value="5" disabled />
                       </label>
                       <label>
-                        Growth Dividen / Tahun
-                        <input id="simDividendGrowth" type="number" min="0" step="0.1" value="5" />
-                      </label>
-                    </div>
-
-                    <div class="input-pair">
-                      <label>
-                        Dividen Awal BMRI / Lembar
-                        <input id="simBmriYield" type="text" inputmode="decimal" placeholder="206.5" value="206.5" />
+                        ICBP % / Tahun
+                        <input id="simIcbpPriceChange" type="number" step="0.1" value="5" disabled />
                       </label>
                       <label>
-                        Dividen Awal ICBP / Lembar
-                        <input id="simIcbpYield" type="text" inputmode="decimal" placeholder="390" value="390" />
-                      </label>
-                      <label>
-                        Dividen Awal BBRI / Lembar
-                        <input id="simBbriYield" type="text" inputmode="decimal" placeholder="235" value="235" />
+                        BBRI % / Tahun
+                        <input id="simBbriPriceChange" type="number" step="0.1" value="5" disabled />
                       </label>
                     </div>
                   </div>
-                </details>
+                </div>
 
-                <p class="simulator-note">Output utama: aset akhir, profit bersih, dan gaji pasif tahun 15.</p>
+                <div class="simulator-setting-group">
+                  <div class="simulator-setting-head">
+                    <strong>4. Return & Dividen</strong>
+                    <small>Input asumsi RDPU dan dividen tahunan untuk 180 bulan.</small>
+                  </div>
+                  <div class="input-pair">
+                    <label>
+                      Return RDPU / Tahun
+                      <input id="simRdpuReturn" type="number" min="0" step="0.01" value="4.14" />
+                    </label>
+                    <label>
+                      Growth Dividen / Tahun
+                      <input id="simDividendGrowth" type="number" min="0" step="0.1" value="5" />
+                    </label>
+                  </div>
+
+                  <div class="input-pair">
+                    <label>
+                      Dividen Awal BMRI / Lembar
+                      <input id="simBmriYield" type="text" inputmode="decimal" placeholder="206.5" value="206.5" />
+                    </label>
+                    <label>
+                      Dividen Awal ICBP / Lembar
+                      <input id="simIcbpYield" type="text" inputmode="decimal" placeholder="390" value="390" />
+                    </label>
+                    <label>
+                      Dividen Awal BBRI / Lembar
+                      <input id="simBbriYield" type="text" inputmode="decimal" placeholder="235" value="235" />
+                    </label>
+                  </div>
+                </div>
+
+                <p class="simulator-note">
+                  Jalur likuidasi memakai Aset Akhir dan Keuntungan Bersih. Jalur keep lot memakai Gaji Pasif Tahun 15 dan Saldo RDPU Akhir.
+                </p>
               </form>
 
               <div class="investment-simulator-results">
@@ -953,51 +957,41 @@
               <section class="investment-records-section">
                 <div class="section-head compact">
                   <h3>Pembelian Saham</h3>
-                  <p>Tambah atau ubah catatan saham per bulan.</p>
+                  <p>Default BMRI, ICBP, dan BBRI; saham lain bisa ditambahkan.</p>
                 </div>
-                <details class="investment-entry-accordion">
-                  <summary>
-                    <span>
-                      <strong>Input Saham</strong>
-                      <small>Tambah ticker lalu catat pembelian.</small>
-                    </span>
-                  </summary>
-                  <div class="investment-entry-body">
-                    <form class="investment-inline-form" id="investmentTickerForm">
-                      <label>
-                        Kode Saham
-                        <input id="investmentTickerInput" type="text" maxlength="8" placeholder="Kode saham" />
-                      </label>
-                      <button class="primary-button" type="submit">Tambah</button>
-                    </form>
-                    <div class="ticker-list" id="investmentTickerList"></div>
+                <form class="investment-inline-form" id="investmentTickerForm">
+                  <label>
+                    Tambah Saham
+                    <input id="investmentTickerInput" type="text" maxlength="8" placeholder="Kode saham" />
+                  </label>
+                  <button class="primary-button" type="submit">Tambah</button>
+                </form>
+                <div class="ticker-list" id="investmentTickerList"></div>
 
-                    <form class="investment-form" id="investmentStockForm">
-                      <label>
-                        Saham
-                        <select id="investmentStockTicker"></select>
-                      </label>
-                      <label>
-                        Bulan
-                        <select id="investmentStockMonth"></select>
-                      </label>
-                      <label>
-                        Tahun
-                        <select id="investmentStockYear"></select>
-                      </label>
-                      <label>
-                        Harga / Lot
-                        <input id="investmentStockLotPrice" type="text" inputmode="numeric" placeholder="0" />
-                      </label>
-                      <label>
-                        Jumlah Lot
-                        <input id="investmentStockLots" type="number" min="1" step="1" placeholder="0" />
-                      </label>
-                      <button class="primary-button investment-submit" id="investmentStockSubmit" type="submit">Simpan</button>
-                      <button class="icon-button" id="investmentStockCancelEdit" type="button" hidden aria-label="Batal edit saham">&times;</button>
-                    </form>
-                  </div>
-                </details>
+                <form class="investment-form" id="investmentStockForm">
+                  <label>
+                    Saham
+                    <select id="investmentStockTicker"></select>
+                  </label>
+                  <label>
+                    Bulan
+                    <select id="investmentStockMonth"></select>
+                  </label>
+                  <label>
+                    Tahun
+                    <select id="investmentStockYear"></select>
+                  </label>
+                  <label>
+                    Harga / Lot
+                    <input id="investmentStockLotPrice" type="text" inputmode="numeric" placeholder="0" />
+                  </label>
+                  <label>
+                    Jumlah Lot
+                    <input id="investmentStockLots" type="number" min="1" step="1" placeholder="0" />
+                  </label>
+                  <button class="primary-button investment-submit" id="investmentStockSubmit" type="submit">Simpan Saham</button>
+                  <button class="icon-button" id="investmentStockCancelEdit" type="button" hidden>Batal Edit</button>
+                </form>
 
                 <div class="table-scroll investment-table-scroll investment-stock-scroll">
                   <table>
@@ -1019,34 +1013,24 @@
               <section class="investment-records-section">
                 <div class="section-head compact">
                   <h3>Pembelian RDPU</h3>
-                  <p>Catat nominal RDPU per bulan dan tahun.</p>
+                  <p>Nominal RDPU dicatat per bulan dan tahun.</p>
                 </div>
-                <details class="investment-entry-accordion">
-                  <summary>
-                    <span>
-                      <strong>Input RDPU</strong>
-                      <small>Buka untuk tambah atau edit catatan.</small>
-                    </span>
-                  </summary>
-                  <div class="investment-entry-body">
-                    <form class="investment-form rdpu-form" id="investmentRdpuForm">
-                      <label>
-                        Bulan
-                        <select id="investmentRdpuMonth"></select>
-                      </label>
-                      <label>
-                        Tahun
-                        <select id="investmentRdpuYear"></select>
-                      </label>
-                      <label>
-                        Nominal RDPU
-                        <input id="investmentRdpuAmount" type="text" inputmode="numeric" placeholder="0" />
-                      </label>
-                      <button class="primary-button investment-submit" id="investmentRdpuSubmit" type="submit">Simpan</button>
-                      <button class="icon-button" id="investmentRdpuCancelEdit" type="button" hidden aria-label="Batal edit RDPU">&times;</button>
-                    </form>
-                  </div>
-                </details>
+                <form class="investment-form rdpu-form" id="investmentRdpuForm">
+                  <label>
+                    Bulan
+                    <select id="investmentRdpuMonth"></select>
+                  </label>
+                  <label>
+                    Tahun
+                    <select id="investmentRdpuYear"></select>
+                  </label>
+                  <label>
+                    Nominal RDPU
+                    <input id="investmentRdpuAmount" type="text" inputmode="numeric" placeholder="0" />
+                  </label>
+                  <button class="primary-button investment-submit" id="investmentRdpuSubmit" type="submit">Simpan RDPU</button>
+                  <button class="icon-button" id="investmentRdpuCancelEdit" type="button" hidden>Batal Edit</button>
+                </form>
 
                 <div class="table-scroll investment-table-scroll investment-rdpu-scroll">
                   <table>
@@ -1166,6 +1150,7 @@
                   <tbody id="investmentSummaryTable"></tbody>
                 </table>
               </div>
+            </section>
             </section>
           </div>
         </section>
