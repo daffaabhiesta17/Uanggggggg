@@ -1494,8 +1494,11 @@ function updateCustomLotSummary(inputs) {
   el.simCustomBbriPurchase.innerHTML = active.includes("BBRI")
     ? formatLotPurchase(purchase.bbriBought, bbriAmount)
     : nonaktifLabel;
-  el.simCustomStockPurchase.textContent = formatMoney(stockAmount);
-  el.simCustomRdpuPurchase.textContent = formatMoney(purchase.leftoverCash);
+  const monthlyDepositForPct = inputs.monthlyDeposit > 0 ? inputs.monthlyDeposit : 0;
+  const stockPct = monthlyDepositForPct > 0 ? (stockAmount / monthlyDepositForPct) * 100 : 0;
+  const rdpuPct = monthlyDepositForPct > 0 ? (purchase.leftoverCash / monthlyDepositForPct) * 100 : 0;
+  el.simCustomStockPurchase.textContent = `${formatMoney(stockAmount)} (${stockPct.toFixed(2).replace(".", ",")}%)`;
+  el.simCustomRdpuPurchase.textContent = `${formatMoney(purchase.leftoverCash)} (${rdpuPct.toFixed(2).replace(".", ",")}%)`;
 
   if (targetAmount <= 0) {
     el.simCustomLotStatus.textContent = "Tidak ada target saham, seluruh setoran bulan normal masuk RDPU.";
