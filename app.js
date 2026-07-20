@@ -3303,6 +3303,196 @@ function renderAsetPersenSimulator() {
   `;
 }
 
+// ============================================================
+// SIMULATOR AVERAGE DOWN/UP SAHAM - LOGIKA & RENDER
+// ============================================================
+
+function avgSimParseNumber(str) {
+  if (!str) return null;
+  const digits = String(str).replace(/[^\d]/g, "");
+  if (!digits) return null;
+  return parseInt(digits, 10);
+}
+
+function avgSimParseInput(text) {
+  const blocks = text
+    .split(/(?=\d+\.\s*Saham\s+)/gi)
+    .map((b) => b.trim())
+    .filter(Boolean);
+
+  const entries = [];
+  const warnings = [];
+
+  blocks.forEach((block, idx) => {
+    const nameMatch = block.match(/Saham\s+([A-Za-z0-9.\-]+)/i);
+    const avgLamaMatch = block.match(/Avg\s*Lama\s*:?\s*([\d.,]+)/i);
+    const jumlahMatch = block.match(/Jumlah\s*:?\s*([\d.,]+)\s*Lot/i);
+    const downSection = block.match(/Skenario\s*DOWN[\s\S]*?(?=Skenario\s*UP|$)/i)?.[0] || "";
+    const upSection = block.match(/Skenario\s*UP[\s\S]*/i)?.[0] || "";
+    const downLotMatch = downSection.match(/Rencana\s*beli\s*([\d.,]+)\s*Lot/i);
+    const downHargaMatch = downSection.match(/Di\s*Harga\s*:?\s*([\d.,]+)/i);
+    const upLotMatch = upSection.match(/Rencana\s*beli\s*([\d.,]+)\s*Lot/i);
+    const upHargaMatch = upSection.match(/Di\s*Harga\s*:?\s*([\d.,]+)/i);
+
+    if (!nameMatch || !avgLamaMatch || !jumlahMatch) {
+      warnings.push(`Baris ${idx + 1}: format tidak lengkap (nama saham, Avg Lama, atau Jumlah Lot tidak ditemukan), dilewati.`);
+      return;
+    }
+
+    entries.push({
+      name: nameMatch[1].toUpperCase(),
+      avgLama: avgSimParseNumber(avgLamaMatch[1]),
+      lotLama: avgSimParseNumber(jumlahMatch[1]),
+      downLot: downLotMatch ? avgSimParseNumber(downLotMatch[1]) : null,
+      downHarga: downHargaMatch ? avgSimParseNumber(downHargaMatch[1]) : null,
+      upLot: upLotMatch ? avgSimParseNumber(upLotMatch[1]) : null,
+      upHarga: upHargaMatch ? avgSimParseNumber(upHargaMatch[1]) : null,
+    });
+  });
+
+  return { entries, warnings };
+}
+
+function avgSimCalcScenario(lotLama, avgLama, lotBaru, hargaBaru) {
+  if (!lotBaru || !hargaBaru) return null;
+  const totalLot = lotLama + lotBaru;
+  const modalTambahan = lotBaru * 100 * hargaBaru;
+  const avgBaru = (lotLama * avgLama + lotBaru * hargaBaru) / totalLot;
+  const pctChange = avgLama > 0 ? ((avgBaru - avgLama) / avgLama) * 100 : 0;
+  return { totalLot, modalTambahan, avgBaru, pctChange };
+}
+
+function avgSimRiskOpinion(kind, pctChange, hargaBaru, avgLama) {
+  const pctAbs = Math.abs(pctChange);
+  if (kind === "down") {
+    if (pctChange <= 0) {
+      return {
+        level: "aman",
+        text: `Average berhasil turun ${pctAbs.toFixed(2).replace(".", ",")}% dari avg lama — posisi makin sehat, harga beli baru (${formatMoney(hargaBaru)}) berada di bawah average lama.`,
+      };
+    }
+    return {
+      level: "warn",
+      text: `Average justru naik ${pctAbs.toFixed(2).replace(".", ",")}% meski disebut skenario DOWN — cek kembali, harga beli (${formatMoney(hargaBaru)}) ternyata di atas average lama (${formatMoney(avgLama)}).`,
+    };
+  }
+  // kind === "up"
+  if (pctAbs <= 5) {
+    return {
+      level: "aman",
+      text: `Average naik tipis (${pctAbs.toFixed(2).replace(".", ",")}%), masih dalam batas wajar dan relatif dekat dengan average lama.`,
+    };
+  }
+  if (pctAbs <= 15) {
+    return {
+      level: "warn",
+      text: `Average naik cukup signifikan (${pctAbs.toFixed(2).replace(".", ",")}%). Pertimbangkan apakah harga beli baru (${formatMoney(hargaBaru)}) masih berada di area support/resistance yang wajar sebelum menambah posisi.`,
+    };
+  }
+  return {
+    level: "danger",
+    text: `Average naik cukup tinggi (${pctAbs.toFixed(2).replace(".", ",")}%), berisiko merusak keunggulan average bawah yang sudah Anda bangun. Pertimbangkan matang-matang sebelum eksekusi skenario ini.`,
+  };
+}
+
+function avgSimRenderEntry(entry) {
+  const modalAwal = entry.lotLama * 100 * entry.avgLama;
+  const down = avgSimCalcScenario(entry.lotLama, entry.avgLama, entry.downLot, entry.downHarga);
+  const up = avgSimCalcScenario(entry.lotLama, entry.avgLama, entry.upLot, entry.upHarga);
+
+  const downRisk = down ? avgSimRiskOpinion("down", down.pctChange, entry.downHarga, entry.avgLama) : null;
+  const upRisk = up ? avgSimRiskOpinion("up", up.pctChange, entry.upHarga, entry.avgLama) : null;
+
+  const downBlock = down
+    ? `
+      <div class="avgsim-scenario avgsim-scenario-down">
+        <h5>2. Hasil Skenario DOWN</h5>
+        <div class="avgsim-metric-grid">
+          <div><span>Total Lot Baru</span><strong>${down.totalLot.toLocaleString("id-ID")} Lot</strong></div>
+          <div><span>Modal Tambahan</span><strong>${formatMoney(down.modalTambahan)}</strong></div>
+          <div><span>Avg Baru</span><strong>${formatMoney(down.avgBaru)}</strong></div>
+          <div><span>Perubahan dari Avg Lama</span><strong class="${down.pctChange <= 0 ? "avgsim-pct-down" : "avgsim-pct-up"}">${down.pctChange >= 0 ? "+" : ""}${down.pctChange.toFixed(2).replace(".", ",")}%</strong></div>
+        </div>
+      </div>`
+    : `<div class="avgsim-scenario avgsim-scenario-down"><h5>2. Hasil Skenario DOWN</h5><p class="kalc-empty">Data skenario DOWN tidak ditemukan/lengkap.</p></div>`;
+
+  const upBlock = up
+    ? `
+      <div class="avgsim-scenario avgsim-scenario-up">
+        <h5>3. Hasil Skenario UP</h5>
+        <div class="avgsim-metric-grid">
+          <div><span>Total Lot Baru</span><strong>${up.totalLot.toLocaleString("id-ID")} Lot</strong></div>
+          <div><span>Modal Tambahan</span><strong>${formatMoney(up.modalTambahan)}</strong></div>
+          <div><span>Avg Baru</span><strong>${formatMoney(up.avgBaru)}</strong></div>
+          <div><span>Perubahan dari Avg Lama</span><strong class="${up.pctChange <= 0 ? "avgsim-pct-down" : "avgsim-pct-up"}">${up.pctChange >= 0 ? "+" : ""}${up.pctChange.toFixed(2).replace(".", ",")}%</strong></div>
+        </div>
+      </div>`
+    : `<div class="avgsim-scenario avgsim-scenario-up"><h5>3. Hasil Skenario UP</h5><p class="kalc-empty">Data skenario UP tidak ditemukan/lengkap.</p></div>`;
+
+  const riskItems = [];
+  if (downRisk) riskItems.push(`<div class="avgsim-risk avgsim-risk-${downRisk.level}"><strong>DOWN:</strong> ${downRisk.text}</div>`);
+  if (upRisk) riskItems.push(`<div class="avgsim-risk avgsim-risk-${upRisk.level}"><strong>UP:</strong> ${upRisk.text}</div>`);
+
+  return `
+    <div class="avgsim-card">
+      <div class="avgsim-card-head">
+        <strong>${entry.name}</strong>
+      </div>
+      <div class="avgsim-scenario avgsim-scenario-base">
+        <h5>1. Rekap Posisi Awal</h5>
+        <div class="avgsim-metric-grid">
+          <div><span>Jumlah Lot</span><strong>${entry.lotLama.toLocaleString("id-ID")} Lot</strong></div>
+          <div><span>Avg Lama</span><strong>${formatMoney(entry.avgLama)}</strong></div>
+          <div><span>Total Modal Saat Ini</span><strong>${formatMoney(modalAwal)}</strong></div>
+        </div>
+      </div>
+      ${downBlock}
+      ${upBlock}
+      <div class="avgsim-scenario avgsim-scenario-risk">
+        <h5>4. Analisis Keamanan Risiko</h5>
+        ${riskItems.join("") || '<p class="kalc-empty">Tidak ada skenario untuk dianalisis.</p>'}
+        <p class="avgsim-disclaimer">Catatan: kalkulasi murni matematis berdasarkan rumus Weighted Average, bukan rekomendasi atau nasihat investasi.</p>
+      </div>
+    </div>
+  `;
+}
+
+function initAvgDownUpSimulator() {
+  const btn = document.querySelector("#avgSimHitung");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    const textarea = document.querySelector("#avgSimInput");
+    const output = document.querySelector("#avgSimOutput");
+    const errorEl = document.querySelector("#avgSimError");
+    if (!textarea || !output || !errorEl) return;
+
+    errorEl.classList.add("hidden");
+    errorEl.textContent = "";
+
+    const text = textarea.value.trim();
+    if (!text) {
+      output.innerHTML = '<p class="kalc-empty">Tempel data saham sesuai format di atas, lalu klik "Hitung Average Down/Up".</p>';
+      return;
+    }
+
+    const { entries, warnings } = avgSimParseInput(text);
+
+    if (entries.length === 0) {
+      errorEl.textContent = "Tidak ada data saham yang berhasil dibaca. Pastikan format sesuai contoh di atas.";
+      errorEl.classList.remove("hidden");
+      output.innerHTML = "";
+      return;
+    }
+
+    if (warnings.length > 0) {
+      errorEl.textContent = warnings.join(" ");
+      errorEl.classList.remove("hidden");
+    }
+
+    output.innerHTML = entries.map(avgSimRenderEntry).join("");
+  });
+}
+
 
 function setupInvestmentTabs() {
   const stack = document.querySelector(".investment-stack");
@@ -3489,6 +3679,37 @@ function setupInvestmentTabs() {
   `;
   analysisPanel.append(asetPersenSurface);
   initAsetPersenSimulator();
+
+  // Simulator Average Down/Up Saham (Weighted Average)
+  const avgSimSurface = document.createElement("section");
+  avgSimSurface.className = "surface";
+  avgSimSurface.innerHTML = `
+    <div class="surface-head">
+      <div>
+        <small>Analisis Portofolio</small>
+        <strong>Simulator Average Down/Up Saham</strong>
+      </div>
+    </div>
+    <p class="kalc-desc">
+      Tempel data posisi &amp; rencana pembelian dengan format berikut (bisa lebih dari satu saham, nomor urut menyesuaikan):<br />
+      <code class="avgsim-format-example">1. Saham BBRI (Avg Lama: 2697 | Jumlah: 10 Lot) - Skenario DOWN: Rencana beli 5 Lot | Di Harga: 2500 - Skenario UP: Rencana beli 5 Lot | Di Harga: 2900</code>
+    </p>
+    <div class="avgsim-layout">
+      <div class="avgsim-inputs">
+        <label>
+          Data Posisi &amp; Skenario
+          <textarea class="kalc-input avgsim-textarea" id="avgSimInput" rows="7" placeholder="1. Saham BBRI (Avg Lama: 2697 | Jumlah: 10 Lot) - Skenario DOWN: Rencana beli 5 Lot | Di Harga: 2500 - Skenario UP: Rencana beli 5 Lot | Di Harga: 2900"></textarea>
+        </label>
+        <button class="primary-button asetpersen-calc-btn" id="avgSimHitung" type="button">Hitung Average Down/Up</button>
+        <p class="avgsim-error hidden" id="avgSimError"></p>
+      </div>
+      <div class="avgsim-output" id="avgSimOutput">
+        <p class="kalc-empty">Tempel data saham sesuai format di atas, lalu klik "Hitung Average Down/Up".</p>
+      </div>
+    </div>
+  `;
+  analysisPanel.append(avgSimSurface);
+  initAvgDownUpSimulator();
 
   el.programActualSyncBanner = document.querySelector("#programActualSyncBanner");
   el.programActualSyncTitle = document.querySelector("#programActualSyncTitle");
