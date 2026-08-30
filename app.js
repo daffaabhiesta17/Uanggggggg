@@ -1070,14 +1070,13 @@ function applyPlClass(element, value) {
   element.classList.toggle("valuation-pl-negative", value < 0);
 }
 
-function renderInvestmentValuation() {
+function renderInvestmentValuationInputs() {
   if (!el.investmentValuationInputs) return;
-  const valuation = calculatePortfolioValuation();
   const tickers = state.investments.tickers;
 
   el.investmentValuationInputs.innerHTML = tickers
     .map((ticker) => {
-      const price = state.investments.currentPrices[ticker];
+      const savedPrice = state.investments.currentPrices[ticker];
       const purchase = state.investments.stockPurchases.find((item) => item.ticker === ticker);
       const hasPosition = Boolean(purchase);
       const disabledAttr = hasPosition ? "" : "disabled";
@@ -1097,6 +1096,11 @@ function renderInvestmentValuation() {
       input.value = savedPrice != null ? String(savedPrice) : "";
     }
   });
+}
+
+function updateInvestmentValuationResults() {
+  if (!el.valuationCostTotal) return;
+  const valuation = calculatePortfolioValuation();
 
   el.valuationCostTotal.textContent = formatMoney(valuation.costTotal);
   el.valuationMarketTotal.textContent = formatMoney(valuation.marketTotal);
@@ -1148,6 +1152,11 @@ function renderInvestmentValuation() {
   el.valuationBreakdownHint.textContent = pricedCount === valuation.rows.length
     ? "Nilai pasar berdasarkan harga terbaru"
     : `${valuation.rows.length - pricedCount} saham belum diisi harga terbarunya`;
+}
+
+function renderInvestmentValuation() {
+  renderInvestmentValuationInputs();
+  updateInvestmentValuationResults();
 }
 
 function formatInvestmentDate(purchase) {
@@ -4224,7 +4233,7 @@ function initEvents() {
     }
     saveState();
     schedulePersistInvestmentSettings();
-    renderInvestmentValuation();
+    updateInvestmentValuationResults();
   });
 
   el.investmentTickerInput.addEventListener("input", () => {
