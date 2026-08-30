@@ -1857,146 +1857,12 @@ input:disabled {
   word-break: break-word;
 }
 
-.valuation-input-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #f8fafc;
-}
-
-.valuation-input-grid label {
-  gap: 6px;
-}
-
-.valuation-input-grid input {
-  font-weight: 750;
-}
-
-.valuation-input-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 0;
-  border-bottom: 1px dashed var(--line);
-}
-
-.valuation-input-row:last-child {
-  border-bottom: 0;
-}
-
-.valuation-symbol {
-  font-weight: 850;
-  color: var(--text);
-}
-
-.valuation-input-row .muted {
-  font-size: 0.76rem;
-}
-
-.valuation-input-row input {
-  width: 130px;
-  text-align: right;
-}
-
-.valuation-summary-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  margin: 14px 0;
-}
-
-.valuation-summary-grid .metric {
-  padding: 14px;
-}
-
-.valuation-summary-grid .metric strong {
-  font-size: 1.2rem;
-}
-
-.valuation-pl-positive {
-  color: var(--income) !important;
-}
-
-.valuation-pl-negative {
-  color: var(--expense) !important;
-}
-
-.valuation-breakdown {
-  display: grid;
-  gap: 10px;
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fff;
-}
-
-.valuation-composition {
-  display: grid;
-  gap: 12px;
-}
-
-.valuation-composition-item {
-  display: grid;
-  gap: 7px;
-}
-
-.valuation-composition-item .row-between span {
-  color: var(--muted);
-  font-size: 0.76rem;
-  font-weight: 750;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.valuation-composition-item .row-between strong {
-  color: var(--text);
-}
-
-.valuation-composition-track {
-  height: 8px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: var(--surface-soft);
-}
-
-.valuation-composition-track span {
-  display: block;
-  height: 100%;
-  min-width: 0;
-  border-radius: inherit;
-  background: var(--primary);
-}
-
-.valuation-composition-item:nth-child(1) .valuation-composition-track span {
-  background: var(--income);
-}
-
-.valuation-composition-item:nth-child(2) .valuation-composition-track span {
-  background: #0ea5e9;
-}
-
-.valuation-composition-item:nth-child(3) .valuation-composition-track span {
-  background: #f59e0b;
-}
-
-.valuation-composition-item:nth-child(4) .valuation-composition-track span {
-  background: #7c3aed;
-}
-
-.valuation-composition-item small {
-  color: var(--muted);
-  line-height: 1.45;
-}
-
 @media (max-width: 1080px) {
   .app-shell,
   .dashboard-grid,
   .workspace-grid,
   .tools-grid,
+  .investment-simulator-grid,
   .monthly-strategy-header,
   .monthly-strategy-layout,
   .investment-grid,
@@ -2046,15 +1912,13 @@ input:disabled {
     .investment-mini-grid,
     .actual-month-grid,
     .monthly-strategy-grid,
-    .monthly-strategy-results,
-    .investment-info-cards,
-    .rdpu-info-cards,
-    .investment-form,
-    .investment-form.rdpu-form,
-    .valuation-summary-grid,
-    .valuation-input-grid {
-      grid-template-columns: 1fr;
-    }
+  .monthly-strategy-results,
+  .investment-info-cards,
+  .rdpu-info-cards,
+  .investment-form,
+  .investment-form.rdpu-form {
+    grid-template-columns: 1fr;
+  }
 
   .investment-year-control,
   .investment-filters,
