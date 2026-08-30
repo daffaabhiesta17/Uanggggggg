@@ -1050,6 +1050,48 @@
             <section class="investment-records-section">
               <div class="section-head">
                 <div>
+                  <h3>Nilai Portofolio Saat Ini</h3>
+                  <p>Isi harga saham terbaru per lembar untuk melihat nilai pasar dan untung/rugi dari posisi yang sudah dicatat.</p>
+                </div>
+              </div>
+
+              <div class="valuation-input-grid" id="investmentValuationInputs"></div>
+
+              <div class="valuation-summary-grid">
+                <article class="metric">
+                  <span>Total Modal Saham</span>
+                  <strong id="valuationCostTotal">Rp0</strong>
+                  <small>total nominal pembelian saham</small>
+                </article>
+                <article class="metric">
+                  <span>Nilai Pasar Saham</span>
+                  <strong id="valuationMarketTotal">Rp0</strong>
+                  <small>harga saat ini x total lot</small>
+                </article>
+                <article class="metric balance">
+                  <span>Untung / Rugi</span>
+                  <strong id="valuationPlTotal">Rp0</strong>
+                  <small id="valuationPlPct">0,00%</small>
+                </article>
+                <article class="metric">
+                  <span>RDPU (Modal)</span>
+                  <strong id="valuationRdpuTotal">Rp0</strong>
+                  <small>total nominal pembelian RDPU</small>
+                </article>
+              </div>
+
+              <div class="valuation-breakdown">
+                <div class="row-between">
+                  <strong>Rincian per Saham</strong>
+                  <span class="muted" id="valuationBreakdownHint">Nilai pasar berdasarkan harga terbaru</span>
+                </div>
+                <div class="valuation-composition" id="valuationComposition"></div>
+              </div>
+            </section>
+
+            <section class="investment-records-section">
+              <div class="section-head">
+                <div>
                   <h3>Grafik Pembelian Saham</h3>
                   <p>Harga per lot dan jumlah lot dari catatan pembelian yang tersimpan.</p>
                 </div>

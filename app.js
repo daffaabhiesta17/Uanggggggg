@@ -320,6 +320,14 @@ const el = {
   investmentStockChart: document.querySelector("#investmentStockChart"),
   investmentStockChartEmpty: document.querySelector("#investmentStockChartEmpty"),
   investmentSummaryTable: document.querySelector("#investmentSummaryTable"),
+  investmentValuationInputs: document.querySelector("#investmentValuationInputs"),
+  valuationCostTotal: document.querySelector("#valuationCostTotal"),
+  valuationMarketTotal: document.querySelector("#valuationMarketTotal"),
+  valuationPlTotal: document.querySelector("#valuationPlTotal"),
+  valuationPlPct: document.querySelector("#valuationPlPct"),
+  valuationRdpuTotal: document.querySelector("#valuationRdpuTotal"),
+  valuationComposition: document.querySelector("#valuationComposition"),
+  valuationBreakdownHint: document.querySelector("#valuationBreakdownHint"),
 };
 
 function loadState() {
@@ -406,11 +414,25 @@ function normalizeInvestments(investments = {}) {
   return {
     horizonYears: clampNumber(Math.round(Number(investments.horizonYears) || 11), 1, 50),
     simulatorConfig: normalizeSimulatorConfig(investments.simulatorConfig || investments.simulator_config),
+    currentPrices: normalizeCurrentPrices(investments.currentPrices),
     tickers: [...new Set(["BMRI", "ICBP", "BBRI", ...tickers, ...stockPurchases.map((purchase) => purchase.ticker)])],
     activeStocks: safeActiveStocks,
     stockPurchases,
     rdpuPurchases,
   };
+}
+
+function normalizeCurrentPrices(prices = {}) {
+  if (!prices || typeof prices !== "object") return {};
+  const normalized = {};
+  Object.entries(prices).forEach(([ticker, price]) => {
+    const symbol = sanitizeTicker(ticker);
+    const numeric = Number(price);
+    if (symbol && Number.isFinite(numeric) && numeric > 0) {
+      normalized[symbol] = numeric;
+    }
+  });
+  return normalized;
 }
 
 function normalizeSimulatorConfig(config = {}) {
@@ -990,8 +1012,142 @@ function investmentTimestamp(purchase) {
   return purchase.year * 100 + purchase.month;
 }
 
+function currentPriceForTicker(ticker) {
+  const price = state.investments.currentPrices[sanitizeTicker(ticker)];
+  return Number.isFinite(price) && price > 0 ? price : null;
+}
+
+function calculatePortfolioValuation() {
+  const purchases = state.investments.stockPurchases;
+  const byTicker = purchases.reduce((acc, purchase) => {
+    const ticker = sanitizeTicker(purchase.ticker);
+    if (!acc[ticker]) {
+      acc[ticker] = { ticker, lots: 0, cost: 0, currentPrice: null };
+    }
+    acc[ticker].lots += purchase.lots;
+    acc[ticker].cost += purchase.lotPrice * purchase.lots;
+    acc[ticker].currentPrice = currentPriceForTicker(ticker);
+    return acc;
+  }, {});
+
+  const rows = Object.values(byTicker)
+    .map((row) => ({
+      ...row,
+      marketValue: row.currentPrice != null ? row.lots * LOT_SIZE * row.currentPrice : null,
+      pl: row.currentPrice != null ? row.lots * LOT_SIZE * row.currentPrice - row.cost : null,
+      plPct: row.currentPrice != null && row.cost > 0 ? ((row.lots * LOT_SIZE * row.currentPrice - row.cost) / row.cost) * 100 : null,
+    }))
+    .sort((a, b) => b.marketValue - a.marketValue || b.cost - a.cost);
+
+  const costTotal = purchases.reduce((total, purchase) => total + investmentValue(purchase), 0);
+  const priced = rows.filter((row) => row.marketValue != null);
+  const marketTotal = priced.reduce((total, row) => total + row.marketValue, 0);
+  const plTotal = priced.reduce((total, row) => total + row.pl, 0);
+  const rdpuTotal = state.investments.rdpuPurchases.reduce((total, purchase) => total + purchase.amount, 0);
+  const total = marketTotal + rdpuTotal;
+
+  return {
+    rows,
+    costTotal,
+    marketTotal,
+    plTotal,
+    plPct: costTotal > 0 ? (plTotal / costTotal) * 100 : 0,
+    rdpuTotal,
+    total,
+  };
+}
+
 function investmentMonthLabel(month) {
   return INVESTMENT_MONTHS[month - 1] || "";
+}
+
+function formatPlPercent(value) {
+  return `${value >= 0 ? "+" : ""}${decimal.format(Math.abs(value))}%`;
+}
+
+function applyPlClass(element, value) {
+  element.classList.toggle("valuation-pl-positive", value > 0);
+  element.classList.toggle("valuation-pl-negative", value < 0);
+}
+
+function renderInvestmentValuation() {
+  if (!el.investmentValuationInputs) return;
+  const valuation = calculatePortfolioValuation();
+  const tickers = state.investments.tickers;
+
+  el.investmentValuationInputs.innerHTML = tickers
+    .map((ticker) => {
+      const price = state.investments.currentPrices[ticker];
+      const purchase = state.investments.stockPurchases.find((item) => item.ticker === ticker);
+      const hasPosition = Boolean(purchase);
+      const disabledAttr = hasPosition ? "" : "disabled";
+      return `
+        <label>
+          ${escapeHtml(ticker)}
+          <input class="valuation-price-input" data-valuation-ticker="${escapeHtml(ticker)}" type="text" inputmode="decimal" placeholder="Harga / lembar" ${disabledAttr} />
+        </label>
+      `;
+    })
+    .join("");
+
+  tickers.forEach((ticker) => {
+    const input = el.investmentValuationInputs.querySelector(`[data-valuation-ticker="${ticker}"]`);
+    if (input) {
+      const savedPrice = state.investments.currentPrices[ticker];
+      input.value = savedPrice != null ? String(savedPrice) : "";
+    }
+  });
+
+  el.valuationCostTotal.textContent = formatMoney(valuation.costTotal);
+  el.valuationMarketTotal.textContent = formatMoney(valuation.marketTotal);
+  el.valuationPlTotal.textContent = formatMoney(valuation.plTotal);
+  applyPlClass(el.valuationPlTotal, valuation.plTotal);
+  el.valuationPlPct.textContent = formatPlPercent(valuation.plPct);
+  el.valuationRdpuTotal.textContent = formatMoney(valuation.rdpuTotal);
+
+  const total = Math.max(valuation.total, 1);
+  const pricedCount = valuation.rows.filter((row) => row.marketValue != null).length;
+  const compositionRows = [
+    ...valuation.rows.map((row) => ({
+      ticker: row.ticker,
+      value: row.marketValue ?? row.cost,
+      pl: row.pl,
+      plPct: row.plPct,
+      isPriced: row.marketValue != null,
+      lots: row.lots,
+    })),
+    { ticker: "RDPU", value: valuation.rdpuTotal, pl: null, plPct: null, isPriced: true, lots: 0 },
+  ];
+
+  el.valuationComposition.innerHTML = compositionRows
+    .map((row) => {
+      const pct = (row.value / total) * 100;
+      const plText =
+        row.pl != null
+          ? `${row.pl >= 0 ? "+" : "-"}${formatMoney(Math.abs(row.pl))} (${row.plPct >= 0 ? "+" : "-"}${decimal.format(Math.abs(row.plPct))}%)`
+          : "Belum ada harga";
+      return `
+        <div class="valuation-composition-item">
+          <div class="row-between">
+            <span>${escapeHtml(row.ticker)}</span>
+            <strong>${formatMoney(row.value)} (${decimal.format(pct)}%)</strong>
+          </div>
+          <div class="valuation-composition-track"><span style="width:${Math.min(pct, 100)}%"></span></div>
+          <small class="${row.pl != null ? (row.pl >= 0 ? "valuation-pl-positive" : "valuation-pl-negative") : ""}">
+            ${row.ticker === "RDPU"
+              ? "Modal RDPU"
+              : row.isPriced
+                ? `${row.lots.toLocaleString("id-ID")} lot - ${plText}`
+                : "Belum ada data harga"}
+          </small>
+        </div>
+      `;
+    })
+    .join("");
+
+  el.valuationBreakdownHint.textContent = pricedCount === valuation.rows.length
+    ? "Nilai pasar berdasarkan harga terbaru"
+    : `${valuation.rows.length - pricedCount} saham belum diisi harga terbarunya`;
 }
 
 function formatInvestmentDate(purchase) {
@@ -3831,6 +3987,7 @@ function renderInvestments() {
   updateMonthlyStrategyCalculator();
   renderInvestmentTables();
   renderInvestmentSummary();
+  renderInvestmentValuation();
   updateInvestmentInfo();
   updateInvestmentStockChart();
   investmentsDirty = false;
@@ -4054,6 +4211,21 @@ function initEvents() {
   el.investmentInfoYearFilter.addEventListener("change", updateInvestmentInfo);
   el.investmentStockChartTickerFilter.addEventListener("change", updateInvestmentStockChart);
   el.investmentStockChartYearFilter.addEventListener("change", updateInvestmentStockChart);
+
+  el.investmentValuationInputs.addEventListener("input", (event) => {
+    const input = event.target.closest(".valuation-price-input");
+    if (!input) return;
+    const ticker = input.dataset.valuationTicker;
+    const price = parseDecimalInput(input.value);
+    if (price > 0) {
+      state.investments.currentPrices[ticker] = price;
+    } else {
+      delete state.investments.currentPrices[ticker];
+    }
+    saveState();
+    schedulePersistInvestmentSettings();
+    renderInvestmentValuation();
+  });
 
   el.investmentTickerInput.addEventListener("input", () => {
     el.investmentTickerInput.value = sanitizeTicker(el.investmentTickerInput.value);
