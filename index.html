@@ -4,6 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Catatan Kas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -36,7 +39,7 @@
         <header class="topbar">
           <button class="sidebar-toggle" id="sidebarToggle" type="button" title="Sembunyikan/tampilkan sidebar">&#9776;</button>
           <div>
-            <p class="eyebrow">Real-time finance tracker</p>
+            <p class="eyebrow" id="pageEyebrow">Real-time finance tracker</p>
             <h2 id="pageTitle">Dashboard</h2>
           </div>
           <div class="topbar-actions">
@@ -277,8 +280,8 @@
             <section class="investment-simulator-grid">
               <form class="surface investment-simulator-form" id="investmentSimulatorForm">
                 <div class="section-head compact">
-                  <h3>Program 1: Proyeksi 180 Bulan</h3>
-                  <p>Bola salju saham BMRI, ICBP, BBRI, dan RDPU dengan pola beli selang-seling.</p>
+                  <h3>Parameter simulasi</h3>
+                  <p>Atur setoran, harga, dan asumsi return. Hasil 180 bulan tampil di kanan secara real-time.</p>
                 </div>
                 <div class="simulator-sync-banner hidden" id="simulatorSyncBanner">
                   <strong>Terhubung ke Program 2</strong>
@@ -287,8 +290,11 @@
 
                 <div class="simulator-setting-group">
                   <div class="simulator-setting-head">
-                    <strong>1. Periode & Modal</strong>
-                    <small>Tentukan kapan simulasi dimulai dan besar setoran rutin.</small>
+                    <span class="setting-index">01</span>
+                    <div>
+                      <strong>Periode & modal</strong>
+                      <small>Kapan simulasi dimulai dan besar setoran rutin.</small>
+                    </div>
                   </div>
                   <label>
                     Total Setoran Bulanan
@@ -321,8 +327,11 @@
 
                 <div class="simulator-setting-group">
                   <div class="simulator-setting-head">
-                    <strong>2. Harga & Pola Beli</strong>
-                    <small>Atur harga awal, pola pembelian, dan target lot jika memakai custom.</small>
+                    <span class="setting-index">02</span>
+                    <div>
+                      <strong>Harga & pola beli</strong>
+                      <small>Harga awal, pola pembelian, dan target lot custom.</small>
+                    </div>
                   </div>
                   <div class="input-pair">
                     <label>
@@ -446,8 +455,11 @@
 
                 <div class="simulator-setting-group">
                   <div class="simulator-setting-head">
-                    <strong>3. Asumsi Harga</strong>
-                    <small>Aktifkan untuk membuat harga saham bergerak naik atau turun per tahun.</small>
+                    <span class="setting-index">03</span>
+                    <div>
+                      <strong>Asumsi harga</strong>
+                      <small>Buat harga saham bergerak naik atau turun per tahun.</small>
+                    </div>
                   </div>
                   <div class="price-change-panel" id="simPriceChangePanel">
                     <label class="switch-row" id="simPriceChangeToggle">
@@ -478,8 +490,11 @@
 
                 <div class="simulator-setting-group">
                   <div class="simulator-setting-head">
-                    <strong>4. Return & Dividen</strong>
-                    <small>Input asumsi RDPU dan dividen tahunan untuk 180 bulan.</small>
+                    <span class="setting-index">04</span>
+                    <div>
+                      <strong>Return & dividen</strong>
+                      <small>Asumsi RDPU dan dividen tahunan untuk 180 bulan.</small>
+                    </div>
                   </div>
                   <div class="input-pair">
                     <label>
@@ -514,7 +529,7 @@
               </form>
 
               <div class="investment-simulator-results">
-                <div class="summary-grid investment-summary">
+                <div class="summary-grid investment-summary sim-kpi-grid">
                   <article class="metric">
                     <span>Total Modal</span>
                     <strong id="simTotalContribution">Rp0</strong>
@@ -540,8 +555,8 @@
                 <section class="surface">
                   <div class="section-head">
                     <div>
-                      <h3>Modal vs Pertumbuhan Aset</h3>
-                      <p>Snapshot tahunan hasil simulasi 180 bulan.</p>
+                  <h3>Modal vs pertumbuhan aset</h3>
+                  <p>Snapshot tahunan hasil simulasi 180 bulan.</p>
                     </div>
                     <strong class="chart-badge" id="simAssetMultiple">0,00x modal</strong>
                   </div>
@@ -552,8 +567,8 @@
 
                 <section class="surface">
                   <div class="section-head compact">
-                    <h3>Posisi Akhir</h3>
-                    <p>Komposisi akhir saham dan RDPU dari hasil simulasi.</p>
+                  <h3>Posisi akhir</h3>
+                  <p>Komposisi akhir saham dan RDPU dari hasil simulasi.</p>
                   </div>
                   <div class="composition-list">
                     <div class="composition-item">
@@ -601,8 +616,8 @@
 
             <section class="surface">
               <div class="section-head compact">
-                <h3>Riwayat Tahunan Simulator</h3>
-                <p>Bulan yang sudah dicatat di Program 2 memakai pembelian aktual, bulan kosong memakai konfigurasi simulator.</p>
+                <h3>Riwayat tahunan</h3>
+                <p>Bulan yang sudah dicatat di Catatan Aktual memakai pembelian nyata. Bulan kosong memakai konfigurasi simulator.</p>
               </div>
               <div class="table-scroll">
                 <table class="sim-history-table">
@@ -631,8 +646,8 @@
 
             <section class="surface">
               <div class="section-head compact">
-                <h3>Rincian Pembelian dari Dividen</h3>
-                <p>Lot dan RDPU aktual Program 2 ikut masuk; bulan kosong tetap mengikuti pola pembelian simulator.</p>
+                <h3>Pembelian dari dividen</h3>
+                <p>Lot dan RDPU aktual ikut masuk; bulan kosong tetap mengikuti pola pembelian simulator.</p>
               </div>
               <div class="table-scroll" id="simDividendPurchaseTableWrap">
                 <table class="sim-dividend-purchase-table">
@@ -667,7 +682,7 @@
               <div class="monthly-strategy-calculator">
                 <div class="monthly-strategy-header">
                   <div>
-                    <h3>Penghitung Strategi Bulanan</h3>
+                    <h3>Strategi bulanan</h3>
                     <p>Atur base, cek diskon BMRI, lalu kirim strateginya ke simulator 180 bulan.</p>
                   </div>
                   <label class="switch-row monthly-sync-toggle">
@@ -918,8 +933,8 @@
             <section class="surface investment-records-surface">
               <div class="section-head">
                 <div>
-                  <h3>Program 2: Catatan Pembelian Aktual</h3>
-                  <p>Catat pembelian saham individual dan RDPU per tahun, lalu pantau total portofolio investasi.</p>
+                  <h3>Ledger pembelian</h3>
+                  <p>Catat pembelian saham dan RDPU per bulan, lalu pantau total portofolio.</p>
                 </div>
                 <div class="investment-year-control">
                   <label>
@@ -930,7 +945,7 @@
                 </div>
               </div>
 
-              <div class="summary-grid investment-summary">
+              <div class="summary-grid investment-summary sim-kpi-grid">
                 <article class="metric income">
                   <span>Akumulasi Saham</span>
                   <strong id="investmentStockTotal">Rp0</strong>

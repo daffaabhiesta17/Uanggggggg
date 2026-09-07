@@ -3454,29 +3454,30 @@ function setupInvestmentTabs() {
   stockToggles.className = "stock-toggles";
   stockToggles.setAttribute("aria-label", "Saham aktif");
   stockToggles.innerHTML = `
-    <span class="stock-toggles-label">Saham Aktif</span>
+    <span class="stock-toggles-label">Universe</span>
     <div class="stock-toggle-group" id="stockToggleGroup">
       <button class="stock-toggle-btn active" data-stock-toggle="BMRI" type="button" aria-pressed="true">BMRI</button>
       <button class="stock-toggle-btn active" data-stock-toggle="ICBP" type="button" aria-pressed="true">ICBP</button>
       <button class="stock-toggle-btn active" data-stock-toggle="BBRI" type="button" aria-pressed="true">BBRI</button>
     </div>
-    <small class="stock-toggles-hint">Minimal 1 saham aktif. Data saham non-aktif tetap tersimpan.</small>
+    <small class="stock-toggles-hint">Minimal 1 saham aktif. Data non-aktif tetap tersimpan.</small>
   `;
 
-  stack.insertBefore(stockToggles, stack.firstChild);
-
   const tabs = document.createElement("nav");
-  tabs.className = "investment-tabs";
+  tabs.className = "investment-subtabs";
   tabs.setAttribute("aria-label", "Sub-tab investasi");
   tabs.innerHTML = `
     <button class="active" data-investment-tab-button="simulator" type="button" aria-controls="investmentTabSimulator" aria-selected="true">
-      Program 1: Proyeksi 180 Bulan
+      <span class="subtab-kicker">Program 1</span>
+      <strong>Proyeksi 180 Bulan</strong>
     </button>
     <button data-investment-tab-button="actual" type="button" aria-controls="investmentTabActual" aria-selected="false">
-      Catatan Aktual
+      <span class="subtab-kicker">Program 2</span>
+      <strong>Catatan Aktual</strong>
     </button>
     <button data-investment-tab-button="analysis" type="button" aria-controls="investmentTabAnalysis" aria-selected="false">
-      Analisis Pembelian
+      <span class="subtab-kicker">Tools</span>
+      <strong>Analisis Portofolio</strong>
     </button>
   `;
 
@@ -3543,7 +3544,7 @@ function setupInvestmentTabs() {
   const divider = stack.querySelector(".investment-section-divider");
   const strategySurface = document.querySelector(".monthly-strategy-calculator")?.closest(".surface");
   const recordsSurface = document.querySelector(".investment-records-surface");
-  stack.insertBefore(tabs, stack.firstElementChild);
+  stack.prepend(tabs, stockToggles);
   stack.append(simulatorPanel, actualPanel, analysisPanel);
   simulatorPanel.append(actualSyncBanner);
   [simulatorGrid, historySurface, dividendSurface].filter(Boolean).forEach((node) => simulatorPanel.append(node));
@@ -3561,13 +3562,10 @@ function setupInvestmentTabs() {
   const rebalancingSurface = document.createElement("section");
   rebalancingSurface.className = "surface";
   rebalancingSurface.innerHTML = `
-    <div class="surface-head">
-      <div>
-        <small>Analisis Portofolio</small>
-        <strong>Kalkulator Komposisi Portofolio</strong>
-      </div>
+    <div class="section-head compact">
+      <h3>Kalkulator komposisi</h3>
+      <p>Masukkan nilai saham dan ETF untuk melihat total portofolio dan porsi masing-masing.</p>
     </div>
-    <p class="kalc-desc">Masukkan nilai saham dan ETF Anda untuk melihat total portofolio dan persentase masing-masing.</p>
     <div class="kalc-layout">
       <div class="kalc-inputs">
         <label>
@@ -3591,13 +3589,10 @@ function setupInvestmentTabs() {
   const asetPersenSurface = document.createElement("section");
   asetPersenSurface.className = "surface";
   asetPersenSurface.innerHTML = `
-    <div class="surface-head">
-      <div>
-        <small>Analisis Portofolio</small>
-        <strong>Simulator Persentase Aset</strong>
-      </div>
+    <div class="section-head compact">
+      <h3>Simulator persentase aset</h3>
+      <p>Bandingkan rincian nilai terhadap total aset, lengkap dengan status kecocokan 100%.</p>
     </div>
-    <p class="kalc-desc">Masukkan Total Aset dan rincian nilai per bagian untuk melihat persentase masing-masing terhadap total, lengkap dengan status kecocokan 100%.</p>
     <div class="asetpersen-layout">
       <div class="asetpersen-inputs">
         <label>
@@ -3622,13 +3617,10 @@ function setupInvestmentTabs() {
   const avgSimSurface = document.createElement("section");
   avgSimSurface.className = "surface";
   avgSimSurface.innerHTML = `
-    <div class="surface-head">
-      <div>
-        <small>Analisis Portofolio</small>
-        <strong>Simulator Average Down/Up Saham</strong>
-      </div>
+    <div class="section-head compact">
+      <h3>Average down / up</h3>
+      <p>Hitung avg baru (weighted average) dari posisi sekarang dan rencana pembelian.</p>
     </div>
-    <p class="kalc-desc">Masukkan posisi saham saat ini dan rencana pembelian baru untuk menghitung Avg Baru (Weighted Average) beserta analisis risikonya.</p>
     <div class="avgsim-layout">
       <div class="avgsim-inputs">
         <div class="avgsim-field-group">
@@ -3861,6 +3853,16 @@ function switchView(view) {
     investments: "Investasi",
     tools: "Tools",
   }[view];
+  const pageEyebrow = document.querySelector("#pageEyebrow");
+  if (pageEyebrow) {
+    pageEyebrow.textContent = {
+      dashboard: "Ringkasan arus kas",
+      transactions: "Ledger transaksi",
+      categories: "Klasifikasi akun",
+      investments: "Portofolio & proyeksi",
+      tools: "Backup & pengaturan",
+    }[view];
+  }
   if (view === "investments") {
     renderInvestmentsIfActive(true);
   }
