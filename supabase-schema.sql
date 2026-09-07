@@ -50,21 +50,12 @@ create table if not exists public.rdpu_purchases (
   created_at timestamptz not null default now()
 );
 
-create table if not exists public.dividend_receipts (
-  id text primary key,
-  month integer not null check (month between 1 and 12),
-  year integer not null check (year between 1900 and 2200),
-  amount numeric not null check (amount > 0),
-  created_at timestamptz not null default now()
-);
-
 alter table public.categories enable row level security;
 alter table public.transactions enable row level security;
 alter table public.investment_settings enable row level security;
 alter table public.investment_tickers enable row level security;
 alter table public.stock_purchases enable row level security;
 alter table public.rdpu_purchases enable row level security;
-alter table public.dividend_receipts enable row level security;
 
 drop policy if exists "public categories read" on public.categories;
 drop policy if exists "public categories write" on public.categories;
@@ -78,8 +69,6 @@ drop policy if exists "public stock purchases read" on public.stock_purchases;
 drop policy if exists "public stock purchases write" on public.stock_purchases;
 drop policy if exists "public rdpu purchases read" on public.rdpu_purchases;
 drop policy if exists "public rdpu purchases write" on public.rdpu_purchases;
-drop policy if exists "public dividend receipts read" on public.dividend_receipts;
-drop policy if exists "public dividend receipts write" on public.dividend_receipts;
 
 create policy "public categories read"
 on public.categories for select
@@ -147,17 +136,6 @@ to anon
 using (true)
 with check (true);
 
-create policy "public dividend receipts read"
-on public.dividend_receipts for select
-to anon
-using (true);
-
-create policy "public dividend receipts write"
-on public.dividend_receipts for all
-to anon
-using (true)
-with check (true);
-
 do $$
 begin
   alter publication supabase_realtime add table public.categories;
@@ -196,13 +174,6 @@ end $$;
 do $$
 begin
   alter publication supabase_realtime add table public.rdpu_purchases;
-exception
-  when duplicate_object then null;
-end $$;
-
-do $$
-begin
-  alter publication supabase_realtime add table public.dividend_receipts;
 exception
   when duplicate_object then null;
 end $$;

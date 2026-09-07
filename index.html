@@ -523,20 +523,6 @@
                   </div>
                 </div>
 
-                <div class="simulator-setting-group">
-                  <div class="simulator-setting-head">
-                    <span class="setting-index">05</span>
-                    <div>
-                      <strong>Target gaji pasif</strong>
-                      <small>Pembanding saja. Tidak mengubah rumus simulasi.</small>
-                    </div>
-                  </div>
-                  <label>
-                    Target Dividen Tahun 15
-                    <input id="simPassiveTarget" type="text" inputmode="numeric" placeholder="0" value="0" />
-                  </label>
-                </div>
-
                 <p class="simulator-note">
                   Jalur likuidasi memakai Aset Akhir dan Keuntungan Bersih. Jalur keep lot memakai Gaji Pasif Tahun 15 dan Saldo RDPU Akhir.
                 </p>
@@ -562,17 +548,8 @@
                   <article class="metric">
                     <span>Gaji Pasif Tahun 15</span>
                     <strong id="simPassiveIncome">Rp0</strong>
-                    <small id="simPassiveTargetMeta">estimasi dividen tahunan</small>
+                    <small>estimasi dividen tahunan</small>
                   </article>
-                </div>
-                <div class="scenario-compare-bar">
-                  <div class="scenario-compare-actions">
-                    <button class="ghost-button" id="simSaveScenarioA" type="button">Simpan sebagai Skenario A</button>
-                    <button class="ghost-button" id="simClearScenarioA" type="button">Hapus Skenario A</button>
-                  </div>
-                  <div class="scenario-compare-grid" id="simScenarioCompare">
-                    <p class="scenario-compare-empty">Simpan Skenario A untuk membandingkan asumsi tanpa menimpa input saat ini.</p>
-                  </div>
                 </div>
 
                 <section class="surface">
@@ -640,27 +617,55 @@
             <section class="surface">
               <div class="section-head compact">
                 <h3>Riwayat tahunan</h3>
-                <p>Bulan aktual memakai pembelian nyata. Kolom dividen menggabungkan hasil simulasi dan catatan dividen aktual.</p>
+                <p>Bulan yang sudah dicatat di Catatan Aktual memakai pembelian nyata. Bulan kosong memakai konfigurasi simulator.</p>
               </div>
               <div class="table-scroll">
                 <table class="sim-history-table">
                   <thead>
                     <tr>
                       <th>Periode</th>
-                      <th>Aktual</th>
+                      <th>Aktual Program 2</th>
                       <th>Total Setoran</th>
+                      <th>Harga BMRI</th>
                       <th>Lot BMRI</th>
+                      <th>Harga ICBP</th>
                       <th>Lot ICBP</th>
+                      <th>Harga BBRI</th>
                       <th>Lot BBRI</th>
                       <th>Dividen Cair</th>
-                      <th>Saham dari Dividen</th>
-                      <th>Sisa ke RDPU</th>
+                      <th>Setoran RDPU</th>
+                      <th>Return RDPU</th>
                       <th>Saldo RDPU</th>
-                      <th>Portofolio</th>
+                      <th>Total Portofolio</th>
                     </tr>
                   </thead>
                   <tbody id="simHistoryTable"></tbody>
                 </table>
+              </div>
+            </section>
+
+            <section class="surface">
+              <div class="section-head compact">
+                <h3>Pembelian dari dividen</h3>
+                <p>Lot dan RDPU aktual ikut masuk; bulan kosong tetap mengikuti pola pembelian simulator.</p>
+              </div>
+              <div class="table-scroll" id="simDividendPurchaseTableWrap">
+                <table class="sim-dividend-purchase-table">
+                  <thead>
+                    <tr>
+                      <th>Periode</th>
+                      <th>Dividen Cair</th>
+                      <th>Saham Terbeli dari Dividen</th>
+                      <th>Dividen Dipakai</th>
+                      <th>Sisa ke RDPU</th>
+                      <th>Aktual Program 2</th>
+                    </tr>
+                  </thead>
+                  <tbody id="simDividendPurchaseTable"></tbody>
+                </table>
+              </div>
+              <div class="empty-state hidden" id="simDividendPurchaseEmpty">
+                Belum ada dividen yang cukup untuk membeli lot saham atau data aktual Program 2 pada simulasi ini.
               </div>
             </section>
 
@@ -920,8 +925,6 @@
                       </section>
                     </div>
                     <p class="monthly-strategy-note" id="monthlyStrategyNote">Beli base dulu, lalu sisa masuk RDPU.</p>
-                    <button class="primary-button" id="monthlyStrategySaveLedger" type="button">Catat ke ledger bulan ini</button>
-                    <p class="monthly-ledger-feedback hidden" id="monthlyStrategyLedgerFeedback" aria-live="polite"></p>
                   </aside>
                 </div>
               </div>
@@ -958,17 +961,12 @@
                   <strong id="investmentRdpuTotal">Rp0</strong>
                   <small>total nominal pembelian RDPU</small>
                 </article>
-                  <article class="metric balance">
-                    <span>Nilai Pasar</span>
-                    <strong id="investmentPortfolioTotal">Rp0</strong>
-                    <small id="investmentPortfolioMeta">isi harga pasar untuk P/L</small>
-                  </article>
-                  <article class="metric">
-                    <span>P/L Belum Terealisasi</span>
-                    <strong id="investmentUnrealizedPnl">-</strong>
-                    <small id="investmentUnrealizedPnlMeta">vs modal beli saham</small>
-                  </article>
-                </div>
+                <article class="metric balance">
+                  <span>Total Portofolio</span>
+                  <strong id="investmentPortfolioTotal">Rp0</strong>
+                  <small>saham + RDPU</small>
+                </article>
+              </div>
 
             <div class="investment-grid">
               <section class="investment-records-section">
@@ -1027,7 +1025,6 @@
                 </div>
               </section>
 
-              <div class="investment-grid-secondary">
               <section class="investment-records-section">
                 <div class="section-head compact">
                   <h3>Pembelian RDPU</h3>
@@ -1063,42 +1060,6 @@
                   </table>
                 </div>
               </section>
-
-              <section class="investment-records-section">
-                <div class="section-head compact">
-                  <h3>Dividen Aktual</h3>
-                  <p>Catat dividen yang sudah cair. Simulator memakai nominal ini untuk bulan aktual, tanpa menambah lot otomatis.</p>
-                </div>
-                <form class="investment-form rdpu-form" id="investmentDividendForm">
-                  <label>
-                    Bulan
-                    <select id="investmentDividendMonth"></select>
-                  </label>
-                  <label>
-                    Tahun
-                    <select id="investmentDividendYear"></select>
-                  </label>
-                  <label>
-                    Nominal Dividen
-                    <input id="investmentDividendAmount" type="text" inputmode="numeric" placeholder="0" />
-                  </label>
-                  <button class="primary-button investment-submit" id="investmentDividendSubmit" type="submit">Simpan Dividen</button>
-                  <button class="icon-button" id="investmentDividendCancelEdit" type="button" hidden>Batal Edit</button>
-                </form>
-                <div class="table-scroll investment-table-scroll investment-rdpu-scroll">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Bulan</th>
-                        <th>Nominal</th>
-                        <th>Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody id="investmentDividendTable"></tbody>
-                  </table>
-                </div>
-              </section>
-              </div>
             </div>
 
             <section class="investment-records-section">
@@ -1127,26 +1088,61 @@
             <section class="investment-records-section">
               <div class="section-head">
                 <div>
-                  <h3>Mark to market</h3>
-                  <p>Avg cost dari ledger vs harga pasar per lembar. Rumus beli lot tidak berubah.</p>
+                  <h3>Informasi Pembelian</h3>
+                  <p>Ringkasan harga, lot, dan nominal RDPU dari transaksi yang sudah dicatat.</p>
+                </div>
+                <div class="investment-filters">
+                  <label>
+                    Saham
+                    <select id="investmentInfoTickerFilter"></select>
+                  </label>
+                  <label>
+                    Tahun
+                    <select id="investmentInfoYearFilter"></select>
+                  </label>
                 </div>
               </div>
-              <div class="market-price-grid" id="investmentMarketPriceGrid"></div>
-              <div class="table-scroll">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Saham</th>
-                      <th>Lot</th>
-                      <th>Modal</th>
-                      <th>Avg / Lembar</th>
-                      <th>Harga Pasar</th>
-                      <th>Nilai Pasar</th>
-                      <th>P/L</th>
-                    </tr>
-                  </thead>
-                  <tbody id="investmentMarkToMarketTable"></tbody>
-                </table>
+              <div class="investment-info-grid">
+                <div>
+                  <h4 class="investment-info-title">Saham</h4>
+                  <div class="investment-info-cards">
+                    <article class="metric">
+                      <span>Nominal Pembelian Terendah</span>
+                      <strong id="investmentMinPrice">-</strong>
+                      <small id="investmentMinPriceMeta">-</small>
+                    </article>
+                    <article class="metric">
+                      <span>Nominal Pembelian Terbesar</span>
+                      <strong id="investmentMaxPrice">-</strong>
+                      <small id="investmentMaxPriceMeta">-</small>
+                    </article>
+                    <article class="metric">
+                      <span>Lot Paling Sedikit</span>
+                      <strong id="investmentMinLots">-</strong>
+                      <small id="investmentMinLotsMeta">-</small>
+                    </article>
+                    <article class="metric">
+                      <span>Lot Paling Banyak</span>
+                      <strong id="investmentMaxLots">-</strong>
+                      <small id="investmentMaxLotsMeta">-</small>
+                    </article>
+                  </div>
+                </div>
+                <div>
+                  <h4 class="investment-info-title">RDPU</h4>
+                  <div class="investment-info-cards rdpu-info-cards">
+                    <article class="metric">
+                      <span>Nominal Terendah</span>
+                      <strong id="investmentMinRdpu">-</strong>
+                      <small id="investmentMinRdpuMeta">-</small>
+                    </article>
+                    <article class="metric">
+                      <span>Nominal Terbesar</span>
+                      <strong id="investmentMaxRdpu">-</strong>
+                      <small id="investmentMaxRdpuMeta">-</small>
+                    </article>
+                  </div>
+                </div>
               </div>
             </section>
 
