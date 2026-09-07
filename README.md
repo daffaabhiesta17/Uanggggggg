@@ -79,4 +79,29 @@ add column if not exists simulator_config jsonb not null default '{}'::jsonb;
 
 Setelah itu refresh aplikasi. Input terakhir di Simulator 120 Bulan akan tersimpan otomatis di browser dan ikut tersinkron ke Supabase lewat kolom `simulator_config`.
 
+Jika ingin menyimpan **dividen aktual** ke cloud, jalankan juga:
+
+```sql
+create table if not exists public.dividend_receipts (
+  id text primary key,
+  month integer not null check (month between 1 and 12),
+  year integer not null check (year between 1900 and 2200),
+  amount numeric not null check (amount > 0),
+  created_at timestamptz not null default now()
+);
+
+alter table public.dividend_receipts enable row level security;
+
+create policy "public dividend receipts read"
+on public.dividend_receipts for select
+to anon
+using (true);
+
+create policy "public dividend receipts write"
+on public.dividend_receipts for all
+to anon
+using (true)
+with check (true);
+```
+
 Catatan keamanan: schema ini dibuat untuk single-user/simple shared app. Siapa pun yang punya URL aplikasi dan anon key di frontend bisa membaca/ubah data. Untuk data pribadi yang serius, tahap berikutnya adalah menambahkan login Supabase Auth dan Row Level Security per user.

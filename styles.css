@@ -1874,7 +1874,7 @@ input:disabled {
 
 .investment-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.7fr) minmax(280px, 0.7fr);
   gap: 18px;
   align-items: start;
 }
@@ -1955,11 +1955,7 @@ input:disabled {
 }
 
 .sim-history-table {
-  min-width: 1360px;
-}
-
-.sim-dividend-purchase-table {
-  min-width: 980px;
+  min-width: 1180px;
 }
 
 .investment-info-grid {
@@ -2599,4 +2595,71 @@ input:disabled {
   font-size: 0.72rem;
   color: var(--muted);
   margin: 8px 0 0;
+}
+
+.scenario-compare-bar {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.scenario-compare-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.scenario-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.scenario-compare-grid article {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.scenario-compare-grid span,
+.scenario-compare-empty {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.scenario-compare-empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.scenario-compare-grid strong {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.market-price-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 1080px) {
+  .scenario-compare-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }

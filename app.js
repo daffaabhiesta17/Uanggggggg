@@ -36,6 +36,8 @@ const defaultState = {
     activeStocks: ["BMRI", "ICBP", "BBRI"],
     stockPurchases: [],
     rdpuPurchases: [],
+    dividendReceipts: [],
+    marketPrices: {},
   },
 };
 
@@ -79,6 +81,8 @@ const DEFAULT_SIMULATOR_CONFIG = {
   bmriPriceChangeAnnual: 5,
   icbpPriceChangeAnnual: 5,
   bbriPriceChangeAnnual: 5,
+  passiveIncomeTarget: 0,
+  savedScenario: null,
 };
 
 const rupiah = new Intl.NumberFormat("id-ID", {
@@ -101,6 +105,7 @@ let chartBars = [];
 let investmentsDirty = true;
 let editingStockPurchaseId = null;
 let editingRdpuPurchaseId = null;
+let editingDividendReceiptId = null;
 let simulatorSettingsSaveTimer = null;
 let investmentGrowthChart = null;
 let investmentStockChart = null;
@@ -208,6 +213,11 @@ const el = {
   simFinalAsset: document.querySelector("#simFinalAsset"),
   simNetProfit: document.querySelector("#simNetProfit"),
   simPassiveIncome: document.querySelector("#simPassiveIncome"),
+  simPassiveTarget: document.querySelector("#simPassiveTarget"),
+  simPassiveTargetMeta: document.querySelector("#simPassiveTargetMeta"),
+  simSaveScenarioA: document.querySelector("#simSaveScenarioA"),
+  simClearScenarioA: document.querySelector("#simClearScenarioA"),
+  simScenarioCompare: document.querySelector("#simScenarioCompare"),
   simAssetMultiple: document.querySelector("#simAssetMultiple"),
   simBmriLots: document.querySelector("#simBmriLots"),
   simIcbpLots: document.querySelector("#simIcbpLots"),
@@ -226,9 +236,7 @@ const el = {
   simTotalRdpuContributions: document.querySelector("#simTotalRdpuContributions"),
   simRdpuReturnGain: document.querySelector("#simRdpuReturnGain"),
   simHistoryTable: document.querySelector("#simHistoryTable"),
-  simDividendPurchaseTableWrap: document.querySelector("#simDividendPurchaseTableWrap"),
-  simDividendPurchaseTable: document.querySelector("#simDividendPurchaseTable"),
-  simDividendPurchaseEmpty: document.querySelector("#simDividendPurchaseEmpty"),
+
   investmentGrowthChart: document.querySelector("#investmentGrowthChart"),
   investmentHorizon: document.querySelector("#investmentHorizon"),
   addInvestmentYearButton: document.querySelector("#addInvestmentYearButton"),
@@ -282,6 +290,11 @@ const el = {
   investmentLotTotal: document.querySelector("#investmentLotTotal"),
   investmentRdpuTotal: document.querySelector("#investmentRdpuTotal"),
   investmentPortfolioTotal: document.querySelector("#investmentPortfolioTotal"),
+  investmentPortfolioMeta: document.querySelector("#investmentPortfolioMeta"),
+  investmentUnrealizedPnl: document.querySelector("#investmentUnrealizedPnl"),
+  investmentUnrealizedPnlMeta: document.querySelector("#investmentUnrealizedPnlMeta"),
+  investmentMarketPriceGrid: document.querySelector("#investmentMarketPriceGrid"),
+  investmentMarkToMarketTable: document.querySelector("#investmentMarkToMarketTable"),
   investmentTickerForm: document.querySelector("#investmentTickerForm"),
   investmentTickerInput: document.querySelector("#investmentTickerInput"),
   investmentTickerList: document.querySelector("#investmentTickerList"),
@@ -301,20 +314,13 @@ const el = {
   investmentRdpuYear: document.querySelector("#investmentRdpuYear"),
   investmentRdpuAmount: document.querySelector("#investmentRdpuAmount"),
   investmentRdpuTable: document.querySelector("#investmentRdpuTable"),
-  investmentInfoTickerFilter: document.querySelector("#investmentInfoTickerFilter"),
-  investmentInfoYearFilter: document.querySelector("#investmentInfoYearFilter"),
-  investmentMinPrice: document.querySelector("#investmentMinPrice"),
-  investmentMinPriceMeta: document.querySelector("#investmentMinPriceMeta"),
-  investmentMaxPrice: document.querySelector("#investmentMaxPrice"),
-  investmentMaxPriceMeta: document.querySelector("#investmentMaxPriceMeta"),
-  investmentMinLots: document.querySelector("#investmentMinLots"),
-  investmentMinLotsMeta: document.querySelector("#investmentMinLotsMeta"),
-  investmentMaxLots: document.querySelector("#investmentMaxLots"),
-  investmentMaxLotsMeta: document.querySelector("#investmentMaxLotsMeta"),
-  investmentMinRdpu: document.querySelector("#investmentMinRdpu"),
-  investmentMinRdpuMeta: document.querySelector("#investmentMinRdpuMeta"),
-  investmentMaxRdpu: document.querySelector("#investmentMaxRdpu"),
-  investmentMaxRdpuMeta: document.querySelector("#investmentMaxRdpuMeta"),
+  investmentDividendForm: document.querySelector("#investmentDividendForm"),
+  investmentDividendSubmit: document.querySelector("#investmentDividendSubmit"),
+  investmentDividendCancelEdit: document.querySelector("#investmentDividendCancelEdit"),
+  investmentDividendMonth: document.querySelector("#investmentDividendMonth"),
+  investmentDividendYear: document.querySelector("#investmentDividendYear"),
+  investmentDividendAmount: document.querySelector("#investmentDividendAmount"),
+  investmentDividendTable: document.querySelector("#investmentDividendTable"),
   investmentStockChartTickerFilter: document.querySelector("#investmentStockChartTickerFilter"),
   investmentStockChartYearFilter: document.querySelector("#investmentStockChartYearFilter"),
   investmentStockChart: document.querySelector("#investmentStockChart"),
@@ -397,6 +403,29 @@ function normalizeInvestments(investments = {}) {
         }))
         .filter((purchase) => purchase.amount > 0)
     : [];
+  const dividendReceipts = Array.isArray(investments.dividendReceipts)
+    ? investments.dividendReceipts
+        .map((receipt) => ({
+          id: String(receipt.id || uid("div")),
+          month: clampNumber(Math.round(Number(receipt.month) || 1), 1, 12),
+          year: Math.round(Number(receipt.year) || INVESTMENT_START_YEAR),
+          amount: positiveNumber(receipt.amount),
+          createdAt: receipt.createdAt || receipt.created_at || new Date().toISOString(),
+        }))
+        .filter((receipt) => receipt.amount > 0)
+    : [];
+  const marketPrices = {};
+  const rawMarketPrices =
+    investments.marketPrices && typeof investments.marketPrices === "object"
+      ? investments.marketPrices
+      : investments.simulatorConfig?.marketPrices && typeof investments.simulatorConfig.marketPrices === "object"
+        ? investments.simulatorConfig.marketPrices
+        : {};
+  Object.entries(rawMarketPrices).forEach(([ticker, price]) => {
+    const symbol = sanitizeTicker(ticker);
+    const numeric = Number(price);
+    if (symbol && Number.isFinite(numeric) && numeric > 0) marketPrices[symbol] = numeric;
+  });
 
   const CORE_STOCKS = ["BMRI", "ICBP", "BBRI"];
   const rawActive = Array.isArray(investments.activeStocks) ? investments.activeStocks : CORE_STOCKS;
@@ -410,6 +439,8 @@ function normalizeInvestments(investments = {}) {
     activeStocks: safeActiveStocks,
     stockPurchases,
     rdpuPurchases,
+    dividendReceipts,
+    marketPrices,
   };
 }
 
@@ -475,11 +506,13 @@ function normalizeSimulatorConfig(config = {}) {
       -99,
       1000,
     ),
-    bbriPriceChangeAnnual: clampNumber(
+      bbriPriceChangeAnnual: clampNumber(
       numberOrDefault(config.bbriPriceChangeAnnual, DEFAULT_SIMULATOR_CONFIG.bbriPriceChangeAnnual),
       -99,
       1000,
     ),
+    passiveIncomeTarget: Math.max(0, numberOrDefault(config.passiveIncomeTarget, DEFAULT_SIMULATOR_CONFIG.passiveIncomeTarget)),
+    savedScenario: config.savedScenario && typeof config.savedScenario === "object" ? config.savedScenario : null,
     activeStocks: (() => {
       const CORE = ["BMRI", "ICBP", "BBRI"];
       const raw = Array.isArray(config.activeStocks) ? config.activeStocks : CORE;
@@ -624,11 +657,34 @@ function fromDbRdpuPurchase(purchase) {
   };
 }
 
+function toDbDividendReceipt(receipt) {
+  return {
+    id: receipt.id,
+    month: receipt.month,
+    year: receipt.year,
+    amount: receipt.amount,
+    created_at: receipt.createdAt || new Date().toISOString(),
+  };
+}
+
+function fromDbDividendReceipt(receipt) {
+  return {
+    id: receipt.id,
+    month: Number(receipt.month),
+    year: Number(receipt.year),
+    amount: Number(receipt.amount),
+    createdAt: receipt.created_at,
+  };
+}
+
 function toDbInvestmentSettings(investments) {
   return {
     id: "default",
     horizon_years: clampNumber(Math.round(Number(investments.horizonYears) || 11), 1, 50),
-    simulator_config: normalizeSimulatorConfig(investments.simulatorConfig),
+    simulator_config: {
+      ...normalizeSimulatorConfig(investments.simulatorConfig),
+      marketPrices: investments.marketPrices || {},
+    },
   };
 }
 
@@ -667,6 +723,7 @@ async function initRemoteStore() {
       .on("postgres_changes", { event: "*", schema: "public", table: "investment_tickers" }, refreshFromRemote)
       .on("postgres_changes", { event: "*", schema: "public", table: "stock_purchases" }, refreshFromRemote)
       .on("postgres_changes", { event: "*", schema: "public", table: "rdpu_purchases" }, refreshFromRemote)
+      .on("postgres_changes", { event: "*", schema: "public", table: "dividend_receipts" }, refreshFromRemote)
       .subscribe();
   } catch (error) {
     console.error(error);
@@ -704,7 +761,7 @@ function isMissingInvestmentTableError(error) {
 
 async function loadRemoteInvestments(localInvestments = state.investments) {
   try {
-    const [settingsResult, tickersResult, stockResult, rdpuResult] = await Promise.all([
+    const [settingsResult, tickersResult, stockResult, rdpuResult, dividendResult] = await Promise.all([
       remoteStore.client.from("investment_settings").select("*").eq("id", "default").maybeSingle(),
       remoteStore.client.from("investment_tickers").select("*").order("symbol", { ascending: true }),
       remoteStore.client
@@ -719,16 +776,25 @@ async function loadRemoteInvestments(localInvestments = state.investments) {
         .order("year", { ascending: true })
         .order("month", { ascending: true })
         .order("created_at", { ascending: true }),
+      remoteStore.client
+        .from("dividend_receipts")
+        .select("*")
+        .order("year", { ascending: true })
+        .order("month", { ascending: true })
+        .order("created_at", { ascending: true }),
     ]);
 
+    const dividendMissing = isMissingInvestmentTableError(dividendResult.error);
     const errors = [settingsResult.error, tickersResult.error, stockResult.error, rdpuResult.error].filter(Boolean);
     if (errors.length) throw errors[0];
+    if (dividendResult.error && !dividendMissing) throw dividendResult.error;
 
     const remoteHasInvestmentData =
       Boolean(settingsResult.data) ||
       tickersResult.data.length > 0 ||
       stockResult.data.length > 0 ||
-      rdpuResult.data.length > 0;
+      rdpuResult.data.length > 0 ||
+      (!dividendMissing && dividendResult.data?.length > 0);
 
     state.investments = remoteHasInvestmentData
       ? normalizeInvestments({
@@ -739,6 +805,8 @@ async function loadRemoteInvestments(localInvestments = state.investments) {
           tickers: tickersResult.data.map(fromDbInvestmentTicker),
           stockPurchases: stockResult.data.map(fromDbStockPurchase),
           rdpuPurchases: rdpuResult.data.map(fromDbRdpuPurchase),
+          dividendReceipts: dividendMissing ? localInvestments.dividendReceipts : (dividendResult.data || []).map(fromDbDividendReceipt),
+          marketPrices: settingsResult.data?.simulator_config?.marketPrices || localInvestments.marketPrices,
         })
       : normalizeInvestments(localInvestments);
 
@@ -808,6 +876,13 @@ async function syncInvestmentsToRemote() {
       .upsert(state.investments.rdpuPurchases.map(toDbRdpuPurchase));
     if (rdpuResult.error) throw rdpuResult.error;
   }
+
+  if (state.investments.dividendReceipts.length) {
+    const dividendResult = await remoteStore.client
+      .from("dividend_receipts")
+      .upsert(state.investments.dividendReceipts.map(toDbDividendReceipt));
+    if (dividendResult.error && !isMissingInvestmentTableError(dividendResult.error)) throw dividendResult.error;
+  }
 }
 
 async function persistInvestmentSettings() {
@@ -857,6 +932,20 @@ async function deleteRdpuPurchaseRemote(id) {
   if (!remoteStore.enabled || !remoteStore.investmentsEnabled) return;
   const { error } = await remoteStore.client.from("rdpu_purchases").delete().eq("id", id);
   if (error) throw error;
+}
+
+async function persistDividendReceipt(receipt) {
+  saveState();
+  if (!remoteStore.enabled || !remoteStore.investmentsEnabled) return;
+  const { error } = await remoteStore.client.from("dividend_receipts").upsert(toDbDividendReceipt(receipt));
+  if (error && !isMissingInvestmentTableError(error)) throw error;
+}
+
+async function deleteDividendReceiptRemote(id) {
+  saveState();
+  if (!remoteStore.enabled || !remoteStore.investmentsEnabled) return;
+  const { error } = await remoteStore.client.from("dividend_receipts").delete().eq("id", id);
+  if (error && !isMissingInvestmentTableError(error)) throw error;
 }
 
 async function refreshFromRemote() {
@@ -921,6 +1010,9 @@ async function resetRemoteData() {
 
     const rdpuResult = await remoteStore.client.from("rdpu_purchases").delete().neq("id", "__never__");
     if (rdpuResult.error) throw rdpuResult.error;
+
+    const dividendResult = await remoteStore.client.from("dividend_receipts").delete().neq("id", "__never__");
+    if (dividendResult.error && !isMissingInvestmentTableError(dividendResult.error)) throw dividendResult.error;
 
     const tickerResult = await remoteStore.client.from("investment_tickers").delete().neq("symbol", "__never__");
     if (tickerResult.error) throw tickerResult.error;
@@ -1223,6 +1315,12 @@ function simulationPeriodLabel(inputs, startMonthIndex, endMonthIndex) {
   return `${simulationMonthYearLabel(inputs, startMonthIndex)} - ${simulationMonthYearLabel(inputs, endMonthIndex)}`;
 }
 
+function actualDividendForSimulationMonth(calendarMonth, calendarYear) {
+  return (state.investments.dividendReceipts || [])
+    .filter((receipt) => receipt.month === calendarMonth && receipt.year === calendarYear)
+    .reduce((total, receipt) => total + receipt.amount, 0);
+}
+
 function actualInvestmentForSimulationMonth(calendarMonth, calendarYear) {
   const active = state.investments.activeStocks;
   const stockPurchases = state.investments.stockPurchases.filter(
@@ -1231,6 +1329,7 @@ function actualInvestmentForSimulationMonth(calendarMonth, calendarYear) {
   const rdpuPurchases = state.investments.rdpuPurchases.filter(
     (purchase) => purchase.month === calendarMonth && purchase.year === calendarYear,
   );
+  const dividendAmount = actualDividendForSimulationMonth(calendarMonth, calendarYear);
   const bmriPurchases = active.includes("BMRI") ? stockPurchases.filter((p) => p.ticker === "BMRI") : [];
   const icbpPurchases = active.includes("ICBP") ? stockPurchases.filter((p) => p.ticker === "ICBP") : [];
   const bbriPurchases = active.includes("BBRI") ? stockPurchases.filter((p) => p.ticker === "BBRI") : [];
@@ -1252,6 +1351,7 @@ function actualInvestmentForSimulationMonth(calendarMonth, calendarYear) {
     bbriAmount,
     stockAmount: bmriAmount + icbpAmount + bbriAmount,
     rdpuAmount,
+    dividendAmount,
     contribution: bmriAmount + icbpAmount + bbriAmount + rdpuAmount,
   };
 }
@@ -1416,6 +1516,7 @@ function readSimulationInputs() {
     bmriDividendInitial: Math.max(0, parseDecimalInput(el.simBmriYield.value)),
     icbpDividendInitial: Math.max(0, parseDecimalInput(el.simIcbpYield.value)),
     bbriDividendInitial: Math.max(0, parseDecimalInput(el.simBbriYield.value)),
+    passiveIncomeTarget: Math.max(0, parseNumberInput(el.simPassiveTarget?.value || "0")),
     priceChangeEnabled: el.simEnablePriceChange.checked,
     bmriPriceChangeAnnual: clampNumber(readNumber(el.simBmriPriceChange, 5), -99, 1000),
     icbpPriceChangeAnnual: clampNumber(readNumber(el.simIcbpPriceChange, 5), -99, 1000),
@@ -1473,6 +1574,7 @@ function applySimulatorConfigToForm(config) {
   el.simBmriPriceChange.value = String(normalized.bmriPriceChangeAnnual);
   el.simIcbpPriceChange.value = String(normalized.icbpPriceChangeAnnual);
   el.simBbriPriceChange.value = String(normalized.bbriPriceChangeAnnual);
+  if (el.simPassiveTarget) el.simPassiveTarget.value = formatNumberInput(normalized.passiveIncomeTarget || 0);
   applyActiveStocksToForm();
 }
 
@@ -1481,6 +1583,7 @@ function saveSimulatorConfigFromInputs() {
   state.investments.simulatorConfig = normalizeSimulatorConfig({
     ...inputs,
     activeStocks: state.investments.activeStocks,
+    savedScenario: state.investments.simulatorConfig?.savedScenario || null,
   });
   saveState();
   schedulePersistInvestmentSettings();
@@ -1560,7 +1663,15 @@ function simulateInvestment(inputs) {
     const bbriDividend = !actualInvestment.hasActual && isBbriDividendMonth
       ? bbriLots * LOT_SIZE * dividendPerShare(inputs.bbriDividendInitial, inputs.dividendGrowthAnnual, year)
       : 0;
-    const dividendThisMonth = bmriDividend + icbpDividend + bbriDividend;
+    const simulatedDividend = bmriDividend + icbpDividend + bbriDividend;
+    const dividendThisMonth = actualInvestment.hasActual
+      ? 0
+      : actualInvestment.dividendAmount > 0
+        ? actualInvestment.dividendAmount
+        : simulatedDividend;
+    const recordedDividendThisMonth = actualInvestment.hasActual
+      ? actualInvestment.dividendAmount
+      : dividendThisMonth;
     let rdpuContribution = monthlyRdpuBudget;
     let dividendBmriBought = 0;
     let dividendIcbpBought = 0;
@@ -1630,9 +1741,9 @@ function simulateInvestment(inputs) {
       rdpuContribution += stockCash - boughtLots * bbriLotPrice;
     }
 
-    totalDividends += dividendThisMonth;
+    totalDividends += recordedDividendThisMonth;
     totalContribution += monthlyContribution;
-    annualDividends += dividendThisMonth;
+    annualDividends += recordedDividendThisMonth;
     annualDividendBmriLots += dividendBmriBought;
     annualDividendIcbpLots += dividendIcbpBought;
     annualDividendBbriLots += dividendBbriBought;
@@ -1938,19 +2049,16 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
               <strong>Tahun ${row.year}</strong>
               ${formatSimulationSourceBadge(row.actualMonths)}
             </div>
-            <small>${row.periodLabel}${row.actualMonths ? ` - ${row.actualMonths} bulan aktual Program 2` : ""}</small>
+            <small>${row.periodLabel}${row.actualMonths ? ` - ${row.actualMonths} bulan aktual` : ""}</small>
           </td>
           <td>${formatAnnualActualPurchase(row)}</td>
           <td>${formatMoney(row.totalContribution)}</td>
-          <td>${formatMoney(row.bmriPrice)}</td>
           <td>${row.bmriLots.toLocaleString("id-ID")} lot</td>
-          <td>${formatMoney(row.icbpPrice)}</td>
           <td>${row.icbpLots.toLocaleString("id-ID")} lot</td>
-          <td>${formatMoney(row.bbriPrice)}</td>
           <td>${row.bbriLots.toLocaleString("id-ID")} lot</td>
           <td>${formatMoney(row.annualDividends)}</td>
-          <td>${formatMoney(row.rdpuContributions)}</td>
-          <td>${formatMoney(row.rdpuReturnGain)}</td>
+          <td>${formatDividendStockPurchase(row)}</td>
+          <td>${formatMoney(row.dividendLeftoverToRdpu)}</td>
           <td>${formatMoney(row.rdpuBalance)}</td>
           <td><strong>${formatMoney(row.portfolioValue)}</strong></td>
         </tr>
@@ -1958,35 +2066,8 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
       },
     )
     .join("");
-
-  const dividendPurchaseRows = result.yearlyRows.filter(
-    (row) => row.dividendBmriLots + row.dividendIcbpLots + row.dividendBbriLots > 0 || row.actualMonths > 0,
-  );
-  el.simDividendPurchaseTableWrap.classList.toggle("hidden", dividendPurchaseRows.length === 0);
-  el.simDividendPurchaseEmpty.classList.toggle("hidden", dividendPurchaseRows.length > 0);
-  el.simDividendPurchaseTable.innerHTML = dividendPurchaseRows
-    .map(
-      (row) => {
-        const status = simulationSourceStatus(row.actualMonths);
-        return `
-        <tr class="source-row-${status.key}">
-          <td>
-            <div class="history-period-head">
-              <strong>Tahun ${row.year}</strong>
-              ${formatSimulationSourceBadge(row.actualMonths)}
-            </div>
-            <small>${row.periodLabel}${row.actualMonths ? ` - ${row.actualMonths} bulan aktual Program 2` : ""}</small>
-          </td>
-          <td>${formatMoney(row.annualDividends)}</td>
-          <td>${formatDividendStockPurchase(row)}</td>
-          <td>${formatMoney(row.dividendStockCashUsed)}</td>
-          <td>${formatMoney(row.dividendLeftoverToRdpu)}</td>
-          <td>${formatAnnualActualPurchase(row)}</td>
-        </tr>
-      `;
-      },
-    )
-    .join("");
+  renderPassiveIncomeTarget(result, inputs);
+  renderScenarioCompare(result, inputs);
 
   if (investmentGrowthChart) {
     investmentGrowthChart.data.labels = result.chartYears;
@@ -1994,6 +2075,64 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
     investmentGrowthChart.data.datasets[1].data = result.chartAssets;
     investmentGrowthChart.update();
   }
+}
+
+function renderPassiveIncomeTarget(result, inputs) {
+  if (!el.simPassiveTargetMeta) return;
+  const target = Math.max(0, Number(inputs.passiveIncomeTarget) || 0);
+  if (target <= 0) {
+    el.simPassiveTargetMeta.textContent = "estimasi dividen tahunan";
+    return;
+  }
+  const gap = result.passiveIncomeFinalYear - target;
+  const pct = target > 0 ? (result.passiveIncomeFinalYear / target) * 100 : 0;
+  el.simPassiveTargetMeta.textContent =
+    gap >= 0
+      ? `target ${formatMoney(target)} terlampaui ${decimal.format(pct)}%`
+      : `kurang ${formatMoney(Math.abs(gap))} dari target ${formatMoney(target)}`;
+}
+
+function scenarioSnapshot(result, inputs) {
+  return {
+    savedAt: new Date().toISOString(),
+    monthlyDeposit: inputs.monthlyDeposit,
+    purchaseMode: inputs.purchaseMode,
+    totalContribution: result.totalContribution,
+    finalAsset: result.finalAsset,
+    netProfit: result.netProfit,
+    passiveIncomeFinalYear: result.passiveIncomeFinalYear,
+    multiple: result.finalAsset / Math.max(result.totalContribution, 1),
+  };
+}
+
+function renderScenarioCompare(result, inputs) {
+  if (!el.simScenarioCompare) return;
+  const saved = state.investments.simulatorConfig?.savedScenario;
+  if (!saved) {
+    el.simScenarioCompare.innerHTML =
+      '<p class="scenario-compare-empty">Simpan Skenario A untuk membandingkan asumsi tanpa menimpa input saat ini.</p>';
+    return;
+  }
+  const current = scenarioSnapshot(result, inputs);
+  const delta = (now, then) => now - then;
+  const row = (label, now, then, money = true) => {
+    const diff = delta(now, then);
+    const cls = diff > 0 ? "positive" : diff < 0 ? "negative" : "";
+    const format = (value) => (money ? formatMoney(value) : `${decimal.format(value)}x`);
+    return `
+      <article>
+        <span>${label}</span>
+        <strong>${format(now)}</strong>
+        <small class="${cls}">A: ${format(then)} (${diff >= 0 ? "+" : ""}${format(diff)})</small>
+      </article>
+    `;
+  };
+  el.simScenarioCompare.innerHTML = `
+    ${row("Aset akhir", current.finalAsset, saved.finalAsset)}
+    ${row("Keuntungan bersih", current.netProfit, saved.netProfit)}
+    ${row("Gaji pasif T15", current.passiveIncomeFinalYear, saved.passiveIncomeFinalYear)}
+    ${row("Kelipatan modal", current.multiple, saved.multiple, false)}
+  `;
 }
 
 function currentMonth() {
@@ -2468,22 +2607,18 @@ function renderInvestmentOptions() {
 
   renderOptionList(el.investmentStockMonth, monthOptions, el.investmentStockMonth.value || "1");
   renderOptionList(el.investmentRdpuMonth, monthOptions, el.investmentRdpuMonth.value || "1");
+  if (el.investmentDividendMonth) {
+    renderOptionList(el.investmentDividendMonth, monthOptions, el.investmentDividendMonth.value || "1");
+  }
   renderOptionList(el.investmentStockYear, yearOptions, el.investmentStockYear.value || String(years[0]));
   renderOptionList(el.investmentRdpuYear, yearOptions, el.investmentRdpuYear.value || String(years[0]));
+  if (el.investmentDividendYear) {
+    renderOptionList(el.investmentDividendYear, yearOptions, el.investmentDividendYear.value || String(years[0]));
+  }
   renderOptionList(
     el.investmentStockTicker,
     state.investments.tickers.map((ticker) => ({ value: ticker, label: ticker })),
     el.investmentStockTicker.value || state.investments.tickers[0],
-  );
-  renderOptionList(
-    el.investmentInfoTickerFilter,
-    [{ value: "all", label: "Semua Saham" }, ...state.investments.tickers.map((ticker) => ({ value: ticker, label: ticker }))],
-    el.investmentInfoTickerFilter.value || "all",
-  );
-  renderOptionList(
-    el.investmentInfoYearFilter,
-    [{ value: "all", label: "Semua Tahun" }, ...yearOptions],
-    el.investmentInfoYearFilter.value || "all",
   );
   renderOptionList(
     el.investmentStockChartTickerFilter,
@@ -2920,6 +3055,131 @@ function renderInvestmentTables() {
         )
         .join("")
     : `<tr><td colspan="3"><div class="empty-state">Belum ada pembelian RDPU.</div></td></tr>`;
+
+  if (!el.investmentDividendTable) return;
+  const dividendRows = [...(state.investments.dividendReceipts || [])].sort(
+    (a, b) => investmentTimestamp(a) - investmentTimestamp(b),
+  );
+  el.investmentDividendTable.innerHTML = dividendRows.length
+    ? dividendRows
+        .map(
+          (receipt) => `
+            <tr>
+              <td>${formatInvestmentDate(receipt)}</td>
+              <td><strong>${formatMoney(receipt.amount)}</strong></td>
+              <td>
+                <div class="table-actions">
+                  <button class="icon-button" data-edit-dividend-receipt="${receipt.id}" type="button">Edit</button>
+                  <button class="icon-button delete" data-delete-dividend-receipt="${receipt.id}" type="button">Hapus</button>
+                </div>
+              </td>
+            </tr>
+          `,
+        )
+        .join("")
+    : `<tr><td colspan="3"><div class="empty-state">Belum ada dividen aktual.</div></td></tr>`;
+}
+
+function calculateMarkToMarket() {
+  const prices = state.investments.marketPrices || {};
+  const grouped = {};
+  state.investments.tickers.forEach((ticker) => {
+    grouped[ticker] = { ticker, lots: 0, cost: 0, marketPrice: Number(prices[ticker]) || 0 };
+  });
+  state.investments.stockPurchases.forEach((purchase) => {
+    if (!grouped[purchase.ticker]) {
+      grouped[purchase.ticker] = { ticker: purchase.ticker, lots: 0, cost: 0, marketPrice: Number(prices[purchase.ticker]) || 0 };
+    }
+    grouped[purchase.ticker].lots += purchase.lots;
+    grouped[purchase.ticker].cost += investmentValue(purchase);
+  });
+  return Object.values(grouped).map((row) => {
+    const shares = row.lots * LOT_SIZE;
+    const avgShare = shares > 0 ? row.cost / shares : 0;
+    const marketValue = row.marketPrice > 0 ? shares * row.marketPrice : 0;
+    const pnl = row.marketPrice > 0 ? marketValue - row.cost : 0;
+    return { ...row, shares, avgShare, marketValue, pnl, hasMarket: row.marketPrice > 0 && row.lots > 0 };
+  });
+}
+
+function renderMarkToMarket() {
+  const rows = calculateMarkToMarket();
+  const priced = rows.filter((row) => row.hasMarket);
+  const marketStockValue = priced.reduce((total, row) => total + row.marketValue, 0);
+  const pricedCost = priced.reduce((total, row) => total + row.cost, 0);
+  const pnl = marketStockValue - pricedCost;
+  const rdpuTotal = state.investments.rdpuPurchases.reduce((total, purchase) => total + purchase.amount, 0);
+  const stockCost = rows.reduce((total, row) => total + row.cost, 0);
+  const unpricedLots = rows.filter((row) => row.lots > 0 && !row.hasMarket).length;
+
+  if (el.investmentMarketPriceGrid) {
+    const existing = [...el.investmentMarketPriceGrid.querySelectorAll("[data-market-ticker]")].map((input) => input.dataset.marketTicker);
+    const nextTickers = state.investments.tickers;
+    const sameTickers = existing.length === nextTickers.length && nextTickers.every((ticker, index) => existing[index] === ticker);
+    if (!sameTickers) {
+      el.investmentMarketPriceGrid.innerHTML = nextTickers
+        .map((ticker) => {
+          const value = state.investments.marketPrices?.[ticker] || "";
+          return `
+            <label>
+              Harga ${escapeHtml(ticker)} / lembar
+              <input class="market-price-input" data-market-ticker="${escapeHtml(ticker)}" type="text" inputmode="numeric" value="${value ? formatNumberInput(value) : ""}" placeholder="0" />
+            </label>
+          `;
+        })
+        .join("");
+    } else {
+      nextTickers.forEach((ticker) => {
+        const input = el.investmentMarketPriceGrid.querySelector(`[data-market-ticker="${ticker}"]`);
+        if (!input || document.activeElement === input) return;
+        const value = state.investments.marketPrices?.[ticker] || "";
+        input.value = value ? formatNumberInput(value) : "";
+      });
+    }
+  }
+
+  if (el.investmentMarkToMarketTable) {
+    const visible = rows.filter((row) => row.lots > 0);
+    el.investmentMarkToMarketTable.innerHTML = visible.length
+      ? visible
+          .map((row) => {
+            const pnlClass = !row.hasMarket ? "" : row.pnl >= 0 ? "positive" : "negative";
+            return `
+              <tr>
+                <td><strong>${escapeHtml(row.ticker)}</strong></td>
+                <td>${row.lots.toLocaleString("id-ID")} lot</td>
+                <td>${formatMoney(row.cost)}</td>
+                <td>${row.avgShare ? formatMoney(row.avgShare) : "-"}</td>
+                <td>${row.marketPrice ? formatMoney(row.marketPrice) : "-"}</td>
+                <td>${row.hasMarket ? formatMoney(row.marketValue) : "-"}</td>
+                <td class="${pnlClass}">${row.hasMarket ? formatMoney(row.pnl) : "-"}</td>
+              </tr>
+            `;
+          })
+          .join("")
+      : `<tr><td colspan="7"><div class="empty-state">Belum ada pembelian saham.</div></td></tr>`;
+  }
+
+  if (el.investmentPortfolioTotal) {
+    el.investmentPortfolioTotal.textContent = priced.length
+      ? formatMoney(marketStockValue + rdpuTotal)
+      : formatMoney(stockCost + rdpuTotal);
+  }
+  if (el.investmentPortfolioMeta) {
+    el.investmentPortfolioMeta.textContent = priced.length
+      ? unpricedLots
+        ? `pasar + RDPU, ${unpricedLots} saham belum ada harga`
+        : "pasar saham + modal RDPU"
+      : "isi harga pasar untuk P/L";
+  }
+  if (el.investmentUnrealizedPnl) {
+    el.investmentUnrealizedPnl.textContent = priced.length ? formatMoney(pnl) : "-";
+    el.investmentUnrealizedPnl.classList.toggle("positive", priced.length > 0 && pnl >= 0);
+    el.investmentUnrealizedPnl.classList.toggle("negative", priced.length > 0 && pnl < 0);
+  }
+  if (el.investmentUnrealizedPnlMeta) {
+    el.investmentUnrealizedPnlMeta.textContent = priced.length ? "vs modal beli saham berharga pasar" : "vs modal beli saham";
+  }
 }
 
 function renderInvestmentSummary() {
@@ -2927,7 +3187,7 @@ function renderInvestmentSummary() {
   el.investmentStockTotal.textContent = formatMoney(summary.stockTotal);
   el.investmentLotTotal.textContent = `${summary.lotTotal.toLocaleString("id-ID")} lot`;
   el.investmentRdpuTotal.textContent = formatMoney(summary.rdpuTotal);
-  el.investmentPortfolioTotal.textContent = formatMoney(summary.portfolioTotal);
+  renderMarkToMarket();
   el.investmentSummaryTable.innerHTML = summary.rows
     .map(
       (row) => `
@@ -3019,98 +3279,6 @@ function formatRibuan(num) {
   if (!num && num !== 0) return "";
   return Math.floor(num).toLocaleString("id-ID");
 }
-
-function renderKalkulatorPorsi() {
-  const sahamInput = document.querySelector("#kalcSaham");
-  const etfInput   = document.querySelector("#kalcEtf");
-  const output     = document.querySelector("#kalcOutput");
-  if (!sahamInput || !etfInput || !output) return;
-
-  const saham = parseRibuanInput(sahamInput.value);
-  const etf   = parseRibuanInput(etfInput.value);
-  const total = saham + etf;
-
-  if (total <= 0) {
-    output.innerHTML = '<p class="kalc-empty">Masukkan nilai untuk melihat hasil.</p>';
-    return;
-  }
-
-  const sahamPct = (saham / total) * 100;
-  const etfPct   = (etf   / total) * 100;
-
-  function fmt(val) {
-    return val.toLocaleString("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 });
-  }
-
-  function fmtShort(val) {
-    if (val >= 1_000_000_000) return `Rp ${(val / 1_000_000_000).toFixed(1).replace(".", ",")} M`;
-    if (val >= 1_000_000)     return `Rp ${(val / 1_000_000).toFixed(0)} Juta`;
-    if (val >= 1_000)         return `Rp ${(val / 1_000).toFixed(0)} Ribu`;
-    return fmt(val);
-  }
-
-  const sahamShort = fmtShort(saham);
-  const etfShort   = fmtShort(etf);
-  const totalShort = fmtShort(total);
-
-  output.innerHTML = `
-    <div class="kalc-result-block">
-      <p class="kalc-line">Nilai Saham&nbsp;&nbsp;&nbsp;: <strong>${fmt(saham)}</strong></p>
-      <p class="kalc-line">Nilai ETF&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <strong>${fmt(etf)}</strong></p>
-      <p class="kalc-line kalc-total">Total Portofolio = <strong>${fmt(total)}</strong></p>
-    </div>
-    <div class="kalc-formula-block">
-      <p class="kalc-formula-title">Rumus persentase:</p>
-      <p class="kalc-formula">
-        % Saham = (${sahamShort} / ${totalShort}) × 100%
-        = <strong>${sahamPct.toFixed(2).replace(".", ",")}%</strong>
-      </p>
-      <p class="kalc-formula">
-        % ETF = (${etfShort} / ${totalShort}) × 100%
-        = <strong>${etfPct.toFixed(2).replace(".", ",")}%</strong>
-      </p>
-    </div>
-    <div class="kalc-bar-section">
-      <div class="kalc-bar-row">
-        <span>Saham</span>
-        <div class="kalc-track">
-          <div class="kalc-fill kalc-fill-saham" style="width:${Math.min(sahamPct,100).toFixed(1)}%"></div>
-        </div>
-        <span class="kalc-pct">${sahamPct.toFixed(1).replace(".", ",")}%</span>
-      </div>
-      <div class="kalc-bar-row">
-        <span>ETF</span>
-        <div class="kalc-track">
-          <div class="kalc-fill kalc-fill-etf" style="width:${Math.min(etfPct,100).toFixed(1)}%"></div>
-        </div>
-        <span class="kalc-pct">${etfPct.toFixed(1).replace(".", ",")}%</span>
-      </div>
-    </div>
-  `;
-}
-
-function initKalkulatorPorsi() {
-  const inputs = document.querySelectorAll(".kalc-input");
-  inputs.forEach((input) => {
-    input.addEventListener("input", () => {
-      // Format ribuan saat mengetik
-      const raw = parseRibuanInput(input.value);
-      const pos  = input.selectionStart;
-      const oldLen = input.value.length;
-      if (raw > 0) {
-        input.value = formatRibuan(raw);
-        // Jaga posisi cursor
-        const newLen = input.value.length;
-        input.setSelectionRange(pos + (newLen - oldLen), pos + (newLen - oldLen));
-      } else {
-        input.value = "";
-      }
-      renderKalkulatorPorsi();
-    });
-  });
-  renderKalkulatorPorsi();
-}
-
 
 // ============================================================
 // SIMULATOR PERSENTASE ASET - LOGIKA & RENDER
@@ -3540,14 +3708,13 @@ function setupInvestmentTabs() {
 
   const simulatorGrid = stack.querySelector(".investment-simulator-grid");
   const historySurface = el.simHistoryTable?.closest(".surface");
-  const dividendSurface = el.simDividendPurchaseTableWrap?.closest(".surface");
   const divider = stack.querySelector(".investment-section-divider");
   const strategySurface = document.querySelector(".monthly-strategy-calculator")?.closest(".surface");
   const recordsSurface = document.querySelector(".investment-records-surface");
   stack.prepend(tabs, stockToggles);
   stack.append(simulatorPanel, actualPanel, analysisPanel);
   simulatorPanel.append(actualSyncBanner);
-  [simulatorGrid, historySurface, dividendSurface].filter(Boolean).forEach((node) => simulatorPanel.append(node));
+  [simulatorGrid, historySurface].filter(Boolean).forEach((node) => simulatorPanel.append(node));
   divider?.remove();
   if (recordsSurface) {
     const recordsHead = recordsSurface.firstElementChild;
@@ -3558,39 +3725,11 @@ function setupInvestmentTabs() {
     analysisPanel.append(strategySurface);
   }
 
-  // Rebalancing Calculator
-  const rebalancingSurface = document.createElement("section");
-  rebalancingSurface.className = "surface";
-  rebalancingSurface.innerHTML = `
-    <div class="section-head compact">
-      <h3>Kalkulator komposisi</h3>
-      <p>Masukkan nilai saham dan ETF untuk melihat total portofolio dan porsi masing-masing.</p>
-    </div>
-    <div class="kalc-layout">
-      <div class="kalc-inputs">
-        <label>
-          Nilai Saham (Rp)
-          <input class="kalc-input" id="kalcSaham" type="text" inputmode="numeric" placeholder="Contoh: 40.000.000" />
-        </label>
-        <label>
-          Nilai ETF (Rp)
-          <input class="kalc-input" id="kalcEtf" type="text" inputmode="numeric" placeholder="Contoh: 60.000.000" />
-        </label>
-      </div>
-      <div class="kalc-output" id="kalcOutput">
-        <p class="kalc-empty">Masukkan nilai untuk melihat hasil.</p>
-      </div>
-    </div>
-  `;
-  analysisPanel.append(rebalancingSurface);
-  initKalkulatorPorsi();
-
-  // Simulator Persentase Aset
   const asetPersenSurface = document.createElement("section");
   asetPersenSurface.className = "surface";
   asetPersenSurface.innerHTML = `
     <div class="section-head compact">
-      <h3>Simulator persentase aset</h3>
+      <h3>Porsi portofolio</h3>
       <p>Bandingkan rincian nilai terhadap total aset, lengkap dengan status kecocokan 100%.</p>
     </div>
     <div class="asetpersen-layout">
@@ -3705,79 +3844,14 @@ function switchInvestmentTab(tab) {
     investmentGrowthChart.resize();
     investmentGrowthChart.update();
   }
-  if (activeInvestmentTab === "actual") {
+    if (activeInvestmentTab === "actual") {
     if (investmentStockChart) {
       investmentStockChart.resize();
       investmentStockChart.update();
     }
-    updateInvestmentInfo();
+    renderMarkToMarket();
     updateInvestmentStockChart();
   }
-}
-
-function filteredInvestmentInfoStocks() {
-  const ticker = el.investmentInfoTickerFilter.value || "all";
-  const year = el.investmentInfoYearFilter.value || "all";
-  return state.investments.stockPurchases
-    .filter((purchase) => ticker === "all" || purchase.ticker === ticker)
-    .filter((purchase) => year === "all" || purchase.year === Number(year));
-}
-
-function filteredInvestmentInfoRdpu() {
-  const year = el.investmentInfoYearFilter.value || "all";
-  return state.investments.rdpuPurchases.filter((purchase) => year === "all" || purchase.year === Number(year));
-}
-
-function findInvestmentByMetric(purchases, metric, direction) {
-  if (!purchases.length) return null;
-  return purchases.reduce((selected, purchase) => {
-    if (direction === "min") return purchase[metric] < selected[metric] ? purchase : selected;
-    return purchase[metric] > selected[metric] ? purchase : selected;
-  }, purchases[0]);
-}
-
-function findInvestmentByValue(purchases, direction) {
-  if (!purchases.length) return null;
-  return purchases.reduce((selected, purchase) => {
-    const selectedValue = investmentValue(selected);
-    const purchaseValue = investmentValue(purchase);
-    if (direction === "min") return purchaseValue < selectedValue ? purchase : selected;
-    return purchaseValue > selectedValue ? purchase : selected;
-  }, purchases[0]);
-}
-
-function formatInvestmentPurchaseMeta(purchase) {
-  return purchase
-    ? `${purchase.ticker} - ${formatInvestmentDate(purchase)} - ${formatMoney(purchase.lotPrice)} / lot x ${purchase.lots.toLocaleString("id-ID")} lot`
-    : "-";
-}
-
-function updateInvestmentInfo() {
-  const stockRows = filteredInvestmentInfoStocks();
-  const rdpuRows = filteredInvestmentInfoRdpu();
-  const minPrice = findInvestmentByValue(stockRows, "min");
-  const maxPrice = findInvestmentByValue(stockRows, "max");
-  const minLots = findInvestmentByMetric(stockRows, "lots", "min");
-  const maxLots = findInvestmentByMetric(stockRows, "lots", "max");
-  const minRdpu = findInvestmentByMetric(rdpuRows, "amount", "min");
-  const maxRdpu = findInvestmentByMetric(rdpuRows, "amount", "max");
-
-  el.investmentMinPrice.textContent = minPrice ? formatMoney(investmentValue(minPrice)) : "-";
-  el.investmentMinPriceMeta.textContent = formatInvestmentPurchaseMeta(minPrice);
-  el.investmentMaxPrice.textContent = maxPrice ? formatMoney(investmentValue(maxPrice)) : "-";
-  el.investmentMaxPriceMeta.textContent = formatInvestmentPurchaseMeta(maxPrice);
-  el.investmentMinLots.textContent = minLots ? `${minLots.lots.toLocaleString("id-ID")} lot` : "-";
-  el.investmentMinLotsMeta.textContent = minLots
-    ? `${minLots.ticker} - ${formatInvestmentDate(minLots)} - ${formatMoney(investmentValue(minLots))} total`
-    : "-";
-  el.investmentMaxLots.textContent = maxLots ? `${maxLots.lots.toLocaleString("id-ID")} lot` : "-";
-  el.investmentMaxLotsMeta.textContent = maxLots
-    ? `${maxLots.ticker} - ${formatInvestmentDate(maxLots)} - ${formatMoney(investmentValue(maxLots))} total`
-    : "-";
-  el.investmentMinRdpu.textContent = minRdpu ? formatMoney(minRdpu.amount) : "-";
-  el.investmentMinRdpuMeta.textContent = minRdpu ? formatInvestmentDate(minRdpu) : "-";
-  el.investmentMaxRdpu.textContent = maxRdpu ? formatMoney(maxRdpu.amount) : "-";
-  el.investmentMaxRdpuMeta.textContent = maxRdpu ? formatInvestmentDate(maxRdpu) : "-";
 }
 
 function filteredInvestmentChartStocks() {
@@ -3823,7 +3897,6 @@ function renderInvestments() {
   updateMonthlyStrategyCalculator();
   renderInvestmentTables();
   renderInvestmentSummary();
-  updateInvestmentInfo();
   updateInvestmentStockChart();
   investmentsDirty = false;
 }
@@ -3994,6 +4067,47 @@ function initEvents() {
       updateInvestmentSimulator();
     });
   });
+  if (el.simPassiveTarget) {
+    el.simPassiveTarget.addEventListener("input", () => {
+      el.simPassiveTarget.value = formatNumberInput(el.simPassiveTarget.value);
+    });
+  }
+  el.simSaveScenarioA?.addEventListener("click", () => {
+    const inputs = readSimulationInputs();
+    const result = simulateInvestment(inputs);
+    state.investments.simulatorConfig = {
+      ...normalizeSimulatorConfig(state.investments.simulatorConfig),
+      savedScenario: scenarioSnapshot(result, inputs),
+    };
+    saveState();
+    schedulePersistInvestmentSettings();
+    renderScenarioCompare(result, inputs);
+  });
+  el.simClearScenarioA?.addEventListener("click", () => {
+    state.investments.simulatorConfig = {
+      ...normalizeSimulatorConfig(state.investments.simulatorConfig),
+      savedScenario: null,
+    };
+    saveState();
+    schedulePersistInvestmentSettings();
+    renderScenarioCompare(simulateInvestment(readSimulationInputs()), readSimulationInputs());
+  });
+  el.investmentMarketPriceGrid?.addEventListener("input", (event) => {
+    const input = event.target.closest("[data-market-ticker]");
+    if (!input) return;
+    input.value = formatNumberInput(input.value);
+    const ticker = sanitizeTicker(input.dataset.marketTicker);
+    const price = parseNumberInput(input.value);
+    state.investments.marketPrices = { ...(state.investments.marketPrices || {}) };
+    if (price > 0) state.investments.marketPrices[ticker] = price;
+    else delete state.investments.marketPrices[ticker];
+    saveState();
+    schedulePersistInvestmentSettings();
+    renderMarkToMarket();
+  });
+  el.investmentDividendAmount?.addEventListener("input", () => {
+    el.investmentDividendAmount.value = formatNumberInput(el.investmentDividendAmount.value);
+  });
 
   el.investmentStockLotPrice.addEventListener("input", () => {
     el.investmentStockLotPrice.value = formatNumberInput(el.investmentStockLotPrice.value);
@@ -4052,8 +4166,6 @@ function initEvents() {
     }
   });
 
-  el.investmentInfoTickerFilter.addEventListener("change", updateInvestmentInfo);
-  el.investmentInfoYearFilter.addEventListener("change", updateInvestmentInfo);
   el.investmentStockChartTickerFilter.addEventListener("change", updateInvestmentStockChart);
   el.investmentStockChartYearFilter.addEventListener("change", updateInvestmentStockChart);
 
@@ -4128,6 +4240,23 @@ function initEvents() {
     el.investmentRdpuForm.reset();
     el.investmentRdpuSubmit.textContent = "Simpan RDPU";
     el.investmentRdpuCancelEdit.hidden = true;
+  }
+
+  function enterDividendEditMode(receipt) {
+    editingDividendReceiptId = receipt.id;
+    el.investmentDividendMonth.value = String(receipt.month);
+    el.investmentDividendYear.value = String(receipt.year);
+    el.investmentDividendAmount.value = formatNumberInput(receipt.amount);
+    el.investmentDividendSubmit.textContent = "Update Dividen";
+    el.investmentDividendCancelEdit.hidden = false;
+    el.investmentDividendForm.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function exitDividendEditMode() {
+    editingDividendReceiptId = null;
+    el.investmentDividendForm.reset();
+    el.investmentDividendSubmit.textContent = "Simpan Dividen";
+    el.investmentDividendCancelEdit.hidden = true;
   }
 
   el.investmentStockForm.addEventListener("submit", async (event) => {
@@ -4219,6 +4348,66 @@ function initEvents() {
 
   el.investmentRdpuCancelEdit.addEventListener("click", () => {
     exitRdpuEditMode();
+  });
+
+  el.investmentDividendForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const amount = parseNumberInput(el.investmentDividendAmount.value);
+    if (amount <= 0) {
+      alert("Nominal dividen harus lebih dari 0.");
+      return;
+    }
+    const isEditing = Boolean(editingDividendReceiptId);
+    const existing = isEditing
+      ? state.investments.dividendReceipts.find((item) => item.id === editingDividendReceiptId)
+      : null;
+    const receipt = {
+      id: isEditing ? editingDividendReceiptId : uid("div"),
+      month: Number(el.investmentDividendMonth.value),
+      year: Number(el.investmentDividendYear.value),
+      amount,
+      createdAt: existing ? existing.createdAt : new Date().toISOString(),
+    };
+    if (isEditing) {
+      state.investments.dividendReceipts = state.investments.dividendReceipts.map((item) =>
+        item.id === receipt.id ? receipt : item,
+      );
+    } else {
+      state.investments.dividendReceipts.push(receipt);
+    }
+    exitDividendEditMode();
+    renderInvestments();
+    showInvestmentSaveFeedback(receipt, "rdpu");
+    try {
+      await persistDividendReceipt(receipt);
+    } catch (error) {
+      console.error(error);
+      setSyncStatus(isEditing ? "Update dividen cloud gagal" : "Simpan dividen cloud gagal", "error");
+    }
+  });
+
+  el.investmentDividendCancelEdit?.addEventListener("click", () => {
+    exitDividendEditMode();
+  });
+
+  el.investmentDividendTable?.addEventListener("click", async (event) => {
+    const editId = event.target.dataset.editDividendReceipt;
+    if (editId) {
+      const receipt = state.investments.dividendReceipts.find((item) => item.id === editId);
+      if (receipt) enterDividendEditMode(receipt);
+      return;
+    }
+    const id = event.target.dataset.deleteDividendReceipt;
+    if (!id) return;
+    if (editingDividendReceiptId === id) exitDividendEditMode();
+    state.investments.dividendReceipts = state.investments.dividendReceipts.filter((item) => item.id !== id);
+    renderInvestments();
+    try {
+      await deleteDividendReceiptRemote(id);
+    } catch (error) {
+      console.error(error);
+      setSyncStatus("Hapus dividen cloud gagal", "error");
+    }
   });
 
   el.investmentStockTable.addEventListener("click", async (event) => {
