@@ -286,6 +286,8 @@ const el = {
   monthlyStrategyBmriDecisionResult: document.querySelector("#monthlyStrategyBmriDecisionResult"),
   monthlyStrategySyncStatus: document.querySelector("#monthlyStrategySyncStatus"),
   monthlyStrategyNote: document.querySelector("#monthlyStrategyNote"),
+  monthlyStrategySaveLedger: document.querySelector("#monthlyStrategySaveLedger"),
+  monthlyStrategyLedgerFeedback: document.querySelector("#monthlyStrategyLedgerFeedback"),
   investmentStockTotal: document.querySelector("#investmentStockTotal"),
   investmentLotTotal: document.querySelector("#investmentLotTotal"),
   investmentRdpuTotal: document.querySelector("#investmentRdpuTotal"),
@@ -2820,14 +2822,7 @@ function applyMonthlyStrategyToSimulator(inputs, extraBmriLots = 0, bmriSimulato
     `Dividen cair tidak dikirim ke simulator karena hanya terjadi pada bulan tertentu dan nominalnya berubah.`;
 }
 
-function updateMonthlyStrategyCalculator() {
-  const inputs = readMonthlyStrategyInputs();
-  el.monthlyStrategyIndicatorPanel.classList.toggle("hidden", !inputs.useIndicator);
-  el.monthlyStrategyExtraPanel.classList.toggle("hidden", !inputs.useExtra);
-  el.monthlyStrategyIndicatorResults.forEach((item) => item.classList.toggle("hidden", !inputs.useIndicator));
-  el.monthlyStrategyExtraResults.forEach((item) => item.classList.toggle("hidden", !inputs.useExtra));
-  el.monthlyStrategyDividendResults.forEach((item) => item.classList.toggle("hidden", !inputs.useDividend));
-
+function computeMonthlyStrategyPlan(inputs = readMonthlyStrategyInputs()) {
   const bmriBaseLotPrice = inputs.bmriPrice * LOT_SIZE;
   const icbpLotPrice = inputs.icbpPrice * LOT_SIZE;
   const bbriLotPrice = inputs.bbriPrice * LOT_SIZE;
@@ -2857,7 +2852,6 @@ function updateMonthlyStrategyCalculator() {
     boughtBmriBaseLots === inputs.bmriBaseLots &&
     boughtIcbpBaseLots === inputs.icbpBaseLots &&
     boughtBbriBaseLots === inputs.bbriBaseLots;
-  let totalStockAmount = baseStockAmount;
   const bmriChangePercent =
     inputs.bmriAveragePrice > 0 ? ((inputs.bmriCurrentPrice - inputs.bmriAveragePrice) / inputs.bmriAveragePrice) * 100 : 0;
   const bmriFormula =
@@ -2886,16 +2880,108 @@ function updateMonthlyStrategyCalculator() {
     bbriLotPrice,
     active,
   );
-  const dividendIcbpLots = dividendRecommendation.icbpLots;
-  const dividendBmriLots = dividendRecommendation.bmriLots;
-  const dividendBbriLots = dividendRecommendation.bbriLots;
-  const dividendStockCost = dividendRecommendation.stockCost;
   const extraLeftoverToRdpu = Math.max(0, dividendRecommendation.leftover);
   const totalRdpuThisMonth = netRdpu + extraLeftoverToRdpu;
-  const totalBmriLots = boughtBmriBaseLots + extraBmriLots + dividendBmriLots;
-  const totalIcbpLots = boughtIcbpBaseLots + dividendIcbpLots;
-  const totalBbriLots = boughtBbriBaseLots + dividendBbriLots;
-  totalStockAmount = baseStockAmount + extraBmriCost + dividendStockCost;
+  const totalBmriLots = boughtBmriBaseLots + extraBmriLots + dividendRecommendation.bmriLots;
+  const totalIcbpLots = boughtIcbpBaseLots + dividendRecommendation.icbpLots;
+  const totalBbriLots = boughtBbriBaseLots + dividendRecommendation.bbriLots;
+  const totalStockAmount = baseStockAmount + extraBmriCost + dividendRecommendation.stockCost;
+  const bmriLotPriceForLedger = totalBmriLots > 0
+    ? (bmriBaseAmount + extraBmriCost + dividendRecommendation.bmriLots * bmriExtraLotPrice) / totalBmriLots
+    : bmriBaseLotPrice;
+  const icbpLotPriceForLedger = icbpLotPrice;
+  const bbriLotPriceForLedger = bbriLotPrice;
+
+  return {
+    inputs,
+    bmriBaseLotPrice,
+    icbpLotPrice,
+    bbriLotPrice,
+    boughtBmriBaseLots,
+    boughtIcbpBaseLots,
+    boughtBbriBaseLots,
+    bmriBaseAmount,
+    icbpBaseAmount,
+    bbriBaseAmount,
+    baseStockAmount,
+    targetBaseAmount,
+    grossRdpu,
+    baseTargetReached,
+    bmriChangePercent,
+    bmriFormula,
+    dividendAmount,
+    bmriExtraLotPrice,
+    extraBmriLots,
+    extraBmriCost,
+    bridgeAmount,
+    rdpuRedeemAmount,
+    netRdpu,
+    unreimbursedBridge,
+    bmriLotsBeforeDividend,
+    icbpLotsBeforeDividend,
+    bbriLotsBeforeDividend,
+    dividendRecommendation,
+    dividendIcbpLots: dividendRecommendation.icbpLots,
+    dividendBmriLots: dividendRecommendation.bmriLots,
+    dividendBbriLots: dividendRecommendation.bbriLots,
+    dividendStockCost: dividendRecommendation.stockCost,
+    extraLeftoverToRdpu,
+    totalRdpuThisMonth,
+    totalBmriLots,
+    totalIcbpLots,
+    totalBbriLots,
+    totalStockAmount,
+    bmriLotPriceForLedger,
+    icbpLotPriceForLedger,
+    bbriLotPriceForLedger,
+  };
+}
+
+function updateMonthlyStrategyCalculator() {
+  const inputs = readMonthlyStrategyInputs();
+  const plan = computeMonthlyStrategyPlan(inputs);
+  el.monthlyStrategyIndicatorPanel.classList.toggle("hidden", !inputs.useIndicator);
+  el.monthlyStrategyExtraPanel.classList.toggle("hidden", !inputs.useExtra);
+  el.monthlyStrategyIndicatorResults.forEach((item) => item.classList.toggle("hidden", !inputs.useIndicator));
+  el.monthlyStrategyExtraResults.forEach((item) => item.classList.toggle("hidden", !inputs.useExtra));
+  el.monthlyStrategyDividendResults.forEach((item) => item.classList.toggle("hidden", !inputs.useDividend));
+  const {
+    boughtBmriBaseLots,
+    boughtIcbpBaseLots,
+    boughtBbriBaseLots,
+    bmriBaseAmount,
+    icbpBaseAmount,
+    bbriBaseAmount,
+    baseStockAmount,
+    targetBaseAmount,
+    grossRdpu,
+    baseTargetReached,
+    bmriChangePercent,
+    bmriFormula,
+    dividendAmount,
+    extraBmriLots,
+    extraBmriCost,
+    bridgeAmount,
+    rdpuRedeemAmount,
+    netRdpu,
+    unreimbursedBridge,
+    bmriLotsBeforeDividend,
+    icbpLotsBeforeDividend,
+    bbriLotsBeforeDividend,
+    dividendIcbpLots,
+    dividendBmriLots,
+    dividendBbriLots,
+    dividendStockCost,
+    extraLeftoverToRdpu,
+    totalRdpuThisMonth,
+    totalBmriLots,
+    totalIcbpLots,
+    totalBbriLots,
+    totalStockAmount,
+    icbpLotPrice,
+    bbriLotPrice,
+    bmriExtraLotPrice,
+  } = plan;
 
   el.monthlyStrategyDividendPanel.classList.toggle("hidden", !inputs.useDividend);
 
@@ -2972,6 +3058,114 @@ function updateMonthlyStrategyCalculator() {
       `Masukkan ${formatMoney(extraLeftoverToRdpu)} ke RDPU atau tambah nominal ekstra.`;
   } else {
     el.monthlyStrategyNote.textContent = `Tidak ada tambahan lot. Total RDPU bulan ini ${formatMoney(totalRdpuThisMonth)}.`;
+  }
+}
+
+function monthlyStrategyLedgerEntries(plan, month, year) {
+  const createdAt = new Date().toISOString();
+  const stocks = [];
+  if (plan.totalBmriLots > 0) {
+    stocks.push({
+      id: uid("stock"),
+      ticker: "BMRI",
+      month,
+      year,
+      lotPrice: plan.bmriLotPriceForLedger,
+      lots: plan.totalBmriLots,
+      createdAt,
+    });
+  }
+  if (plan.totalIcbpLots > 0) {
+    stocks.push({
+      id: uid("stock"),
+      ticker: "ICBP",
+      month,
+      year,
+      lotPrice: plan.icbpLotPriceForLedger,
+      lots: plan.totalIcbpLots,
+      createdAt,
+    });
+  }
+  if (plan.totalBbriLots > 0) {
+    stocks.push({
+      id: uid("stock"),
+      ticker: "BBRI",
+      month,
+      year,
+      lotPrice: plan.bbriLotPriceForLedger,
+      lots: plan.totalBbriLots,
+      createdAt,
+    });
+  }
+  const rdpu = plan.totalRdpuThisMonth > 0
+    ? {
+        id: uid("rdpu"),
+        month,
+        year,
+        amount: plan.totalRdpuThisMonth,
+        createdAt,
+      }
+    : null;
+  const dividend = plan.dividendAmount > 0
+    ? {
+        id: uid("div"),
+        month,
+        year,
+        amount: plan.dividendAmount,
+        createdAt,
+      }
+    : null;
+  return { stocks, rdpu, dividend };
+}
+
+async function saveMonthlyStrategyToLedger() {
+  const plan = computeMonthlyStrategyPlan();
+  const { month, year } = currentActualMonthDate();
+  const entries = monthlyStrategyLedgerEntries(plan, month, year);
+  if (!entries.stocks.length && !entries.rdpu && !entries.dividend) {
+    if (el.monthlyStrategyLedgerFeedback) {
+      el.monthlyStrategyLedgerFeedback.textContent = "Tidak ada lot, RDPU, atau dividen untuk dicatat bulan ini.";
+      el.monthlyStrategyLedgerFeedback.classList.remove("hidden");
+    }
+    return;
+  }
+
+  const existingLabel = [
+    state.investments.stockPurchases.some((item) => item.month === month && item.year === year && ["BMRI", "ICBP", "BBRI"].includes(item.ticker)),
+    state.investments.rdpuPurchases.some((item) => item.month === month && item.year === year),
+    (state.investments.dividendReceipts || []).some((item) => item.month === month && item.year === year),
+  ].some(Boolean);
+  if (existingLabel && !confirm(`Sudah ada catatan ${investmentMonthLabel(month)} ${year}. Tambah hasil strategi sebagai baris baru?`)) {
+    return;
+  }
+
+  entries.stocks.forEach((purchase) => state.investments.stockPurchases.push(purchase));
+  if (entries.rdpu) state.investments.rdpuPurchases.push(entries.rdpu);
+  if (entries.dividend) {
+    state.investments.dividendReceipts = state.investments.dividendReceipts || [];
+    state.investments.dividendReceipts.push(entries.dividend);
+  }
+
+  renderInvestments();
+  const summary = [
+    entries.stocks.length ? `${entries.stocks.map((item) => `${item.ticker} ${item.lots} lot`).join(", ")}` : null,
+    entries.rdpu ? `RDPU ${formatMoney(entries.rdpu.amount)}` : null,
+    entries.dividend ? `dividen ${formatMoney(entries.dividend.amount)}` : null,
+  ].filter(Boolean).join(" · ");
+  if (el.monthlyStrategyLedgerFeedback) {
+    el.monthlyStrategyLedgerFeedback.textContent = `Tersimpan ke Catatan Aktual ${investmentMonthLabel(month)} ${year}: ${summary}.`;
+    el.monthlyStrategyLedgerFeedback.classList.remove("hidden");
+  }
+  showInvestmentSaveFeedback({ month, year, ticker: "BMRI" }, entries.stocks.length ? "stock" : "rdpu");
+  switchInvestmentTab("actual");
+
+  try {
+    for (const purchase of entries.stocks) await persistStockPurchase(purchase);
+    if (entries.rdpu) await persistRdpuPurchase(entries.rdpu);
+    if (entries.dividend) await persistDividendReceipt(entries.dividend);
+  } catch (error) {
+    console.error(error);
+    setSyncStatus("Simpan ledger strategi cloud gagal", "error");
   }
 }
 
@@ -4143,6 +4337,9 @@ function initEvents() {
   el.monthlyStrategyUseIndicator.addEventListener("change", updateMonthlyStrategyCalculator);
   el.monthlyStrategyUseDividend.addEventListener("change", updateMonthlyStrategyCalculator);
   el.monthlyStrategySyncSimulator.addEventListener("change", updateMonthlyStrategyCalculator);
+  el.monthlyStrategySaveLedger?.addEventListener("click", () => {
+    saveMonthlyStrategyToLedger();
+  });
 
   el.investmentHorizon.addEventListener("change", async () => {
     state.investments.horizonYears = clampNumber(Math.round(Number(el.investmentHorizon.value) || 11), 1, 50);
