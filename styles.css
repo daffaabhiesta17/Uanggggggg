@@ -1889,7 +1889,14 @@ input:disabled {
 
 .investment-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.7fr) minmax(280px, 0.7fr);
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.investment-grid-secondary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
   align-items: start;
 }
@@ -1950,8 +1957,12 @@ input:disabled {
 
 .investment-table-scroll {
   margin-top: 6px;
-  max-height: 336px;
+  max-height: 420px;
   overflow: auto;
+}
+
+.investment-stock-scroll {
+  max-height: 520px;
 }
 
 .investment-stock-scroll table {
@@ -2018,6 +2029,7 @@ input:disabled {
   .monthly-strategy-header,
   .monthly-strategy-layout,
   .investment-grid,
+  .investment-grid-secondary,
   .investment-info-grid,
   .actual-month-head,
   .investment-subtabs {
