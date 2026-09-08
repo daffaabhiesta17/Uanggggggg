@@ -3851,6 +3851,7 @@ function switchView(view) {
     transactions: "Transaksi",
     categories: "Tab & Jenis",
     investments: "Investasi",
+    decision: "Decision Desk",
     tools: "Tools",
   }[view];
   const pageEyebrow = document.querySelector("#pageEyebrow");
@@ -3860,11 +3861,16 @@ function switchView(view) {
       transactions: "Ledger transaksi",
       categories: "Klasifikasi akun",
       investments: "Portofolio & proyeksi",
+      decision: "Saham lokal vs BTC",
       tools: "Backup & pengaturan",
     }[view];
   }
   if (view === "investments") {
     renderInvestmentsIfActive(true);
+  }
+  if (view === "decision") {
+    window.renderDecisionDesk?.();
+    window.refreshDeskMarket?.();
   }
 }
 
@@ -4500,5 +4506,6 @@ setupInvestmentTabs();
 initEvents();
 initInvestmentCharts();
 initSidebarToggle();
+window.initDecisionDesk?.();
 renderAll();
 initRemoteStore().then(renderAll);

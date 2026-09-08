@@ -25,6 +25,7 @@
           <button class="nav-item" data-view="transactions" type="button">Transaksi</button>
           <button class="nav-item" data-view="categories" type="button">Tab & Jenis</button>
           <button class="nav-item" data-view="investments" type="button">Investasi</button>
+          <button class="nav-item" data-view="decision" type="button">Decision Desk</button>
           <button class="nav-item" data-view="tools" type="button">Tools</button>
         </nav>
 
@@ -271,6 +272,137 @@
                 <p>Menghapus semua transaksi dan tab lokal.</p>
               </div>
               <button class="danger-button" id="resetButton" type="button">Reset Semua Data</button>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="decisionView" aria-labelledby="pageTitle">
+          <div class="decision-stack">
+            <section class="surface decision-hero">
+              <div class="section-head">
+                <div>
+                  <h3>Decision Desk</h3>
+                  <p>Keputusan beli saham lokal atau BTC dari kejadian lapangan. Tidak tersambung ke tab Investasi.</p>
+                </div>
+                <button class="ghost-button" id="deskRefreshMarket" type="button">Refresh data BTC</button>
+              </div>
+              <div class="summary-grid sim-kpi-grid">
+                <article class="metric">
+                  <span>Fear & Greed BTC</span>
+                  <strong id="deskFngValue">-</strong>
+                  <small id="deskFngMeta">menarik Alternative.me</small>
+                </article>
+                <article class="metric">
+                  <span>Harga BTC</span>
+                  <strong id="deskBtcPrice">-</strong>
+                  <small id="deskBtcPriceMeta">CoinGecko, USD & IDR</small>
+                </article>
+                <article class="metric balance">
+                  <span>Dana siap beli</span>
+                  <strong id="deskReadyCashOut">Rp0</strong>
+                  <small id="deskReserveMeta">setelah cadangan</small>
+                </article>
+                <article class="metric">
+                  <span>Prioritas bulan ini</span>
+                  <strong id="deskPriorityOut">Tahan kas</strong>
+                  <small id="deskPriorityMeta">saham vs BTC vs skip</small>
+                </article>
+              </div>
+            </section>
+
+            <section class="surface">
+              <div class="section-head compact">
+                <h3>Kas & aturan</h3>
+                <p>Isi dana bulan ini. Cadangan tidak boleh dipakai untuk extra.</p>
+              </div>
+              <div class="decision-cash-grid">
+                <label>
+                  Dana siap beli
+                  <input id="deskCashReady" type="text" inputmode="numeric" placeholder="0" />
+                </label>
+                <label>
+                  Cadangan minimum
+                  <input id="deskCashReserve" type="text" inputmode="numeric" placeholder="0" />
+                </label>
+                <label>
+                  Target porsi saham
+                  <input id="deskStockTargetPct" type="number" min="0" max="100" step="1" value="70" />
+                </label>
+                <label>
+                  Target porsi BTC
+                  <input id="deskBtcTargetPct" type="number" min="0" max="100" step="1" value="20" />
+                </label>
+              </div>
+              <p class="decision-hint">Sisa otomatis jadi kas. Konflik kas tipis: skip extra, isi cadangan dulu.</p>
+            </section>
+
+            <div class="decision-split">
+              <section class="surface">
+                <div class="section-head">
+                  <div>
+                    <h3>Saham lokal</h3>
+                    <p>Maksimal 5 aset. Centang kejadian lapangan bulan ini.</p>
+                  </div>
+                  <button class="primary-button" id="deskAddStock" type="button">+ Saham</button>
+                </div>
+                <div id="deskStockList" class="decision-asset-list"></div>
+              </section>
+              <section class="surface">
+                <div class="section-head compact">
+                  <h3>BTC</h3>
+                  <p>Satu aset. Harga bisa diisi manual atau ditarik API.</p>
+                </div>
+                <div class="decision-btc-form">
+                  <label>
+                    Avg beli (Rp / BTC)
+                    <input id="deskBtcAvg" type="text" inputmode="numeric" placeholder="0" />
+                  </label>
+                  <label>
+                    Harga sekarang (Rp / BTC)
+                    <input id="deskBtcNow" type="text" inputmode="numeric" placeholder="otomatis dari API" />
+                  </label>
+                  <label>
+                    Jumlah BTC dipegang
+                    <input id="deskBtcHeld" type="text" inputmode="decimal" placeholder="0" />
+                  </label>
+                  <label>
+                    Nilai pasar posisi (opsional)
+                    <input id="deskBtcValue" type="text" inputmode="numeric" placeholder="otomatis" />
+                  </label>
+                </div>
+                <div class="decision-events" id="deskBtcEvents">
+                  <label class="checkbox-label"><span>Diskon vs avg</span><input data-desk-btc-event="discount" type="checkbox" /></label>
+                  <label class="checkbox-label"><span>Event kalender / halving</span><input data-desk-btc-event="halving" type="checkbox" /></label>
+                  <label class="checkbox-label"><span>Regulasi / berita besar</span><input data-desk-btc-event="regulation" type="checkbox" /></label>
+                  <label class="checkbox-label"><span>Fear ekstrem</span><input data-desk-btc-event="extremeFear" type="checkbox" /></label>
+                  <label class="checkbox-label"><span>Greed ekstrem</span><input data-desk-btc-event="extremeGreed" type="checkbox" /></label>
+                  <label class="checkbox-label"><span>Tidak ada kejadian khusus</span><input data-desk-btc-event="none" type="checkbox" /></label>
+                </div>
+              </section>
+            </div>
+
+            <section class="surface">
+              <div class="section-head compact">
+                <h3>Keputusan</h3>
+                <p>Skor dari diskon vs avg, kejadian lapangan, porsi, kas, dan Fear & Greed BTC.</p>
+              </div>
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Aset</th>
+                      <th>Vs avg</th>
+                      <th>Skor</th>
+                      <th>Keputusan</th>
+                      <th>Alokasi</th>
+                      <th>Alasan</th>
+                    </tr>
+                  </thead>
+                  <tbody id="deskDecisionTable"></tbody>
+                </table>
+              </div>
+              <div class="decision-alloc" id="deskAllocSummary"></div>
+              <p class="decision-disclaimer">Bukan saran investasi. API hanya pelengkap. Eksekusi tetap manual di broker/exchange.</p>
             </section>
           </div>
         </section>
@@ -1175,6 +1307,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="./supabase-config.js"></script>
+    <script src="./decision-desk.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>
