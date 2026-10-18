@@ -10,8 +10,10 @@ Web UI statis untuk pencatatan pemasukan dan pengeluaran. Bisa berjalan lokal di
 - Ringkasan pemasukan, pengeluaran, selisih saldo, dan rata-rata harian per bulan.
 - Chart nominal setiap tab per bulan untuk pemasukan dan pengeluaran.
 - Daftar tab terbesar dan aktivitas terbaru.
-- Simulator compounding saham BMRI/ICBP dan RDPU selama 120 bulan.
-- Catatan pembelian saham individual dan RDPU dengan grafik, rekap tahunan, dan sinkron Supabase.
+- Simulator jangka waktu 1–50 tahun; alokasi saham/RDPU tetap berjalan seperti sebelumnya.
+- Setoran BTC bulanan dan asumsi return BTC terpisah; catatan aktual BTC mengganti nominal BTC pada bulan itu saja.
+- Catatan pembelian saham, RDPU, dan BTC dengan ringkasan tahunan, sinkron Supabase, dan ekspor/impor JSON.
+- Kalkulator dan analisis portofolio pribadi tetap tersedia.
 - Export JSON, export CSV, import JSON, dan reset data.
 - Data tersimpan lokal di browser memakai `localStorage`.
 - Mode cloud realtime dengan Supabase agar bisa diakses dari device lain tanpa laptop menyala.

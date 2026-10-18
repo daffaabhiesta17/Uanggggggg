@@ -429,6 +429,11 @@
                     <input id="simMonthlyDeposit" type="number" min="0" step="10000" value="1100000" />
                   </label>
                   <label>
+                    Setoran BTC Bulanan
+                    <input id="simBtcMonthlyContribution" type="text" inputmode="numeric" placeholder="0" value="0" />
+                    <small id="simBtcContributionInfo">Setoran BTC rutin; saham dan sisa RDPU tetap mengikuti logika yang sekarang.</small>
+                  </label>
+                  <label>
                     Jangka Waktu Investasi (tahun)
                     <input id="simDurationYears" type="number" min="1" max="50" step="1" value="15" />
                     <small>Rentang 1–50 tahun; perubahan ini ikut tersimpan di konfigurasi investasi.</small>
@@ -626,13 +631,17 @@
                     <span class="setting-index">04</span>
                     <div>
                       <strong>Return & dividen</strong>
-                      <small>Asumsi RDPU dan dividen tahunan untuk 180 bulan.</small>
+                      <small>Asumsi return RDPU, return BTC, dan dividen sesuai jangka waktu investasi.</small>
                     </div>
                   </div>
                   <div class="input-pair">
                     <label>
                       Return RDPU / Tahun
                       <input id="simRdpuReturn" type="number" min="0" step="0.01" value="4.14" />
+                    </label>
+                    <label>
+                      Return BTC / Tahun
+                      <input id="simBtcReturn" type="number" step="0.1" value="0" />
                     </label>
                     <label>
                       Growth Dividen / Tahun
@@ -657,7 +666,7 @@
                 </div>
 
                 <p class="simulator-note">
-                  Jalur likuidasi memakai Aset Akhir dan Keuntungan Bersih. Jalur keep lot memakai Gaji Pasif Tahun 15 dan Saldo RDPU Akhir.
+                  Jalur likuidasi memakai Aset Akhir dan Keuntungan Bersih. Jalur keep lot memakai Gaji Pasif Tahun Akhir dan Saldo RDPU Akhir.
                 </p>
               </form>
 
@@ -666,7 +675,7 @@
                   <article class="metric">
                     <span>Total Modal</span>
                     <strong id="simTotalContribution">Rp0</strong>
-                    <small>setoran 180 bulan</small>
+                    <small id="simTotalContributionMeta">total setoran selama 15 tahun</small>
                   </article>
                   <article class="metric income">
                     <span>Aset Akhir</span>
@@ -679,9 +688,14 @@
                     <small>setelah fee jual saham</small>
                   </article>
                   <article class="metric">
-                    <span>Gaji Pasif Tahun 15</span>
+                    <span>Gaji Pasif Tahun Akhir</span>
                     <strong id="simPassiveIncome">Rp0</strong>
                     <small>estimasi dividen tahunan</small>
+                  </article>
+                  <article class="metric">
+                    <span>Nilai BTC Akhir</span>
+                    <strong id="simBtcValue">Rp0</strong>
+                    <small id="simBtcKpiContribution">setoran akumulatif BTC</small>
                   </article>
                 </div>
 
@@ -689,7 +703,7 @@
                   <div class="section-head">
                     <div>
                   <h3>Modal vs pertumbuhan aset</h3>
-                  <p>Snapshot tahunan hasil simulasi 180 bulan.</p>
+                  <p>Snapshot tahunan mengikuti jangka waktu simulasi.</p>
                     </div>
                     <strong class="chart-badge" id="simAssetMultiple">0,00x modal</strong>
                   </div>
@@ -724,6 +738,11 @@
                       <div class="composition-track"><span id="simRdpuBar"></span></div>
                       <small id="simRdpuValue">Rp0</small>
                     </div>
+                    <div class="composition-item">
+                      <div class="row-between"><strong>BTC</strong><span id="simBtcPositionShare">0%</span></div>
+                      <div class="composition-track"><span id="simBtcPositionBar"></span></div>
+                      <small>Nilai: <span id="simBtcPositionValue">Rp0</span> · <span id="simBtcPositionReturn">Return Rp0</span></small>
+                    </div>
                   </div>
                   <div class="investment-mini-grid">
                     <article>
@@ -750,7 +769,7 @@
             <section class="surface">
               <div class="section-head compact">
                 <h3>Riwayat tahunan</h3>
-                <p>Bulan yang sudah dicatat di Catatan Aktual memakai pembelian nyata. Bulan kosong memakai konfigurasi simulator.</p>
+                <p>Override bersifat per aset: catatan saham, RDPU, atau BTC hanya mengganti aset itu pada bulan tercatat; aset lain tetap mengikuti setoran default.</p>
               </div>
               <div class="table-scroll">
                 <table class="sim-history-table">
@@ -759,6 +778,8 @@
                       <th>Periode</th>
                       <th>Aktual Program 2</th>
                       <th>Total Setoran</th>
+                      <th>Setoran BTC</th>
+                      <th>Saldo BTC</th>
                       <th>Harga BMRI</th>
                       <th>Lot BMRI</th>
                       <th>Harga ICBP</th>
@@ -827,6 +848,11 @@
               </div>
 
               <div class="summary-grid investment-summary sim-kpi-grid">
+                <article class="metric">
+                  <span>Akumulasi Setoran BTC</span>
+                  <strong id="investmentBtcTotal">Rp0</strong>
+                  <small>nominal pembelian BTC</small>
+                </article>
                 <article class="metric income">
                   <span>Akumulasi Saham</span>
                   <strong id="investmentStockTotal">Rp0</strong>
@@ -850,6 +876,34 @@
               </div>
 
             <div class="investment-grid">
+              <section class="investment-records-section">
+                <div class="section-head compact">
+                  <h3>Pembelian BTC</h3>
+                  <p>Catat nominal rupiah aktual per bulan; bulan tercatat mengganti setoran BTC simulator pada bulan tersebut.</p>
+                </div>
+                <form class="investment-form rdpu-form" id="investmentBtcForm">
+                  <label>
+                    Bulan
+                    <select id="investmentBtcMonth"></select>
+                  </label>
+                  <label>
+                    Tahun
+                    <select id="investmentBtcYear"></select>
+                  </label>
+                  <label>
+                    Setoran BTC (Rp)
+                    <input id="investmentBtcAmount" type="text" inputmode="numeric" placeholder="0" />
+                  </label>
+                  <button class="primary-button investment-submit" id="investmentBtcSubmit" type="submit">Simpan BTC</button>
+                  <button class="icon-button" id="investmentBtcCancelEdit" type="button" hidden>Batal Edit</button>
+                </form>
+                <div class="table-scroll investment-table-scroll">
+                  <table>
+                    <thead><tr><th>Bulan</th><th>Setoran BTC</th><th>Aksi</th></tr></thead>
+                    <tbody id="investmentBtcTable"></tbody>
+                  </table>
+                </div>
+              </section>
               <section class="investment-records-section">
                 <div class="section-head compact">
                   <h3>Pembelian Saham</h3>
@@ -1040,6 +1094,7 @@
                       <th>Pembelian Saham</th>
                       <th>Total Lot</th>
                       <th>Pembelian RDPU</th>
+                      <th>Setoran BTC</th>
                       <th>Total Tahun Ini</th>
                     </tr>
                   </thead>

@@ -50,6 +50,42 @@ create table if not exists public.rdpu_purchases (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.btc_purchases (
+  id text primary key,
+  month integer not null check (month between 1 and 12),
+  year integer not null check (year between 1900 and 2200),
+  amount numeric not null check (amount > 0),
+  created_at timestamptz not null default now()
+);
+
+alter table public.btc_purchases enable row level security;
+
+drop policy if exists "public btc purchases read" on public.btc_purchases;
+drop policy if exists "public btc purchases write" on public.btc_purchases;
+
+create policy "public btc purchases read"
+on public.btc_purchases for select
+to anon
+using (true);
+
+create policy "public btc purchases write"
+on public.btc_purchases for all
+to anon
+using (true)
+with check (true);
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'btc_purchases'
+  ) then
+    alter publication supabase_realtime add table public.btc_purchases;
+  end if;
+end $$;
+
 alter table public.categories enable row level security;
 alter table public.transactions enable row level security;
 alter table public.investment_settings enable row level security;

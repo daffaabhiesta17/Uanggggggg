@@ -36,6 +36,7 @@ const defaultState = {
     activeStocks: ["BMRI", "ICBP", "BBRI"],
     stockPurchases: [],
     rdpuPurchases: [],
+    btcPurchases: [],
   },
 };
 
@@ -70,6 +71,8 @@ const DEFAULT_SIMULATOR_CONFIG = {
   bmriPrice: 4130,
   icbpPrice: 6700,
   bbriPrice: 4000,
+  btcMonthlyContribution: 0,
+  btcReturnAnnual: 0,
   rdpuReturnAnnual: 4.14,
   dividendGrowthAnnual: 5,
   bmriDividendInitial: 206.5,
@@ -101,6 +104,7 @@ let chartBars = [];
 let investmentsDirty = true;
 let editingStockPurchaseId = null;
 let editingRdpuPurchaseId = null;
+let editingBtcPurchaseId = null;
 let simulatorSettingsSaveTimer = null;
 let investmentGrowthChart = null;
 let investmentStockChart = null;
@@ -168,6 +172,44 @@ const el = {
   investmentSimulatorForm: document.querySelector("#investmentSimulatorForm"),
   simMonthlyDeposit: document.querySelector("#simMonthlyDeposit"),
   simDurationYears: document.querySelector("#simDurationYears"),
+  simBtcMonthlyContribution: document.querySelector("#simBtcMonthlyContribution"),
+  simBtcReturn: document.querySelector("#simBtcReturn"),
+  simBtcValue: document.querySelector("#simBtcValue"),
+  simBtcContributionInfo: document.querySelector("#simBtcContributionInfo"),
+  simBtcReturnGain: document.querySelector("#simBtcPositionReturn"),
+  simBtcKpiContribution: document.querySelector("#simBtcKpiContribution"),
+  simBtcPositionShare: document.querySelector("#simBtcPositionShare"),
+  simBtcPositionBar: document.querySelector("#simBtcPositionBar"),
+  simBtcPositionValue: document.querySelector("#simBtcPositionValue"),
+  simBtcPositionReturn: document.querySelector("#simBtcPositionReturn"),
+  investmentBtcForm: document.querySelector("#investmentBtcForm"),
+  investmentBtcMonth: document.querySelector("#investmentBtcMonth"),
+  investmentBtcYear: document.querySelector("#investmentBtcYear"),
+  investmentBtcAmount: document.querySelector("#investmentBtcAmount"),
+  investmentBtcTable: document.querySelector("#investmentBtcTable"),
+  investmentBtcSubmit: document.querySelector("#investmentBtcSubmit"),
+  investmentBtcCancelEdit: document.querySelector("#investmentBtcCancelEdit"),
+  investmentBtcTotal: document.querySelector("#investmentBtcTotal"),
+  investmentPortfolioTotal: document.querySelector("#investmentPortfolioTotal"),
+  investmentTickerForm: document.querySelector("#investmentTickerForm"),
+  investmentTickerInput: document.querySelector("#investmentTickerInput"),
+  investmentTickerList: document.querySelector("#investmentTickerList"),
+  investmentStockForm: document.querySelector("#investmentStockForm"),
+  investmentStockSubmit: document.querySelector("#investmentStockSubmit"),
+  investmentStockCancelEdit: document.querySelector("#investmentStockCancelEdit"),
+  investmentStockTicker: document.querySelector("#investmentStockTicker"),
+  investmentStockMonth: document.querySelector("#investmentStockMonth"),
+  investmentStockYear: document.querySelector("#investmentStockYear"),
+  investmentStockLotPrice: document.querySelector("#investmentStockLotPrice"),
+  investmentStockLots: document.querySelector("#investmentStockLots"),
+  investmentStockTable: document.querySelector("#investmentStockTable"),
+  investmentRdpuForm: document.querySelector("#investmentRdpuForm"),
+  investmentRdpuSubmit: document.querySelector("#investmentRdpuSubmit"),
+  investmentRdpuCancelEdit: document.querySelector("#investmentRdpuCancelEdit"),
+  investmentRdpuMonth: document.querySelector("#investmentRdpuMonth"),
+  investmentRdpuYear: document.querySelector("#investmentRdpuYear"),
+  investmentRdpuAmount: document.querySelector("#investmentRdpuAmount"),
+  investmentRdpuTable: document.querySelector("#investmentRdpuTable"),
   simStartMonth: document.querySelector("#simStartMonth"),
   simStartYear: document.querySelector("#simStartYear"),
   simStockAllocation: document.querySelector("#simStockAllocation"),
@@ -204,6 +246,7 @@ const el = {
   simIcbpYield: document.querySelector("#simIcbpYield"),
   simBbriYield: document.querySelector("#simBbriYield"),
   simTotalContribution: document.querySelector("#simTotalContribution"),
+  simTotalContributionMeta: document.querySelector("#simTotalContributionMeta"),
   simFinalAsset: document.querySelector("#simFinalAsset"),
   simNetProfit: document.querySelector("#simNetProfit"),
   simPassiveIncome: document.querySelector("#simPassiveIncome"),
@@ -234,6 +277,7 @@ const el = {
   investmentStockTotal: document.querySelector("#investmentStockTotal"),
   investmentLotTotal: document.querySelector("#investmentLotTotal"),
   investmentRdpuTotal: document.querySelector("#investmentRdpuTotal"),
+  investmentBtcTotal: document.querySelector("#investmentBtcTotal"),
   investmentPortfolioTotal: document.querySelector("#investmentPortfolioTotal"),
   investmentTickerForm: document.querySelector("#investmentTickerForm"),
   investmentTickerInput: document.querySelector("#investmentTickerInput"),
@@ -254,6 +298,8 @@ const el = {
   investmentRdpuYear: document.querySelector("#investmentRdpuYear"),
   investmentRdpuAmount: document.querySelector("#investmentRdpuAmount"),
   investmentRdpuTable: document.querySelector("#investmentRdpuTable"),
+  investmentBtcEditId: null,
+
   investmentInfoTickerFilter: document.querySelector("#investmentInfoTickerFilter"),
   investmentInfoYearFilter: document.querySelector("#investmentInfoYearFilter"),
   investmentMinPrice: document.querySelector("#investmentMinPrice"),
@@ -351,6 +397,16 @@ function normalizeInvestments(investments = {}) {
         .filter((purchase) => purchase.amount > 0)
     : [];
 
+  const btcPurchaseSource = investments.btcPurchases || investments.simulatorConfig?.btcPurchases || investments.simulator_config?.btcPurchases;
+  const btcPurchases = Array.isArray(btcPurchaseSource)
+    ? btcPurchaseSource.map((purchase) => ({
+        id: String(purchase.id || uid("btc")),
+        month: clampNumber(Math.round(Number(purchase.month) || 1), 1, 12),
+        year: Math.round(Number(purchase.year) || INVESTMENT_START_YEAR),
+        amount: positiveNumber(purchase.amount),
+        createdAt: purchase.createdAt || purchase.created_at || new Date().toISOString(),
+      })).filter((purchase) => purchase.amount > 0)
+    : [];
   const CORE_STOCKS = ["BMRI", "ICBP", "BBRI"];
   const rawActive = Array.isArray(investments.activeStocks) ? investments.activeStocks : CORE_STOCKS;
   const activeStocks = CORE_STOCKS.filter((s) => rawActive.includes(s));
@@ -363,6 +419,7 @@ function normalizeInvestments(investments = {}) {
     activeStocks: safeActiveStocks,
     stockPurchases,
     rdpuPurchases,
+    btcPurchases,
   };
 }
 
@@ -434,6 +491,8 @@ function normalizeSimulatorConfig(config = {}) {
       -99,
       1000,
     ),
+    btcMonthlyContribution: Math.max(0, numberOrDefault(config.btcMonthlyContribution, DEFAULT_SIMULATOR_CONFIG.btcMonthlyContribution)),
+    btcReturnAnnual: clampNumber(numberOrDefault(config.btcReturnAnnual, DEFAULT_SIMULATOR_CONFIG.btcReturnAnnual), -99, 1000),
     marketPrices: (() => {
       const prices = config.marketPrices && typeof config.marketPrices === "object" ? config.marketPrices : {};
       return Object.fromEntries(Object.entries(prices)
@@ -584,6 +643,26 @@ function fromDbRdpuPurchase(purchase) {
   };
 }
 
+function toDbBtcPurchase(purchase) {
+  return {
+    id: purchase.id,
+    month: purchase.month,
+    year: purchase.year,
+    amount: purchase.amount,
+    created_at: purchase.createdAt || new Date().toISOString(),
+  };
+}
+
+function fromDbBtcPurchase(purchase) {
+  return {
+    id: purchase.id,
+    month: Number(purchase.month),
+    year: Number(purchase.year),
+    amount: Number(purchase.amount),
+    createdAt: purchase.created_at,
+  };
+}
+
 function toDbInvestmentSettings(investments) {
   return {
     id: "default",
@@ -627,6 +706,7 @@ async function initRemoteStore() {
       .on("postgres_changes", { event: "*", schema: "public", table: "investment_tickers" }, refreshFromRemote)
       .on("postgres_changes", { event: "*", schema: "public", table: "stock_purchases" }, refreshFromRemote)
       .on("postgres_changes", { event: "*", schema: "public", table: "rdpu_purchases" }, refreshFromRemote)
+      .on("postgres_changes", { event: "*", schema: "public", table: "btc_purchases" }, refreshFromRemote)
       .subscribe();
   } catch (error) {
     console.error(error);
@@ -659,7 +739,10 @@ async function loadRemoteState() {
 }
 
 function isMissingInvestmentTableError(error) {
-  return error?.code === "42P01" || String(error?.message || "").toLowerCase().includes("does not exist");
+  const message = String(error?.message || "").toLowerCase();
+  return error?.code === "42P01"
+    || message.includes("does not exist")
+    || (message.includes("could not find the table") && message.includes("schema cache"));
 }
 
 async function loadRemoteInvestments(localInvestments = state.investments) {
@@ -667,60 +750,39 @@ async function loadRemoteInvestments(localInvestments = state.investments) {
     const [settingsResult, tickersResult, stockResult, rdpuResult] = await Promise.all([
       remoteStore.client.from("investment_settings").select("*").eq("id", "default").maybeSingle(),
       remoteStore.client.from("investment_tickers").select("*").order("symbol", { ascending: true }),
-      remoteStore.client
-        .from("stock_purchases")
-        .select("*")
-        .order("year", { ascending: true })
-        .order("month", { ascending: true })
-        .order("created_at", { ascending: true }),
-      remoteStore.client
-        .from("rdpu_purchases")
-        .select("*")
-        .order("year", { ascending: true })
-        .order("month", { ascending: true })
-        .order("created_at", { ascending: true }),
+      remoteStore.client.from("stock_purchases").select("*").order("year", { ascending: true }).order("month", { ascending: true }).order("created_at", { ascending: true }),
+      remoteStore.client.from("rdpu_purchases").select("*").order("year", { ascending: true }).order("month", { ascending: true }).order("created_at", { ascending: true }),
     ]);
-
     const errors = [settingsResult.error, tickersResult.error, stockResult.error, rdpuResult.error].filter(Boolean);
     if (errors.length) throw errors[0];
-
-    const remoteHasInvestmentData =
-      Boolean(settingsResult.data) ||
-      tickersResult.data.length > 0 ||
-      stockResult.data.length > 0 ||
-      rdpuResult.data.length > 0;
-
+    const remoteHasInvestmentData = Boolean(settingsResult.data) || tickersResult.data.length > 0 || stockResult.data.length > 0 || rdpuResult.data.length > 0;
     state.investments = remoteHasInvestmentData
       ? normalizeInvestments({
           horizonYears: Number(settingsResult.data?.horizon_years) || state.investments.horizonYears,
           simulatorConfig: settingsResult.data?.simulator_config || state.investments.simulatorConfig,
-          activeStocks: (settingsResult.data?.simulator_config || state.investments.simulatorConfig)?.activeStocks
-            || state.investments.activeStocks,
+          activeStocks: (settingsResult.data?.simulator_config || state.investments.simulatorConfig)?.activeStocks || state.investments.activeStocks,
           tickers: tickersResult.data.map(fromDbInvestmentTicker),
           stockPurchases: stockResult.data.map(fromDbStockPurchase),
           rdpuPurchases: rdpuResult.data.map(fromDbRdpuPurchase),
+          btcPurchases: localInvestments.btcPurchases || [],
         })
       : normalizeInvestments(localInvestments);
 
-    remoteStore.investmentsEnabled = true;
+      const btcResult = await remoteStore.client.from("btc_purchases").select("*").order("year", { ascending: true }).order("month", { ascending: true }).order("created_at", { ascending: true });
+      if (btcResult.error && !isMissingInvestmentTableError(btcResult.error)) throw btcResult.error;
+      state.investments.btcPurchases = btcResult.error ? (localInvestments.btcPurchases || []) : btcResult.data.map(fromDbBtcPurchase);
+      remoteStore.investmentsEnabled = true;
 
     const remoteTickers = new Set(tickersResult.data.map(fromDbInvestmentTicker));
     const hasMissingDefaultTicker = state.investments.tickers.some((ticker) => !remoteTickers.has(ticker));
     if (remoteHasInvestmentData && hasMissingDefaultTicker) {
-      const tickerUpsert = await remoteStore.client
-        .from("investment_tickers")
-        .upsert(state.investments.tickers.map(toDbInvestmentTicker));
+      const tickerUpsert = await remoteStore.client.from("investment_tickers").upsert(state.investments.tickers.map(toDbInvestmentTicker));
       if (tickerUpsert.error) throw tickerUpsert.error;
     }
-
-    if (!remoteHasInvestmentData && state.investments.tickers.length) {
-      await syncInvestmentsToRemote();
-    }
+    if (!remoteHasInvestmentData && state.investments.tickers.length) await syncInvestmentsToRemote();
   } catch (error) {
     remoteStore.investmentsEnabled = false;
-    if (!isMissingInvestmentTableError(error)) {
-      console.warn("Investment cloud sync disabled:", error);
-    }
+    if (!isMissingInvestmentTableError(error)) console.warn("Investment cloud sync disabled:", error);
   }
 }
 
@@ -729,14 +791,10 @@ async function syncFullStateToRemote() {
     const categoriesResult = await remoteStore.client.from("categories").upsert(state.categories.map(toDbCategory));
     if (categoriesResult.error) throw categoriesResult.error;
   }
-
   if (state.transactions.length) {
-    const transactionsResult = await remoteStore.client
-      .from("transactions")
-      .upsert(state.transactions.map(toDbTransaction));
+    const transactionsResult = await remoteStore.client.from("transactions").upsert(state.transactions.map(toDbTransaction));
     if (transactionsResult.error) throw transactionsResult.error;
   }
-
   await syncInvestmentsToRemote();
   saveState();
 }
@@ -768,6 +826,20 @@ async function syncInvestmentsToRemote() {
       .upsert(state.investments.rdpuPurchases.map(toDbRdpuPurchase));
     if (rdpuResult.error) throw rdpuResult.error;
   }
+}
+
+async function persistBtcPurchase(purchase) {
+  saveState();
+  if (!remoteStore.enabled || !remoteStore.investmentsEnabled) return;
+  const { error } = await remoteStore.client.from("btc_purchases").upsert(toDbBtcPurchase(purchase));
+  if (error) throw error;
+}
+
+async function deleteBtcPurchaseRemote(id) {
+  saveState();
+  if (!remoteStore.enabled || !remoteStore.investmentsEnabled) return;
+  const { error } = await remoteStore.client.from("btc_purchases").delete().eq("id", id);
+  if (error) throw error;
 }
 
 async function persistInvestmentSettings() {
@@ -1185,6 +1257,10 @@ function simulationPeriodLabel(inputs, startMonthIndex, endMonthIndex) {
 
 function actualInvestmentForSimulationMonth(calendarMonth, calendarYear) {
   const active = state.investments.activeStocks;
+  const btcPurchases = state.investments.btcPurchases.filter(
+    (purchase) => purchase.month === calendarMonth && purchase.year === calendarYear,
+  );
+  const btcActualAmount = btcPurchases.reduce((total, purchase) => total + purchase.amount, 0);
   const stockPurchases = state.investments.stockPurchases.filter(
     (purchase) => purchase.month === calendarMonth && purchase.year === calendarYear,
   );
@@ -1203,7 +1279,8 @@ function actualInvestmentForSimulationMonth(calendarMonth, calendarYear) {
   const rdpuAmount = rdpuPurchases.reduce((total, purchase) => total + purchase.amount, 0);
 
   return {
-    hasActual: bmriLots > 0 || icbpLots > 0 || bbriLots > 0 || rdpuAmount > 0,
+    hasLegacyActual: bmriLots > 0 || icbpLots > 0 || bbriLots > 0 || rdpuAmount > 0,
+    hasActual: bmriLots > 0 || icbpLots > 0 || bbriLots > 0 || rdpuAmount > 0 || btcActualAmount > 0,
     bmriLots,
     icbpLots,
     bbriLots,
@@ -1212,6 +1289,8 @@ function actualInvestmentForSimulationMonth(calendarMonth, calendarYear) {
     bbriAmount,
     stockAmount: bmriAmount + icbpAmount + bbriAmount,
     rdpuAmount,
+    btcAmount: btcActualAmount,
+    hasBtcActual: btcPurchases.length > 0,
     contribution: bmriAmount + icbpAmount + bbriAmount + rdpuAmount,
   };
 }
@@ -1227,12 +1306,16 @@ function isMonthInSimulationRange(calendarMonth, calendarYear, inputs = readSimu
 
 function actualInvestmentLine(actualInvestment, { withStockAmounts = false } = {}) {
   const stockSuffix = (amount) => (withStockAmounts ? ` - ${formatMoney(amount)}` : "");
-  return [
+  const parts = [
     `BMRI ${actualInvestment.bmriLots.toLocaleString("id-ID")} lot${stockSuffix(actualInvestment.bmriAmount)}`,
     `ICBP ${actualInvestment.icbpLots.toLocaleString("id-ID")} lot${stockSuffix(actualInvestment.icbpAmount)}`,
     `BBRI ${actualInvestment.bbriLots.toLocaleString("id-ID")} lot${stockSuffix(actualInvestment.bbriAmount)}`,
     `RDPU ${formatMoney(actualInvestment.rdpuAmount)}`,
-  ].join(", ");
+  ];
+  if (actualInvestment.hasBtcActual) {
+    parts.push(`BTC ${formatMoney(actualInvestment.btcAmount)} (hanya mengganti setoran BTC bulan ini)`);
+  }
+  return parts.join(", ");
 }
 
 function simulationActualSyncSummary(inputs) {
@@ -1360,6 +1443,8 @@ function readSimulationInputs() {
   const stockAllocation = clampNumber(Math.round(readNumber(el.simStockAllocationNumber, 80)), 0, 100);
   return {
     monthlyDeposit: Math.max(0, readNumber(el.simMonthlyDeposit, 1100000)),
+    btcMonthlyContribution: parseNumberInput(el.simBtcMonthlyContribution.value),
+    btcReturnAnnual: readNumber(el.simBtcReturn, 0),
     durationMonths: clampNumber(Math.round(readNumber(el.simDurationYears, 15)), 1, 50) * 12,
     startMonth: clampNumber(Math.round(readNumber(el.simStartMonth, 6)), 1, 12),
     startYear: clampNumber(Math.round(readNumber(el.simStartYear, 2026)), 2000, 2100),
@@ -1414,6 +1499,8 @@ function applyActiveStocksToForm() {
 function applySimulatorConfigToForm(config) {
   const normalized = normalizeSimulatorConfig(config);
   el.simMonthlyDeposit.value = String(normalized.monthlyDeposit);
+  el.simBtcMonthlyContribution.value = String(normalized.btcMonthlyContribution);
+  el.simBtcReturn.value = String(normalized.btcReturnAnnual);
   el.simDurationYears.value = String(normalized.durationMonths / 12);
   el.simStartMonth.value = String(normalized.startMonth);
   el.simStartYear.value = String(normalized.startYear);
@@ -1467,6 +1554,9 @@ function simulateInvestment(inputs) {
   let icbpLots = 0;
   let bbriLots = 0;
   let rdpuBalance = 0;
+  let btcBalance = 0;
+  let totalBtcContributions = 0;
+  let actualBtcMonths = 0;
   let totalRdpuContributions = 0;
   let totalDividends = 0;
   let totalContribution = 0;
@@ -1516,13 +1606,13 @@ function simulateInvestment(inputs) {
     const bmriLotPrice = currentBmriPrice * LOT_SIZE;
     const icbpLotPrice = currentIcbpPrice * LOT_SIZE;
     const bbriLotPrice = currentBbriPrice * LOT_SIZE;
-    const bmriDividend = !actualInvestment.hasActual && isBmriDividendMonth
+    const bmriDividend = !actualInvestment.hasLegacyActual && isBmriDividendMonth
       ? bmriLots * LOT_SIZE * dividendPerShare(inputs.bmriDividendInitial, inputs.dividendGrowthAnnual, year)
       : 0;
-    const icbpDividend = !actualInvestment.hasActual && isIcbpDividendMonth
+    const icbpDividend = !actualInvestment.hasLegacyActual && isIcbpDividendMonth
       ? icbpLots * LOT_SIZE * dividendPerShare(inputs.icbpDividendInitial, inputs.dividendGrowthAnnual, year)
       : 0;
-    const bbriDividend = !actualInvestment.hasActual && isBbriDividendMonth
+    const bbriDividend = !actualInvestment.hasLegacyActual && isBbriDividendMonth
       ? bbriLots * LOT_SIZE * dividendPerShare(inputs.bbriDividendInitial, inputs.dividendGrowthAnnual, year)
       : 0;
     const dividendThisMonth = bmriDividend + icbpDividend + bbriDividend;
@@ -1532,7 +1622,9 @@ function simulateInvestment(inputs) {
     let dividendBbriBought = 0;
     let dividendStockCashUsed = 0;
 
-    if (actualInvestment.hasActual) {
+    let btcContribution = actualInvestment.hasBtcActual ? actualInvestment.btcAmount : inputs.btcMonthlyContribution;
+    if (actualInvestment.hasBtcActual) actualBtcMonths += 1;
+    if (actualInvestment.hasLegacyActual) {
       bmriLots += actualInvestment.bmriLots;
       icbpLots += actualInvestment.icbpLots;
       bbriLots += actualInvestment.bbriLots;
@@ -1596,6 +1688,9 @@ function simulateInvestment(inputs) {
     }
 
     totalDividends += dividendThisMonth;
+    totalBtcContributions += btcContribution;
+    btcBalance = (btcBalance + btcContribution) * (1 + inputs.btcReturnAnnual / 100 / 12);
+    monthlyContribution += btcContribution;
     totalContribution += monthlyContribution;
     annualDividends += dividendThisMonth;
     annualDividendBmriLots += dividendBmriBought;
@@ -1609,7 +1704,7 @@ function simulateInvestment(inputs) {
       const bmriValue = bmriLots * LOT_SIZE * currentBmriPrice;
       const icbpValue = icbpLots * LOT_SIZE * currentIcbpPrice;
       const bbriValue = bbriLots * LOT_SIZE * currentBbriPrice;
-      const portfolioValue = bmriValue + icbpValue + bbriValue + rdpuBalance;
+      const portfolioValue = bmriValue + icbpValue + bbriValue + rdpuBalance + btcBalance;
 
       yearlyRows.push({
         year,
@@ -1637,6 +1732,8 @@ function simulateInvestment(inputs) {
         rdpuContributions: totalRdpuContributions,
         rdpuReturnGain: rdpuBalance - totalRdpuContributions,
         rdpuBalance,
+        btcContributions: totalBtcContributions,
+        btcBalance,
         portfolioValue,
       });
 
@@ -1662,7 +1759,7 @@ function simulateInvestment(inputs) {
   const icbpValue = icbpLots * LOT_SIZE * currentIcbpPrice;
   const bbriValue = bbriLots * LOT_SIZE * currentBbriPrice;
   const stockValue = bmriValue + icbpValue + bbriValue;
-  const finalAsset = stockValue + rdpuBalance;
+  const finalAsset = stockValue + rdpuBalance + btcBalance;
   const rdpuReturnGain = rdpuBalance - totalRdpuContributions;
   const sellingFee = stockValue * SELLING_FEE_RATE;
   const netProfit = finalAsset - sellingFee - totalContribution;
@@ -1681,6 +1778,10 @@ function simulateInvestment(inputs) {
     totalDividends,
     totalRdpuContributions,
     rdpuReturnGain,
+    btcBalance,
+    totalBtcContributions,
+    actualBtcMonths,
+    btcReturnGain: btcBalance - totalBtcContributions,
     bmriLots,
     icbpLots,
     bbriLots,
@@ -1872,6 +1973,7 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
 
   const result = simulateInvestment(inputs);
   el.simTotalContribution.textContent = formatMoney(result.totalContribution);
+  el.simTotalContributionMeta.textContent = `total setoran saham/RDPU + BTC selama ${inputs.durationMonths / 12} tahun`;
   el.simFinalAsset.textContent = formatMoney(result.finalAsset);
   el.simNetProfit.textContent = formatMoney(result.netProfit);
   el.simNetProfit.classList.toggle("negative", result.netProfit < 0);
@@ -1881,6 +1983,19 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
   el.simTotalDividends.textContent = formatMoney(result.totalDividends);
   el.simTotalRdpuContributions.textContent = formatMoney(result.totalRdpuContributions);
   el.simRdpuReturnGain.textContent = formatMoney(result.rdpuReturnGain);
+  el.simBtcValue.textContent = formatMoney(result.btcBalance);
+  el.simBtcContributionInfo.textContent = `Setoran proyeksi ${formatMoney(inputs.btcMonthlyContribution)} / bulan · aktual ${result.actualBtcMonths} bulan`;
+  el.simBtcKpiContribution.textContent = `Total setoran ${formatMoney(result.totalBtcContributions)} · return ${formatMoney(result.btcReturnGain)}`;
+  el.simBtcReturnGain.textContent = `Total setoran ${formatMoney(result.totalBtcContributions)} · return ${formatMoney(result.btcReturnGain)}`;
+  el.simBtcPositionShare.textContent = `${decimal.format((result.btcBalance / Math.max(result.finalAsset, 1)) * 100)}%`;
+  el.simBtcPositionValue.textContent = formatMoney(result.btcBalance);
+  el.simBtcPositionReturn.textContent = `Total setoran ${formatMoney(result.totalBtcContributions)} · return ${formatMoney(result.btcReturnGain)}`;
+  el.simBtcPositionBar.style.width = `${Math.min((result.btcBalance / Math.max(result.finalAsset, 1)) * 100, 100)}%`;
+  el.investmentBtcTotal.textContent = formatMoney(state.investments.btcPurchases.reduce((sum, item) => sum + item.amount, 0));
+  el.investmentBtcTable.innerHTML = state.investments.btcPurchases
+    .slice().sort((a, b) => investmentTimestamp(a) - investmentTimestamp(b))
+    .map((purchase) => `<tr><td>${formatInvestmentDate(purchase)}</td><td>${formatMoney(purchase.amount)}</td><td><div class="table-actions"><button class="icon-button" data-edit-btc-purchase="${purchase.id}" type="button">Edit</button><button class="icon-button delete" data-delete-btc-purchase="${purchase.id}" type="button">Hapus</button></div></td></tr>`)
+    .join("") || `<tr><td colspan="3"><div class="empty-state">Belum ada catatan BTC.</div></td></tr>`;
   el.simAssetMultiple.textContent = `${decimal.format(result.finalAsset / Math.max(result.totalContribution, 1))}x modal`;
 
   const total = Math.max(result.finalAsset, 1);
@@ -1902,10 +2017,19 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
   el.simBbriBar.style.width = `${Math.min(bbriPct, 100)}%`;
   el.simRdpuBar.style.width = `${Math.min(rdpuPct, 100)}%`;
 
+  const btcActualPurchases = state.investments.btcPurchases;
   el.simHistoryTable.innerHTML = result.yearlyRows
     .map(
-      (row) => {
+      (row, rowIndex) => {
         const status = simulationSourceStatus(row.actualMonths);
+        const rowStartMonth = rowIndex * 12 + 1;
+        const rowEndMonth = Math.min((rowIndex + 1) * 12, inputs.durationMonths);
+        const rowActualBtc = btcActualPurchases
+          .filter((purchase) => {
+            const monthIndex = simulationMonthIndexForDate(inputs, purchase.month, purchase.year);
+            return monthIndex >= rowStartMonth && monthIndex <= rowEndMonth;
+          })
+          .reduce((sum, purchase) => sum + purchase.amount, 0);
         return `
         <tr class="source-row-${status.key}">
           <td>
@@ -1917,6 +2041,8 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
           </td>
           <td>${formatAnnualActualPurchase(row)}</td>
           <td>${formatMoney(row.totalContribution)}</td>
+          <td>${formatMoney(row.btcContributions)}${rowActualBtc ? `<small> · aktual ${formatMoney(rowActualBtc)}</small>` : ""}</td>
+          <td>${formatMoney(row.btcBalance)}</td>
           <td>${formatMoney(row.bmriPrice)}</td>
           <td>${row.bmriLots.toLocaleString("id-ID")} lot</td>
           <td>${formatMoney(row.icbpPrice)}</td>
@@ -2443,8 +2569,10 @@ function renderInvestmentOptions() {
 
   renderOptionList(el.investmentStockMonth, monthOptions, el.investmentStockMonth.value || "1");
   renderOptionList(el.investmentRdpuMonth, monthOptions, el.investmentRdpuMonth.value || "1");
+  renderOptionList(el.investmentBtcMonth, monthOptions, el.investmentBtcMonth.value || "1");
   renderOptionList(el.investmentStockYear, yearOptions, el.investmentStockYear.value || String(years[0]));
   renderOptionList(el.investmentRdpuYear, yearOptions, el.investmentRdpuYear.value || String(years[0]));
+  renderOptionList(el.investmentBtcYear, yearOptions, el.investmentBtcYear.value || String(years[0]));
   renderOptionList(
     el.investmentStockTicker,
     state.investments.tickers.map((ticker) => ({ value: ticker, label: ticker })),
@@ -2584,19 +2712,23 @@ function calculateInvestmentSummary() {
   const stockTotal = state.investments.stockPurchases.reduce((total, purchase) => total + investmentValue(purchase), 0);
   const lotTotal = state.investments.stockPurchases.reduce((total, purchase) => total + purchase.lots, 0);
   const rdpuTotal = state.investments.rdpuPurchases.reduce((total, purchase) => total + purchase.amount, 0);
+  const btcTotal = state.investments.btcPurchases.reduce((total, purchase) => total + purchase.amount, 0);
   const rows = investmentYears().map((year) => {
     const yearStocks = state.investments.stockPurchases.filter((purchase) => purchase.year === year);
     const yearRdpu = state.investments.rdpuPurchases.filter((purchase) => purchase.year === year);
+    const yearBtc = state.investments.btcPurchases.filter((purchase) => purchase.year === year);
     const yearStockTotal = yearStocks.reduce((total, purchase) => total + investmentValue(purchase), 0);
     const yearLotTotal = yearStocks.reduce((total, purchase) => total + purchase.lots, 0);
     const yearRdpuTotal = yearRdpu.reduce((total, purchase) => total + purchase.amount, 0);
+    const yearBtcTotal = yearBtc.reduce((total, purchase) => total + purchase.amount, 0);
 
     return {
       year,
       stockTotal: yearStockTotal,
       lotTotal: yearLotTotal,
       rdpuTotal: yearRdpuTotal,
-      portfolioTotal: yearStockTotal + yearRdpuTotal,
+      btcTotal: yearBtcTotal,
+      portfolioTotal: yearStockTotal + yearRdpuTotal + yearBtcTotal,
     };
   });
 
@@ -2604,7 +2736,8 @@ function calculateInvestmentSummary() {
     stockTotal,
     lotTotal,
     rdpuTotal,
-    portfolioTotal: stockTotal + rdpuTotal,
+    btcTotal,
+    portfolioTotal: stockTotal + rdpuTotal + btcTotal,
     rows,
   };
 }
@@ -2660,6 +2793,19 @@ function renderInvestmentTables() {
         )
         .join("")
     : `<tr><td colspan="3"><div class="empty-state">Belum ada pembelian RDPU.</div></td></tr>`;
+
+  const btcRows = [...state.investments.btcPurchases].sort((a, b) => investmentTimestamp(a) - investmentTimestamp(b));
+  el.investmentBtcTable.innerHTML = btcRows.length
+    ? btcRows.map((purchase) => `
+        <tr>
+          <td>${formatInvestmentDate(purchase)}</td>
+          <td><strong>${formatMoney(purchase.amount)}</strong></td>
+          <td><div class="table-actions">
+            <button class="icon-button" data-edit-btc-purchase="${purchase.id}" type="button">Edit</button>
+            <button class="icon-button delete" data-delete-btc-purchase="${purchase.id}" type="button">Hapus</button>
+          </div></td>
+        </tr>`).join("")
+    : `<tr><td colspan="3"><div class="empty-state">Belum ada catatan BTC.</div></td></tr>`;
 }
 
 function renderInvestmentSummary() {
@@ -2667,6 +2813,7 @@ function renderInvestmentSummary() {
   el.investmentStockTotal.textContent = formatMoney(summary.stockTotal);
   el.investmentLotTotal.textContent = `${summary.lotTotal.toLocaleString("id-ID")} lot`;
   el.investmentRdpuTotal.textContent = formatMoney(summary.rdpuTotal);
+  el.investmentBtcTotal.textContent = formatMoney(summary.btcTotal);
   el.investmentPortfolioTotal.textContent = formatMoney(summary.portfolioTotal);
   el.investmentSummaryTable.innerHTML = summary.rows
     .map(
@@ -2676,6 +2823,7 @@ function renderInvestmentSummary() {
           <td>${formatMoney(row.stockTotal)}</td>
           <td>${row.lotTotal.toLocaleString("id-ID")} lot</td>
           <td>${formatMoney(row.rdpuTotal)}</td>
+          <td>${formatMoney(row.btcTotal)}</td>
           <td><strong>${formatMoney(row.portfolioTotal)}</strong></td>
         </tr>
       `,
@@ -2696,7 +2844,7 @@ function renderCurrentActualSummary(inputs = readSimulationInputs()) {
   const { month, year } = currentActualMonthDate();
   const actualInvestment = actualInvestmentForSimulationMonth(month, year);
   const inSimulation = isMonthInSimulationRange(month, year, inputs);
-  const totalActual = actualInvestment.contribution;
+  const totalActual = actualInvestment.contribution + actualInvestment.btcAmount;
   let programStatus = "Belum ada data aktual";
 
   if (actualInvestment.hasActual && inSimulation) {
@@ -3773,6 +3921,89 @@ function initEvents() {
 
   el.investmentRdpuAmount.addEventListener("input", () => {
     el.investmentRdpuAmount.value = formatNumberInput(el.investmentRdpuAmount.value);
+  });
+  el.investmentBtcAmount.addEventListener("input", () => {
+    el.investmentBtcAmount.value = formatNumberInput(el.investmentBtcAmount.value);
+  });
+  el.simBtcMonthlyContribution.addEventListener("input", () => {
+    el.simBtcMonthlyContribution.value = formatNumberInput(el.simBtcMonthlyContribution.value);
+  });
+
+  function enterBtcEditMode(purchase) {
+    editingBtcPurchaseId = purchase.id;
+    el.investmentBtcMonth.value = String(purchase.month);
+    el.investmentBtcYear.value = String(purchase.year);
+    el.investmentBtcAmount.value = String(purchase.amount);
+    el.investmentBtcSubmit.textContent = "Update BTC";
+    el.investmentBtcCancelEdit.hidden = false;
+    el.investmentBtcForm.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function exitBtcEditMode() {
+    editingBtcPurchaseId = null;
+    el.investmentBtcForm.reset();
+    el.investmentBtcSubmit.textContent = "Simpan BTC";
+    el.investmentBtcCancelEdit.hidden = true;
+  }
+
+  el.investmentBtcForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const amount = parseNumberInput(el.investmentBtcAmount.value);
+    if (amount <= 0) {
+      alert("Nominal BTC harus lebih dari 0.");
+      return;
+    }
+    const existing = editingBtcPurchaseId
+      ? state.investments.btcPurchases.find((item) => item.id === editingBtcPurchaseId)
+      : null;
+    const purchase = {
+      id: editingBtcPurchaseId || uid("btc"),
+      month: Number(el.investmentBtcMonth.value),
+      year: Number(el.investmentBtcYear.value),
+      amount,
+      createdAt: existing?.createdAt || new Date().toISOString(),
+    };
+    if (existing) {
+      state.investments.btcPurchases = state.investments.btcPurchases.map((item) => item.id === purchase.id ? purchase : item);
+    } else {
+      state.investments.btcPurchases.push(purchase);
+    }
+    exitBtcEditMode();
+    renderInvestments();
+    showInvestmentSaveFeedback(purchase, "btc");
+    try {
+      await persistBtcPurchase(purchase);
+    } catch (error) {
+      console.error(error);
+      setSyncStatus("Simpan BTC cloud gagal", "error");
+    }
+  });
+
+  el.investmentBtcCancelEdit.addEventListener("click", exitBtcEditMode);
+  el.investmentBtcTable.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-edit-btc-purchase], [data-delete-btc-purchase]");
+    if (!button) return;
+    const editId = button.dataset.editBtcPurchase;
+    if (editId) {
+      const purchase = state.investments.btcPurchases.find((item) => item.id === editId);
+      if (purchase) enterBtcEditMode(purchase);
+      return;
+    }
+    const id = button.dataset.deleteBtcPurchase;
+    if (!id) return;
+    const purchase = state.investments.btcPurchases.find((item) => item.id === id);
+    if (!purchase || !confirm(`Hapus catatan setoran BTC ${formatInvestmentDate(purchase)} sebesar ${formatMoney(purchase.amount)}?`)) return;
+    if (editingBtcPurchaseId === id) exitBtcEditMode();
+    state.investments.btcPurchases = state.investments.btcPurchases.filter((item) => item.id !== id);
+    renderInvestments();
+    try {
+      await deleteBtcPurchaseRemote(id);
+    } catch (error) {
+      console.error(error);
+      state.investments.btcPurchases.push(purchase);
+      renderInvestments();
+      setSyncStatus("Hapus BTC cloud gagal; catatan dipulihkan lokal", "error");
+    }
   });
 
   el.investmentHorizon.addEventListener("change", async () => {
