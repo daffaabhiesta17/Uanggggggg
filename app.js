@@ -167,6 +167,7 @@ const el = {
   storageHint: document.querySelector("#storageHint"),
   investmentSimulatorForm: document.querySelector("#investmentSimulatorForm"),
   simMonthlyDeposit: document.querySelector("#simMonthlyDeposit"),
+  simDurationYears: document.querySelector("#simDurationYears"),
   simStartMonth: document.querySelector("#simStartMonth"),
   simStartYear: document.querySelector("#simStartYear"),
   simStockAllocation: document.querySelector("#simStockAllocation"),
@@ -385,6 +386,7 @@ function normalizeSimulatorConfig(config = {}) {
 
   return {
     monthlyDeposit: Math.max(0, numberOrDefault(config.monthlyDeposit, DEFAULT_SIMULATOR_CONFIG.monthlyDeposit)),
+    durationMonths: clampNumber(Math.round(numberOrDefault(config.durationMonths, 180)), 1, 600),
     startMonth: clampNumber(Math.round(numberOrDefault(config.startMonth, DEFAULT_SIMULATOR_CONFIG.startMonth)), 1, 12),
     startYear: clampNumber(Math.round(numberOrDefault(config.startYear, DEFAULT_SIMULATOR_CONFIG.startYear)), 2000, 2100),
     stockAllocation: clampNumber(Math.round(numberOrDefault(config.stockAllocation, DEFAULT_SIMULATOR_CONFIG.stockAllocation)), 0, 100),
@@ -1220,7 +1222,7 @@ function simulationMonthIndexForDate(inputs, calendarMonth, calendarYear) {
 
 function isMonthInSimulationRange(calendarMonth, calendarYear, inputs = readSimulationInputs()) {
   const monthIndex = simulationMonthIndexForDate(inputs, calendarMonth, calendarYear);
-  return monthIndex >= 1 && monthIndex <= SIMULATION_MONTHS;
+  return monthIndex >= 1 && monthIndex <= (inputs.durationMonths || SIMULATION_MONTHS);
 }
 
 function actualInvestmentLine(actualInvestment, { withStockAmounts = false } = {}) {
@@ -1234,7 +1236,8 @@ function actualInvestmentLine(actualInvestment, { withStockAmounts = false } = {
 }
 
 function simulationActualSyncSummary(inputs) {
-  for (let month = 1; month <= SIMULATION_MONTHS; month += 1) {
+  const durationMonths = inputs.durationMonths || SIMULATION_MONTHS;
+  for (let month = 1; month <= durationMonths; month += 1) {
     const calendarMonth = simulationCalendarMonth(inputs, month);
     const calendarYear = simulationCalendarYear(inputs, month);
     const actualInvestment = actualInvestmentForSimulationMonth(calendarMonth, calendarYear);
@@ -1249,7 +1252,7 @@ function simulationActualSyncSummary(inputs) {
 
   return {
     hasActual: false,
-    label: simulationPeriodLabel(inputs, 1, SIMULATION_MONTHS),
+    label: simulationPeriodLabel(inputs, 1, inputs.durationMonths || SIMULATION_MONTHS),
     actualInvestment: null,
   };
 }
@@ -1357,6 +1360,7 @@ function readSimulationInputs() {
   const stockAllocation = clampNumber(Math.round(readNumber(el.simStockAllocationNumber, 80)), 0, 100);
   return {
     monthlyDeposit: Math.max(0, readNumber(el.simMonthlyDeposit, 1100000)),
+    durationMonths: clampNumber(Math.round(readNumber(el.simDurationYears, 15)), 1, 50) * 12,
     startMonth: clampNumber(Math.round(readNumber(el.simStartMonth, 6)), 1, 12),
     startYear: clampNumber(Math.round(readNumber(el.simStartYear, 2026)), 2000, 2100),
     stockAllocation,
@@ -1410,6 +1414,7 @@ function applyActiveStocksToForm() {
 function applySimulatorConfigToForm(config) {
   const normalized = normalizeSimulatorConfig(config);
   el.simMonthlyDeposit.value = String(normalized.monthlyDeposit);
+  el.simDurationYears.value = String(normalized.durationMonths / 12);
   el.simStartMonth.value = String(normalized.startMonth);
   el.simStartYear.value = String(normalized.startYear);
   el.simStockAllocation.value = String(normalized.stockAllocation);
@@ -1488,7 +1493,8 @@ function simulateInvestment(inputs) {
   const monthlyStockBudget = (inputs.monthlyDeposit * inputs.stockAllocation) / 100;
   const monthlyRdpuBudget = (inputs.monthlyDeposit * inputs.rdpuAllocation) / 100;
 
-  for (let month = 1; month <= SIMULATION_MONTHS; month += 1) {
+  const durationMonths = clampNumber(Math.round(inputs.durationMonths || SIMULATION_MONTHS), 1, 600);
+  for (let month = 1; month <= durationMonths; month += 1) {
     const year = Math.ceil(month / 12);
     const active = inputs.activeStocks;
     const activeCycle = active.filter((s) => ["BMRI", "ICBP", "BBRI"].includes(s));
@@ -1599,7 +1605,7 @@ function simulateInvestment(inputs) {
     totalRdpuContributions += rdpuContribution;
     rdpuBalance = (rdpuBalance + rdpuContribution) * (1 + monthlyRdpuRate);
 
-    if (month % 12 === 0) {
+    if (month % 12 === 0 || month === durationMonths) {
       const bmriValue = bmriLots * LOT_SIZE * currentBmriPrice;
       const icbpValue = icbpLots * LOT_SIZE * currentIcbpPrice;
       const bbriValue = bbriLots * LOT_SIZE * currentBbriPrice;
@@ -1660,7 +1666,7 @@ function simulateInvestment(inputs) {
   const rdpuReturnGain = rdpuBalance - totalRdpuContributions;
   const sellingFee = stockValue * SELLING_FEE_RATE;
   const netProfit = finalAsset - sellingFee - totalContribution;
-  const finalYear = Math.ceil(SIMULATION_MONTHS / 12);
+  const finalYear = Math.ceil(durationMonths / 12);
   const passiveIncomeFinalYear =
     bmriLots * LOT_SIZE * dividendPerShare(inputs.bmriDividendInitial, inputs.dividendGrowthAnnual, finalYear) +
     icbpLots * LOT_SIZE * dividendPerShare(inputs.icbpDividendInitial, inputs.dividendGrowthAnnual, finalYear) +
@@ -1826,6 +1832,16 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
   if (persistConfig) {
     saveSimulatorConfigFromInputs();
   }
+  const durationMonths = inputs.durationMonths || SIMULATION_MONTHS;
+  const durationLabel = `${decimal.format(durationMonths / 12)} tahun (${durationMonths} bulan)`;
+  const durationTabLabel = document.querySelector("[data-investment-tab-button='simulator'] strong");
+  if (durationTabLabel) durationTabLabel.textContent = `Proyeksi ${durationMonths} Bulan`;
+  const totalContributionMeta = el.simTotalContribution?.closest("article")?.querySelector("small");
+  if (totalContributionMeta) totalContributionMeta.textContent = `setoran ${durationLabel}`;
+  const historyDescription = el.simHistoryTable?.closest(".surface")?.querySelector(".section-head p");
+  if (historyDescription) historyDescription.textContent = `Snapshot tahunan hasil simulasi ${durationLabel}.`;
+  const dividendDescription = el.simDividendPurchaseTable?.closest(".surface")?.querySelector(".section-head p");
+  if (dividendDescription) dividendDescription.textContent = `Lot dan RDPU aktual ikut masuk; bulan kosong mengikuti pola pembelian simulator ${durationLabel}.`;
   const isCustomPurchase = inputs.purchaseMode === "custom";
   el.simStockAllocation.value = String(inputs.stockAllocation);
   el.simStockAllocationNumber.value = String(inputs.stockAllocation);
