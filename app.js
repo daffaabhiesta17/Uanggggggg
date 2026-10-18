@@ -432,6 +432,12 @@ function normalizeSimulatorConfig(config = {}) {
       -99,
       1000,
     ),
+    marketPrices: (() => {
+      const prices = config.marketPrices && typeof config.marketPrices === "object" ? config.marketPrices : {};
+      return Object.fromEntries(Object.entries(prices)
+        .map(([ticker, value]) => [sanitizeTicker(ticker), Number(value)])
+        .filter(([ticker, price]) => ticker && Number.isFinite(price) && price > 0));
+    })(),
     activeStocks: (() => {
       const CORE = ["BMRI", "ICBP", "BBRI"];
       const raw = Array.isArray(config.activeStocks) ? config.activeStocks : CORE;
@@ -1432,6 +1438,7 @@ function saveSimulatorConfigFromInputs() {
   const inputs = readSimulationInputs();
   state.investments.simulatorConfig = normalizeSimulatorConfig({
     ...inputs,
+    marketPrices: state.investments.simulatorConfig.marketPrices,
     activeStocks: state.investments.activeStocks,
   });
   saveState();
@@ -2463,6 +2470,100 @@ function renderInvestmentTickers() {
     .join("");
 }
 
+function calculatePortfolioAnalysis(investments) {
+  const stockByTicker = new Map();
+  investments.stockPurchases.forEach((purchase) => {
+    const row = stockByTicker.get(purchase.ticker) || { lots: 0, costBasis: 0 };
+    row.lots += purchase.lots;
+    row.costBasis += investmentValue(purchase);
+    stockByTicker.set(purchase.ticker, row);
+  });
+
+  const rdpuCostBasis = investments.rdpuPurchases.reduce((total, purchase) => total + purchase.amount, 0);
+  const holdings = [...stockByTicker.entries()].map(([ticker, row]) => {
+    const marketPrice = Number(investments.simulatorConfig.marketPrices?.[ticker]);
+    const hasMarketPrice = Number.isFinite(marketPrice) && marketPrice > 0;
+    const units = row.lots * LOT_SIZE;
+    const marketValue = hasMarketPrice ? units * marketPrice : null;
+    return {
+      ticker,
+      units,
+      lots: row.lots,
+      costBasis: row.costBasis,
+      averagePrice: units ? row.costBasis / units : 0,
+      marketPrice: hasMarketPrice ? marketPrice : null,
+      marketValue,
+      profitLoss: hasMarketPrice ? marketValue - row.costBasis : null,
+    };
+  });
+
+  const valuedStockValue = holdings.reduce((sum, holding) => sum + (holding.marketValue ?? holding.costBasis), 0);
+  const totalValue = valuedStockValue + rdpuCostBasis;
+  holdings.push({
+    ticker: "RDPU",
+    units: null,
+    lots: null,
+    costBasis: rdpuCostBasis,
+    averagePrice: null,
+    marketPrice: null,
+    marketValue: rdpuCostBasis,
+    profitLoss: 0,
+  });
+
+  holdings.forEach((holding) => {
+    holding.weight = totalValue > 0 ? (holding.marketValue ?? holding.costBasis) / totalValue * 100 : 0;
+  });
+  return {
+    holdings,
+    stockCostBasis: holdings.filter((holding) => holding.ticker !== "RDPU").reduce((sum, holding) => sum + holding.costBasis, 0),
+    rdpuCostBasis,
+    totalCostBasis: holdings.reduce((sum, holding) => sum + holding.costBasis, 0),
+    totalValue,
+    unrealizedProfitLoss: holdings.filter((holding) => holding.ticker !== "RDPU").reduce((sum, holding) => sum + (holding.profitLoss ?? 0), 0),
+    unpricedAssets: holdings.filter((holding) => holding.ticker !== "RDPU" && holding.marketValue === null).map((holding) => holding.ticker),
+  };
+}
+
+function renderPortfolioAnalysis() {
+  if (!el.portfolioAnalysisTable || !el.portfolioAnalysisSummary) return;
+  const analysis = calculatePortfolioAnalysis(state.investments);
+  el.portfolioAnalysisTable.innerHTML = analysis.holdings.map((holding) => {
+    const isRdpu = holding.ticker === "RDPU";
+    const marketValue = holding.marketValue === null ? "Isi harga" : formatMoney(holding.marketValue);
+    const profitLoss = holding.profitLoss === null ? "-" : formatMoney(holding.profitLoss);
+    return `<tr>
+      <td><strong>${escapeHtml(holding.ticker)}</strong></td>
+      <td>${isRdpu ? "-" : `${holding.lots.toLocaleString("id-ID")} lot (${holding.units.toLocaleString("id-ID")} lembar)`}</td>
+      <td>${formatMoney(holding.costBasis)}</td>
+      <td>${isRdpu ? "-" : `<input class="portfolio-market-price" data-market-price="${escapeHtml(holding.ticker)}" type="text" inputmode="decimal" placeholder="Belum diisi" value="${holding.marketPrice ?? ""}" aria-label="Harga pasar ${escapeHtml(holding.ticker)} per lembar">`}</td>
+      <td>${marketValue}</td><td class="${holding.profitLoss === null ? "" : holding.profitLoss >= 0 ? "positive" : "negative"}">${profitLoss}</td>
+      <td>${holding.weight.toLocaleString("id-ID", { maximumFractionDigits: 2 })}%</td>
+    </tr>`;
+  }).join("");
+  el.portfolioAnalysisSummary.innerHTML = [
+    ["Total modal tercatat", formatMoney(analysis.totalCostBasis)],
+    ["Estimasi nilai pasar", formatMoney(analysis.totalValue)],
+    ["Untung/rugi belum terealisasi", formatMoney(analysis.unrealizedProfitLoss)],
+  ].map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
+  const meta = document.querySelector("#portfolioAnalysisMeta");
+  if (meta) meta.textContent = analysis.unpricedAssets.length
+    ? `Isi harga pasar per lembar untuk menghitung valuasi saham: ${analysis.unpricedAssets.join(", ")}. Nilai RDPU sementara memakai setoran tercatat; belum termasuk biaya transaksi/pajak.`
+    : "Harga pasar saham dimasukkan manual dan disimpan ke konfigurasi investasi. Nilai RDPU sementara memakai setoran tercatat; belum termasuk biaya transaksi/pajak.";
+}
+
+async function savePortfolioMarketPrice(ticker, rawValue) {
+  const price = parseNumberInput(rawValue);
+  state.investments.simulatorConfig.marketPrices[ticker] = price > 0 ? price : null;
+  saveState();
+  renderPortfolioAnalysis();
+  try {
+    await persistInvestmentSettings();
+  } catch (error) {
+    console.error(error);
+    setSyncStatus("Simpan harga pasar investasi gagal", "error");
+  }
+}
+
 function calculateInvestmentSummary() {
   const stockTotal = state.investments.stockPurchases.reduce((total, purchase) => total + investmentValue(purchase), 0);
   const lotTotal = state.investments.stockPurchases.reduce((total, purchase) => total + purchase.lots, 0);
@@ -3181,6 +3282,38 @@ function setupInvestmentTabs() {
     analysisPanel.append(strategySurface);
   }
 
+  // Analisis portofolio aktual dari ledger dan harga pasar manual
+  const holdingsSurface = document.createElement("section");
+  holdingsSurface.className = "surface";
+  holdingsSurface.innerHTML = `
+    <div class="section-head compact">
+      <h3>Posisi Portofolio Aktual</h3>
+      <p>Modal dihitung dari ledger. Isi harga pasar terakhir per lembar saham; harga dan hasil analisis tersimpan bersama konfigurasi investasi.</p>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Aset</th><th>Unit / Lot</th><th>Modal</th><th>Harga pasar / unit</th><th>Nilai pasar</th><th>Untung / rugi</th><th>Bobot</th></tr></thead>
+        <tbody id="portfolioAnalysisTable"></tbody>
+      </table>
+    </div>
+    <div class="investment-mini-grid" id="portfolioAnalysisSummary"></div>
+    <p class="simulator-note" id="portfolioAnalysisMeta">Nilai pasar saham menggunakan harga manual, tidak termasuk biaya transaksi/pajak. RDPU dinilai sebesar setoran tercatat sampai ada nilai aktual.</p>
+  `;
+  analysisPanel.append(holdingsSurface);
+  el.portfolioAnalysisTable = holdingsSurface.querySelector("#portfolioAnalysisTable");
+  el.portfolioAnalysisSummary = holdingsSurface.querySelector("#portfolioAnalysisSummary");
+  renderPortfolioAnalysis();
+  holdingsSurface.addEventListener("input", (event) => {
+    const input = event.target.closest("[data-market-price]");
+    if (!input) return;
+    window.clearTimeout(input._analysisTimer);
+    input._analysisTimer = window.setTimeout(() => savePortfolioMarketPrice(input.dataset.marketPrice, input.value), 600);
+  });
+  holdingsSurface.addEventListener("blur", (event) => {
+    const input = event.target.closest("[data-market-price]");
+    if (input) savePortfolioMarketPrice(input.dataset.marketPrice, input.value);
+  }, true);
+
   // Rebalancing Calculator
   const rebalancingSurface = document.createElement("section");
   rebalancingSurface.className = "surface";
@@ -3443,6 +3576,7 @@ function renderInvestments() {
   updateInvestmentSimulator({ persistConfig: false });
   renderInvestmentOptions();
   renderInvestmentTickers();
+  renderPortfolioAnalysis();
   renderInvestmentTables();
   renderInvestmentSummary();
   updateInvestmentInfo();
