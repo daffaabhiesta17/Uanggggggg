@@ -397,7 +397,9 @@ function normalizeInvestments(investments = {}) {
         .filter((purchase) => purchase.amount > 0)
     : [];
 
-  const btcPurchaseSource = investments.btcPurchases || investments.simulatorConfig?.btcPurchases || investments.simulator_config?.btcPurchases;
+  const directBtcPurchases = Array.isArray(investments.btcPurchases) ? investments.btcPurchases : null;
+  const backupBtcPurchases = investments.simulatorConfig?.btcPurchases || investments.simulator_config?.btcPurchases;
+  const btcPurchaseSource = directBtcPurchases?.length ? directBtcPurchases : backupBtcPurchases || directBtcPurchases;
   const btcPurchases = Array.isArray(btcPurchaseSource)
     ? btcPurchaseSource.map((purchase) => ({
         id: String(purchase.id || uid("btc")),
@@ -667,7 +669,11 @@ function toDbInvestmentSettings(investments) {
   return {
     id: "default",
     horizon_years: clampNumber(Math.round(Number(investments.horizonYears) || 11), 1, 50),
-    simulator_config: normalizeSimulatorConfig(investments.simulatorConfig),
+    simulator_config: {
+      ...normalizeSimulatorConfig(investments.simulatorConfig),
+      // Compatibility backup while older Supabase projects have no btc_purchases table.
+      btcPurchases: investments.btcPurchases.map(toDbBtcPurchase),
+    },
   };
 }
 
@@ -768,10 +774,14 @@ async function loadRemoteInvestments(localInvestments = state.investments) {
         })
       : normalizeInvestments(localInvestments);
 
-      const btcResult = await remoteStore.client.from("btc_purchases").select("*").order("year", { ascending: true }).order("month", { ascending: true }).order("created_at", { ascending: true });
-      if (btcResult.error && !isMissingInvestmentTableError(btcResult.error)) throw btcResult.error;
-      state.investments.btcPurchases = btcResult.error ? (localInvestments.btcPurchases || []) : btcResult.data.map(fromDbBtcPurchase);
-      remoteStore.investmentsEnabled = true;
+    const remoteBtcBackup = settingsResult.data?.simulator_config?.btcPurchases || [];
+    const btcResult = await remoteStore.client.from("btc_purchases").select("*").order("year", { ascending: true }).order("month", { ascending: true }).order("created_at", { ascending: true });
+    if (btcResult.error && !isMissingInvestmentTableError(btcResult.error)) throw btcResult.error;
+    const remoteBtcPurchases = btcResult.error ? remoteBtcBackup : btcResult.data.map(fromDbBtcPurchase);
+    state.investments.btcPurchases = remoteBtcPurchases.length
+      ? normalizeInvestments({ btcPurchases: remoteBtcPurchases }).btcPurchases
+      : (localInvestments.btcPurchases || []);
+    remoteStore.investmentsEnabled = true;
 
     const remoteTickers = new Set(tickersResult.data.map(fromDbInvestmentTicker));
     const hasMissingDefaultTicker = state.investments.tickers.some((ticker) => !remoteTickers.has(ticker));
@@ -831,15 +841,27 @@ async function syncInvestmentsToRemote() {
 async function persistBtcPurchase(purchase) {
   saveState();
   if (!remoteStore.enabled || !remoteStore.investmentsEnabled) return;
+
   const { error } = await remoteStore.client.from("btc_purchases").upsert(toDbBtcPurchase(purchase));
-  if (error) throw error;
+  if (!error) return;
+  if (!isMissingInvestmentTableError(error)) throw error;
+
+  // Older deployed schemas may not have btc_purchases yet. Keep the BTC
+  // ledger in the already-synced simulator_config instead of failing the save.
+  await persistInvestmentSettings();
+  setSyncStatus("BTC tersimpan ke cloud (kompatibilitas schema lama)", "cloud");
 }
 
 async function deleteBtcPurchaseRemote(id) {
   saveState();
   if (!remoteStore.enabled || !remoteStore.investmentsEnabled) return;
+
   const { error } = await remoteStore.client.from("btc_purchases").delete().eq("id", id);
-  if (error) throw error;
+  if (!error) return;
+  if (!isMissingInvestmentTableError(error)) throw error;
+
+  await persistInvestmentSettings();
+  setSyncStatus("Perubahan BTC tersimpan ke cloud (kompatibilitas schema lama)", "cloud");
 }
 
 async function persistInvestmentSettings() {
