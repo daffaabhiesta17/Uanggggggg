@@ -477,10 +477,6 @@
                       <input id="simBmriPrice" type="number" min="10" step="10" value="4130" />
                     </label>
                     <label>
-                      Harga ICBP
-                      <input id="simIcbpPrice" type="number" min="1" step="0.01" value="6700" />
-                    </label>
-                    <label>
                       Harga BBRI
                       <input id="simBbriPrice" type="number" min="10" step="10" value="4000" />
                     </label>
@@ -499,7 +495,7 @@
                     <ul>
                       <li>Selang-seling: dividen cair menambah kas untuk beli saham sesuai giliran bulan itu.</li>
                       <li>Custom lot: dividen membantu mencapai target lot bulanan. Jika reinvest ON, sisa dividen setelah target akan membeli lot tambahan.</li>
-                      <li>Jika Program 2 tersambung, simulator memakai custom lot dari Program 2. Dividen manual Program 2 tidak dikirim agar tidak dobel hitung.</li>
+                      <li>Jika Program 2 tersambung, simulator memakai custom lot dari Program 2. Jika sebagian pembelian dibiayai dividen, isi kolom "Dari Dividen" di Catatan Aktual agar dihitung sebagai dividen, bukan setoran modal.</li>
                     </ul>
                   </div>
 
@@ -517,23 +513,19 @@
                       <span class="switch-control" aria-hidden="true"></span>
                     </label>
                     <div class="custom-lot-presets" aria-label="Preset custom lot">
-                      <button type="button" data-sim-lot-preset="2-1-1">
-                        <strong>2 + 1 + 1</strong>
-                        <span>BMRI 2 lot, ICBP 1 lot, BBRI 1 lot</span>
+                      <button type="button" data-sim-lot-preset="2-1">
+                        <strong>2 + 1</strong>
+                        <span>BMRI 2 lot, BBRI 1 lot</span>
                       </button>
-                      <button type="button" data-sim-lot-preset="3-1-1">
-                        <strong>3 + 1 + 1</strong>
-                        <span>BMRI 3 lot, ICBP 1 lot, BBRI 1 lot</span>
+                      <button type="button" data-sim-lot-preset="3-1">
+                        <strong>3 + 1</strong>
+                        <span>BMRI 3 lot, BBRI 1 lot</span>
                       </button>
                     </div>
                     <div class="input-pair">
                       <label>
                         BMRI Lot / Bulan
                         <input id="simBmriMonthlyLots" type="number" min="0" step="1" value="1" />
-                      </label>
-                      <label>
-                        ICBP Lot / Bulan
-                        <input id="simIcbpMonthlyLots" type="number" min="0" step="1" value="1" />
                       </label>
                       <label>
                         BBRI Lot / Bulan
@@ -544,10 +536,6 @@
                       <article>
                         <span>BMRI terbeli</span>
                         <strong id="simCustomBmriPurchase">0 lot - Rp0</strong>
-                      </article>
-                      <article>
-                        <span>ICBP terbeli</span>
-                        <strong id="simCustomIcbpPurchase">0 lot - Rp0</strong>
                       </article>
                       <article>
                         <span>BBRI terbeli</span>
@@ -615,10 +603,6 @@
                         <input id="simBmriPriceChange" type="number" step="0.1" value="5" disabled />
                       </label>
                       <label>
-                        ICBP % / Tahun
-                        <input id="simIcbpPriceChange" type="number" step="0.1" value="5" disabled />
-                      </label>
-                      <label>
                         BBRI % / Tahun
                         <input id="simBbriPriceChange" type="number" step="0.1" value="5" disabled />
                       </label>
@@ -653,10 +637,6 @@
                     <label>
                       Dividen Awal BMRI / Lembar
                       <input id="simBmriYield" type="text" inputmode="decimal" placeholder="206.5" value="206.5" />
-                    </label>
-                    <label>
-                      Dividen Awal ICBP / Lembar
-                      <input id="simIcbpYield" type="text" inputmode="decimal" placeholder="390" value="390" />
                     </label>
                     <label>
                       Dividen Awal BBRI / Lembar
@@ -724,11 +704,6 @@
                       <small id="simBmriValue">Rp0</small>
                     </div>
                     <div class="composition-item">
-                      <div class="row-between"><strong>ICBP</strong><span id="simIcbpLots">0 lot</span></div>
-                      <div class="composition-track"><span id="simIcbpBar"></span></div>
-                      <small id="simIcbpValue">Rp0</small>
-                    </div>
-                    <div class="composition-item">
                       <div class="row-between"><strong>BBRI</strong><span id="simBbriLots">0 lot</span></div>
                       <div class="composition-track"><span id="simBbriBar"></span></div>
                       <small id="simBbriValue">Rp0</small>
@@ -782,8 +757,6 @@
                       <th>Saldo BTC</th>
                       <th>Harga BMRI</th>
                       <th>Lot BMRI</th>
-                      <th>Harga ICBP</th>
-                      <th>Lot ICBP</th>
                       <th>Harga BBRI</th>
                       <th>Lot BBRI</th>
                       <th>Dividen Cair</th>
@@ -907,7 +880,7 @@
               <section class="investment-records-section">
                 <div class="section-head compact">
                   <h3>Pembelian Saham</h3>
-                  <p>Default BMRI, ICBP, dan BBRI; saham lain bisa ditambahkan.</p>
+                  <p>Default BMRI dan BBRI; saham lain bisa ditambahkan.</p>
                 </div>
                 <form class="investment-inline-form" id="investmentTickerForm">
                   <label>
@@ -918,7 +891,7 @@
                 </form>
                 <div class="ticker-list" id="investmentTickerList"></div>
 
-                <form class="investment-form" id="investmentStockForm">
+                <form class="investment-form stock-form" id="investmentStockForm">
                   <label>
                     Saham
                     <select id="investmentStockTicker"></select>
@@ -939,6 +912,10 @@
                     Jumlah Lot
                     <input id="investmentStockLots" type="number" min="1" step="1" placeholder="0" />
                   </label>
+                  <label>
+                    Dari Dividen (Rp)
+                    <input id="investmentStockDividend" type="text" inputmode="numeric" placeholder="0 (opsional)" />
+                  </label>
                   <button class="primary-button investment-submit" id="investmentStockSubmit" type="submit">Simpan Saham</button>
                   <button class="icon-button" id="investmentStockCancelEdit" type="button" hidden>Batal Edit</button>
                 </form>
@@ -952,6 +929,7 @@
                         <th>Harga / Lot</th>
                         <th>Lot</th>
                         <th>Nominal</th>
+                        <th>Dari Dividen</th>
                         <th>Aksi</th>
                       </tr>
                     </thead>
