@@ -92,7 +92,13 @@ const decimal = new Intl.NumberFormat("id-ID", {
 });
 
 let state = loadState();
-let activeView = "dashboard";
+const hasInitialLocalCache = Boolean(
+  localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_INVESTMENT_STORAGE_KEY),
+);
+const isInvestmentsOnlyLayout = !document.querySelector("#dashboardView");
+let isOfflineReadOnly = false;
+let isCloudConnecting = isInvestmentsOnlyLayout;
+let activeView = isInvestmentsOnlyLayout ? "investments" : "dashboard";
 let activeChartType = "income";
 let transactionSelectionMode = false;
 let selectedTransactionIds = new Set();
@@ -102,6 +108,7 @@ let editingStockPurchaseId = null;
 let editingRdpuPurchaseId = null;
 let editingBtcPurchaseId = null;
 let simulatorSettingsSaveTimer = null;
+let kpiFlashTimer = null;
 let investmentGrowthChart = null;
 let investmentStockChart = null;
 let investmentStockChartPurchases = [];
@@ -164,66 +171,68 @@ const el = {
   importFile: document.querySelector("#importFile"),
   resetButton: document.querySelector("#resetButton"),
   syncStatus: document.querySelector("#syncStatus"),
+  syncStatusText: document.querySelector("#syncStatusText"),
   storageHint: document.querySelector("#storageHint"),
-  investmentSimulatorForm: document.querySelector("#investmentSimulatorForm"),
+  investmentSimulatorForm: document.querySelector("#simulatorForm") || document.querySelector("#investmentSimulatorForm"),
   simMonthlyDeposit: document.querySelector("#simMonthlyDeposit"),
   simDurationYears: document.querySelector("#simDurationYears"),
-  simBtcMonthlyContribution: document.querySelector("#simBtcMonthlyContribution"),
+  simBtcMonthlyContribution: document.querySelector("#simBtcMonthly") || document.querySelector("#simBtcMonthlyContribution"),
   simBtcReturn: document.querySelector("#simBtcReturn"),
-  simBtcValue: document.querySelector("#simBtcValue"),
-  simBtcContributionInfo: document.querySelector("#simBtcContributionInfo"),
+  simBtcValue: document.querySelector("#kpiBtcValue") || document.querySelector("#simBtcValue"),
+  simBtcContributionInfo: document.querySelector("#simBtcHint") || document.querySelector("#simBtcContributionInfo"),
   simBtcReturnGain: document.querySelector("#simBtcPositionReturn"),
-  simBtcKpiContribution: document.querySelector("#simBtcKpiContribution"),
-  simBtcPositionShare: document.querySelector("#simBtcPositionShare"),
-  simBtcPositionBar: document.querySelector("#simBtcPositionBar"),
-  simBtcPositionValue: document.querySelector("#simBtcPositionValue"),
+  simBtcKpiContribution: document.querySelector("#kpiBtcSub") || document.querySelector("#simBtcKpiContribution"),
+  simBtcPositionShare: document.querySelector("#posBtcShare") || document.querySelector("#simBtcPositionShare"),
+  simBtcPositionBar: document.querySelector("#posBtcBar") || document.querySelector("#simBtcPositionBar"),
+  simBtcPositionValue: document.querySelector("#posBtcVal") || document.querySelector("#simBtcPositionValue"),
   simBtcPositionReturn: document.querySelector("#simBtcPositionReturn"),
-  investmentBtcForm: document.querySelector("#investmentBtcForm"),
-  investmentBtcMonth: document.querySelector("#investmentBtcMonth"),
-  investmentBtcYear: document.querySelector("#investmentBtcYear"),
-  investmentBtcAmount: document.querySelector("#investmentBtcAmount"),
-  investmentBtcTable: document.querySelector("#investmentBtcTable"),
-  investmentBtcSubmit: document.querySelector("#investmentBtcSubmit"),
-  investmentBtcCancelEdit: document.querySelector("#investmentBtcCancelEdit"),
-  investmentBtcTotal: document.querySelector("#investmentBtcTotal"),
-  investmentPortfolioTotal: document.querySelector("#investmentPortfolioTotal"),
-  investmentTickerForm: document.querySelector("#investmentTickerForm"),
-  investmentTickerInput: document.querySelector("#investmentTickerInput"),
-  investmentTickerList: document.querySelector("#investmentTickerList"),
-  investmentStockForm: document.querySelector("#investmentStockForm"),
-  investmentStockSubmit: document.querySelector("#investmentStockSubmit"),
-  investmentStockCancelEdit: document.querySelector("#investmentStockCancelEdit"),
-  investmentStockTicker: document.querySelector("#investmentStockTicker"),
-  investmentStockMonth: document.querySelector("#investmentStockMonth"),
-  investmentStockYear: document.querySelector("#investmentStockYear"),
-  investmentStockLotPrice: document.querySelector("#investmentStockLotPrice"),
-  investmentStockLots: document.querySelector("#investmentStockLots"),
-  investmentStockDividend: document.querySelector("#investmentStockDividend"),
-  investmentStockTable: document.querySelector("#investmentStockTable"),
-  investmentRdpuForm: document.querySelector("#investmentRdpuForm"),
-  investmentRdpuSubmit: document.querySelector("#investmentRdpuSubmit"),
-  investmentRdpuCancelEdit: document.querySelector("#investmentRdpuCancelEdit"),
-  investmentRdpuMonth: document.querySelector("#investmentRdpuMonth"),
-  investmentRdpuYear: document.querySelector("#investmentRdpuYear"),
-  investmentRdpuAmount: document.querySelector("#investmentRdpuAmount"),
-  investmentRdpuTable: document.querySelector("#investmentRdpuTable"),
+  investmentBtcForm: document.querySelector("#btcForm") || document.querySelector("#investmentBtcForm"),
+  investmentBtcMonth: document.querySelector("#btcFormMonth") || document.querySelector("#investmentBtcMonth"),
+  investmentBtcYear: document.querySelector("#btcFormYear") || document.querySelector("#investmentBtcYear"),
+  investmentBtcAmount: document.querySelector("#btcFormAmount") || document.querySelector("#investmentBtcAmount"),
+  investmentBtcTable: document.querySelector("#actualBtcBody") || document.querySelector("#investmentBtcTable"),
+  investmentBtcSubmit: document.querySelector("#btcFormSubmit") || document.querySelector("#investmentBtcSubmit"),
+  investmentBtcCancelEdit: document.querySelector("#btcFormCancel") || document.querySelector("#investmentBtcCancelEdit"),
+  investmentBtcTotal: document.querySelector("#actKpiBtc") || document.querySelector("#investmentBtcTotal"),
+  investmentPortfolioTotal: document.querySelector("#actKpiPortfolio") || document.querySelector("#investmentPortfolioTotal"),
+  investmentTickerForm: document.querySelector("#tickerAddForm") || document.querySelector("#investmentTickerForm"),
+  investmentTickerInput: document.querySelector("#newTickerInput") || document.querySelector("#investmentTickerInput"),
+  investmentTickerList: document.querySelector("#tickerChips") || document.querySelector("#investmentTickerList"),
+  investmentStockForm: document.querySelector("#stockPurchaseForm") || document.querySelector("#investmentStockForm"),
+  investmentStockSubmit: document.querySelector("#stockFormSubmit") || document.querySelector("#investmentStockSubmit"),
+  investmentStockCancelEdit: document.querySelector("#stockFormCancel") || document.querySelector("#investmentStockCancelEdit"),
+  investmentStockTicker: document.querySelector("#stockFormTicker") || document.querySelector("#investmentStockTicker"),
+  investmentStockMonth: document.querySelector("#stockFormMonth") || document.querySelector("#investmentStockMonth"),
+  investmentStockYear: document.querySelector("#stockFormYear") || document.querySelector("#investmentStockYear"),
+  investmentStockLotPrice: document.querySelector("#stockFormLotPrice") || document.querySelector("#investmentStockLotPrice"),
+  investmentStockLots: document.querySelector("#stockFormLots") || document.querySelector("#investmentStockLots"),
+  investmentStockDividend: document.querySelector("#stockFormDividend") || document.querySelector("#investmentStockDividend"),
+  investmentStockTable: document.querySelector("#actualStockBody") || document.querySelector("#investmentStockTable"),
+  investmentRdpuForm: document.querySelector("#rdpuForm") || document.querySelector("#investmentRdpuForm"),
+  investmentRdpuSubmit: document.querySelector("#rdpuFormSubmit") || document.querySelector("#investmentRdpuSubmit"),
+  investmentRdpuCancelEdit: document.querySelector("#rdpuFormCancel") || document.querySelector("#investmentRdpuCancelEdit"),
+  investmentRdpuMonth: document.querySelector("#rdpuFormMonth") || document.querySelector("#investmentRdpuMonth"),
+  investmentRdpuYear: document.querySelector("#rdpuFormYear") || document.querySelector("#investmentRdpuYear"),
+  investmentRdpuAmount: document.querySelector("#rdpuFormAmount") || document.querySelector("#investmentRdpuAmount"),
+  investmentRdpuTable: document.querySelector("#actualRdpuBody") || document.querySelector("#investmentRdpuTable"),
   simStartMonth: document.querySelector("#simStartMonth"),
   simStartYear: document.querySelector("#simStartYear"),
   simStockAllocation: document.querySelector("#simStockAllocation"),
   simStockAllocationNumber: document.querySelector("#simStockAllocationNumber"),
-  simRdpuAllocationLabel: document.querySelector("#simRdpuAllocationLabel"),
-  simStockAllocationAmount: document.querySelector("#simStockAllocationAmount"),
-  simRdpuAllocationAmount: document.querySelector("#simRdpuAllocationAmount"),
+  simAllocLabel: document.querySelector("#simAllocLabel"),
+  simRdpuAllocationLabel: document.querySelector("#simRdpuAllocLabel") || document.querySelector("#simRdpuAllocationLabel"),
+  simStockAllocationAmount: document.querySelector("#simStockAllocAmount") || document.querySelector("#simStockAllocationAmount"),
+  simRdpuAllocationAmount: document.querySelector("#simRdpuAllocAmount") || document.querySelector("#simRdpuAllocationAmount"),
   simPurchaseMode: document.querySelector("#simPurchaseMode"),
   simCustomLotPanel: document.querySelector("#simCustomLotPanel"),
   simReinvestCustomDividends: document.querySelector("#simReinvestCustomDividends"),
-  simBmriMonthlyLots: document.querySelector("#simBmriMonthlyLots"),
-  simBbriMonthlyLots: document.querySelector("#simBbriMonthlyLots"),
-  simCustomBmriPurchase: document.querySelector("#simCustomBmriPurchase"),
-  simCustomBbriPurchase: document.querySelector("#simCustomBbriPurchase"),
-  simCustomStockPurchase: document.querySelector("#simCustomStockPurchase"),
-  simCustomRdpuPurchase: document.querySelector("#simCustomRdpuPurchase"),
-  simCustomLotStatus: document.querySelector("#simCustomLotStatus"),
+  simBmriMonthlyLots: document.querySelector("#simBmriLots") || document.querySelector("#simBmriMonthlyLots"),
+  simBbriMonthlyLots: document.querySelector("#simBbriLots") || document.querySelector("#simBbriMonthlyLots"),
+  simCustomBmriPurchase: document.querySelector("#customBmriOut") || document.querySelector("#simCustomBmriPurchase"),
+  simCustomBbriPurchase: document.querySelector("#customBbriOut") || document.querySelector("#simCustomBbriPurchase"),
+  simCustomStockPurchase: document.querySelector("#customStockOut") || document.querySelector("#simCustomStockPurchase"),
+  simCustomRdpuPurchase: document.querySelector("#customRdpuOut") || document.querySelector("#simCustomRdpuPurchase"),
+  simCustomLotStatus: document.querySelector("#customLotStatus") || document.querySelector("#simCustomLotStatus"),
   simBmriPrice: document.querySelector("#simBmriPrice"),
   simBbriPrice: document.querySelector("#simBbriPrice"),
   simEnablePriceChange: document.querySelector("#simEnablePriceChange"),
@@ -235,79 +244,69 @@ const el = {
   simBbriPriceChange: document.querySelector("#simBbriPriceChange"),
   simRdpuReturn: document.querySelector("#simRdpuReturn"),
   simDividendGrowth: document.querySelector("#simDividendGrowth"),
-  simBmriYield: document.querySelector("#simBmriYield"),
-  simBbriYield: document.querySelector("#simBbriYield"),
-  simTotalContribution: document.querySelector("#simTotalContribution"),
-  simTotalContributionMeta: document.querySelector("#simTotalContributionMeta"),
-  simFinalAsset: document.querySelector("#simFinalAsset"),
-  simNetProfit: document.querySelector("#simNetProfit"),
-  simPassiveIncome: document.querySelector("#simPassiveIncome"),
-  simAssetMultiple: document.querySelector("#simAssetMultiple"),
-  simBmriLots: document.querySelector("#simBmriLots"),
-  simBbriLots: document.querySelector("#simBbriLots"),
-  simBmriValue: document.querySelector("#simBmriValue"),
-  simBbriValue: document.querySelector("#simBbriValue"),
-  simRdpuValue: document.querySelector("#simRdpuValue"),
-  simRdpuShare: document.querySelector("#simRdpuShare"),
-  simBmriBar: document.querySelector("#simBmriBar"),
-  simBbriBar: document.querySelector("#simBbriBar"),
-  simRdpuBar: document.querySelector("#simRdpuBar"),
-  simSellingFee: document.querySelector("#simSellingFee"),
-  simTotalDividends: document.querySelector("#simTotalDividends"),
-  simTotalRdpuContributions: document.querySelector("#simTotalRdpuContributions"),
-  simRdpuReturnGain: document.querySelector("#simRdpuReturnGain"),
-  simHistoryTable: document.querySelector("#simHistoryTable"),
+  simBmriYield: document.querySelector("#simBmriDiv") || document.querySelector("#simBmriYield"),
+  simBbriYield: document.querySelector("#simBbriDiv") || document.querySelector("#simBbriYield"),
+  simTotalContribution: document.querySelector("#kpiTotalContribution") || document.querySelector("#simTotalContribution"),
+  simTotalContributionMeta: document.querySelector("#kpiTotalContributionMeta") || document.querySelector("#simTotalContributionMeta"),
+  simFinalAsset: document.querySelector("#kpiFinalAsset") || document.querySelector("#simFinalAsset"),
+  simNetProfit: document.querySelector("#kpiNetProfit") || document.querySelector("#simNetProfit"),
+  simPassiveIncome: document.querySelector("#kpiPassiveIncome") || document.querySelector("#simPassiveIncome"),
+  simAssetMultiple: document.querySelector("#chartMultipleBadge") || document.querySelector("#simAssetMultiple"),
+  simAssetMultipleKpi: document.querySelector("#kpiMultiple"),
+  simBmriLots: document.querySelector("#posBmriLots") || document.querySelector("#simBmriLots"),
+  simBbriLots: document.querySelector("#posBbriLots") || document.querySelector("#simBbriLots"),
+  simBmriValue: document.querySelector("#posBmriVal") || document.querySelector("#simBmriValue"),
+  simBbriValue: document.querySelector("#posBbriVal") || document.querySelector("#simBbriValue"),
+  simRdpuValue: document.querySelector("#posRdpuVal") || document.querySelector("#simRdpuValue"),
+  simRdpuShare: document.querySelector("#posRdpuShare") || document.querySelector("#simRdpuShare"),
+  simBmriBar: document.querySelector("#posBmriBar") || document.querySelector("#simBmriBar"),
+  simBbriBar: document.querySelector("#posBbriBar") || document.querySelector("#simBbriBar"),
+  simRdpuBar: document.querySelector("#posRdpuBar") || document.querySelector("#simRdpuBar"),
+  simSellingFee: document.querySelector("#statSellingFee") || document.querySelector("#simSellingFee"),
+  simTotalDividends: document.querySelector("#statTotalDividends") || document.querySelector("#simTotalDividends"),
+  simTotalRdpuContributions: document.querySelector("#statTotalRdpu") || document.querySelector("#simTotalRdpuContributions"),
+  simRdpuReturnGain: document.querySelector("#statRdpuGain") || document.querySelector("#simRdpuReturnGain"),
+  simHistoryTable: document.querySelector("#simHistoryBody") || document.querySelector("#simHistoryTable"),
   simDividendPurchaseTableWrap: document.querySelector("#simDividendPurchaseTableWrap"),
-  simDividendPurchaseTable: document.querySelector("#simDividendPurchaseTable"),
+  simDividendPurchaseTable: document.querySelector("#simDividendBody") || document.querySelector("#simDividendPurchaseTable"),
   simDividendPurchaseEmpty: document.querySelector("#simDividendPurchaseEmpty"),
-  investmentGrowthChart: document.querySelector("#investmentGrowthChart"),
-  investmentHorizon: document.querySelector("#investmentHorizon"),
-  addInvestmentYearButton: document.querySelector("#addInvestmentYearButton"),
-  investmentStockTotal: document.querySelector("#investmentStockTotal"),
-  investmentLotTotal: document.querySelector("#investmentLotTotal"),
-  investmentRdpuTotal: document.querySelector("#investmentRdpuTotal"),
-  investmentBtcTotal: document.querySelector("#investmentBtcTotal"),
-  investmentPortfolioTotal: document.querySelector("#investmentPortfolioTotal"),
-  investmentTickerForm: document.querySelector("#investmentTickerForm"),
-  investmentTickerInput: document.querySelector("#investmentTickerInput"),
-  investmentTickerList: document.querySelector("#investmentTickerList"),
-  investmentStockForm: document.querySelector("#investmentStockForm"),
-  investmentStockSubmit: document.querySelector("#investmentStockSubmit"),
-  investmentStockCancelEdit: document.querySelector("#investmentStockCancelEdit"),
-  investmentStockTicker: document.querySelector("#investmentStockTicker"),
-  investmentStockMonth: document.querySelector("#investmentStockMonth"),
-  investmentStockYear: document.querySelector("#investmentStockYear"),
-  investmentStockLotPrice: document.querySelector("#investmentStockLotPrice"),
-  investmentStockLots: document.querySelector("#investmentStockLots"),
-  investmentStockTable: document.querySelector("#investmentStockTable"),
-  investmentRdpuForm: document.querySelector("#investmentRdpuForm"),
-  investmentRdpuSubmit: document.querySelector("#investmentRdpuSubmit"),
-  investmentRdpuCancelEdit: document.querySelector("#investmentRdpuCancelEdit"),
-  investmentRdpuMonth: document.querySelector("#investmentRdpuMonth"),
-  investmentRdpuYear: document.querySelector("#investmentRdpuYear"),
-  investmentRdpuAmount: document.querySelector("#investmentRdpuAmount"),
-  investmentRdpuTable: document.querySelector("#investmentRdpuTable"),
+  investmentGrowthChart: document.querySelector("#growthChartCanvas") || document.querySelector("#investmentGrowthChart"),
+  programActualSyncBanner: document.querySelector("#syncBanner") || document.querySelector("#programActualSyncBanner"),
+  programActualSyncTitle: document.querySelector("#syncBannerTitle") || document.querySelector("#programActualSyncTitle"),
+  programActualSyncText: document.querySelector("#syncBannerText") || document.querySelector("#programActualSyncText"),
+  programActualSyncMeta: document.querySelector("#syncBannerMeta") || document.querySelector("#programActualSyncMeta"),
+  investmentHorizon: document.querySelector("#actualHorizonInput") || document.querySelector("#investmentHorizon"),
+  addInvestmentYearButton: document.querySelector("#addHorizonYearBtn") || document.querySelector("#addInvestmentYearButton"),
+  investmentStockTotal: document.querySelector("#actKpiStock") || document.querySelector("#investmentStockTotal"),
+  investmentLotTotal: document.querySelector("#actKpiLots") || document.querySelector("#investmentLotTotal"),
+  investmentRdpuTotal: document.querySelector("#actKpiRdpu") || document.querySelector("#investmentRdpuTotal"),
+  investmentActualMonthTitle: document.querySelector("#actualMonthTitle") || document.querySelector("#investmentActualMonthTitle"),
+  investmentActualMonthMeta: document.querySelector("#actualMonthMeta") || document.querySelector("#investmentActualMonthMeta"),
+  investmentActualBmri: document.querySelector("#actualMonthBmri") || document.querySelector("#investmentActualBmri"),
+  investmentActualBbri: document.querySelector("#actualMonthBbri") || document.querySelector("#investmentActualBbri"),
+  investmentActualRdpu: document.querySelector("#actualMonthRdpu") || document.querySelector("#investmentActualRdpu"),
+  investmentActualTotal: document.querySelector("#actualMonthTotal") || document.querySelector("#investmentActualTotal"),
+  investmentActualUsed: document.querySelector("#investmentActualUsed"),
   investmentBtcEditId: null,
-
-  investmentInfoTickerFilter: document.querySelector("#investmentInfoTickerFilter"),
-  investmentInfoYearFilter: document.querySelector("#investmentInfoYearFilter"),
-  investmentMinPrice: document.querySelector("#investmentMinPrice"),
-  investmentMinPriceMeta: document.querySelector("#investmentMinPriceMeta"),
-  investmentMaxPrice: document.querySelector("#investmentMaxPrice"),
-  investmentMaxPriceMeta: document.querySelector("#investmentMaxPriceMeta"),
-  investmentMinLots: document.querySelector("#investmentMinLots"),
-  investmentMinLotsMeta: document.querySelector("#investmentMinLotsMeta"),
-  investmentMaxLots: document.querySelector("#investmentMaxLots"),
-  investmentMaxLotsMeta: document.querySelector("#investmentMaxLotsMeta"),
-  investmentMinRdpu: document.querySelector("#investmentMinRdpu"),
-  investmentMinRdpuMeta: document.querySelector("#investmentMinRdpuMeta"),
-  investmentMaxRdpu: document.querySelector("#investmentMaxRdpu"),
-  investmentMaxRdpuMeta: document.querySelector("#investmentMaxRdpuMeta"),
-  investmentStockChartTickerFilter: document.querySelector("#investmentStockChartTickerFilter"),
-  investmentStockChartYearFilter: document.querySelector("#investmentStockChartYearFilter"),
-  investmentStockChart: document.querySelector("#investmentStockChart"),
+  investmentInfoTickerFilter: document.querySelector("#infoTickerFilter") || document.querySelector("#investmentInfoTickerFilter"),
+  investmentInfoYearFilter: document.querySelector("#infoYearFilter") || document.querySelector("#investmentInfoYearFilter"),
+  investmentMinPrice: document.querySelector("#infoMinPrice") || document.querySelector("#investmentMinPrice"),
+  investmentMinPriceMeta: document.querySelector("#infoMinPriceMeta") || document.querySelector("#investmentMinPriceMeta"),
+  investmentMaxPrice: document.querySelector("#infoMaxPrice") || document.querySelector("#investmentMaxPrice"),
+  investmentMaxPriceMeta: document.querySelector("#infoMaxPriceMeta") || document.querySelector("#investmentMaxPriceMeta"),
+  investmentMinLots: document.querySelector("#infoMinLots") || document.querySelector("#investmentMinLots"),
+  investmentMinLotsMeta: document.querySelector("#infoMinLotsMeta") || document.querySelector("#investmentMinLotsMeta"),
+  investmentMaxLots: document.querySelector("#infoMaxLots") || document.querySelector("#investmentMaxLots"),
+  investmentMaxLotsMeta: document.querySelector("#infoMaxLotsMeta") || document.querySelector("#investmentMaxLotsMeta"),
+  investmentMinRdpu: document.querySelector("#infoMinRdpu") || document.querySelector("#investmentMinRdpu"),
+  investmentMinRdpuMeta: document.querySelector("#infoMinRdpuMeta") || document.querySelector("#investmentMinRdpuMeta"),
+  investmentMaxRdpu: document.querySelector("#infoMaxRdpu") || document.querySelector("#investmentMaxRdpu"),
+  investmentMaxRdpuMeta: document.querySelector("#infoMaxRdpuMeta") || document.querySelector("#investmentMaxRdpuMeta"),
+  investmentStockChartTickerFilter: document.querySelector("#stockChartTickerFilter") || document.querySelector("#investmentStockChartTickerFilter"),
+  investmentStockChartYearFilter: document.querySelector("#stockChartYearFilter") || document.querySelector("#investmentStockChartYearFilter"),
+  investmentStockChart: document.querySelector("#stockPurchaseChartCanvas") || document.querySelector("#investmentStockChart"),
   investmentStockChartEmpty: document.querySelector("#investmentStockChartEmpty"),
-  investmentSummaryTable: document.querySelector("#investmentSummaryTable"),
+  investmentSummaryTable: document.querySelector("#annualSummaryBody") || document.querySelector("#investmentSummaryTable"),
 };
 
 function loadState() {
@@ -347,6 +346,7 @@ function loadLegacyInvestments() {
 }
 
 function saveState() {
+  if (isOfflineReadOnly) return;
   state = normalizeState(state);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
@@ -509,12 +509,25 @@ function transactionCreatedAt(transaction) {
 }
 
 function setSyncStatus(text, mode = "") {
-  el.syncStatus.textContent = text;
-  el.syncStatus.classList.toggle("cloud", mode === "cloud");
-  el.syncStatus.classList.toggle("error", mode === "error");
-  el.storageHint.textContent = remoteStore.enabled
-    ? "Data otomatis tersimpan ke cloud dan sinkron antar-device."
-    : "Data otomatis tersimpan di browser.";
+  if (el.syncStatusText) {
+    el.syncStatusText.textContent = text;
+  } else if (el.syncStatus) {
+    el.syncStatus.textContent = text;
+  }
+  if (el.syncStatus) {
+    el.syncStatus.classList.toggle("cloud", mode === "cloud");
+    el.syncStatus.classList.toggle("error", mode === "error");
+    if (el.syncStatus.classList.contains("badge")) {
+      el.syncStatus.classList.toggle("badge-emerald", mode === "cloud");
+      el.syncStatus.classList.toggle("badge-destructive", mode === "error");
+      el.syncStatus.classList.toggle("badge-secondary", mode !== "cloud" && mode !== "error");
+    }
+  }
+  if (el.storageHint) {
+    el.storageHint.textContent = remoteStore.enabled
+      ? "Data otomatis tersimpan ke cloud dan sinkron antar-device."
+      : "Data otomatis tersimpan di browser.";
+  }
 }
 
 function hasSupabaseConfig() {
@@ -658,9 +671,104 @@ function toDbInvestmentSettings(investments) {
   };
 }
 
+function isWriteLocked() {
+  return isOfflineReadOnly || isCloudConnecting;
+}
+
+function applyWriteFormLockState() {
+  if (!isInvestmentsOnlyLayout) return;
+  const locked = isWriteLocked();
+  const writeContainers = [
+    el.investmentTickerForm,
+    el.investmentStockForm,
+    el.investmentRdpuForm,
+    el.investmentBtcForm,
+  ];
+  writeContainers.forEach((form) => {
+    if (!form) return;
+    form.querySelectorAll("input, select, button, textarea").forEach((control) => {
+      control.disabled = locked;
+    });
+  });
+  [el.investmentHorizon, el.addInvestmentYearButton].forEach((control) => {
+    if (control) control.disabled = locked;
+  });
+  document
+    .querySelectorAll(
+      "[data-delete-investment-ticker], [data-edit-stock-purchase], [data-delete-stock-purchase], [data-edit-rdpu-purchase], [data-delete-rdpu-purchase], [data-edit-btc-purchase], [data-delete-btc-purchase]",
+    )
+    .forEach((btn) => {
+      btn.disabled = locked;
+    });
+}
+
+function setOfflineReadOnlyMode(enabled, { hasCache = hasInitialLocalCache, reason = "" } = {}) {
+  if (!isInvestmentsOnlyLayout) return;
+  isOfflineReadOnly = Boolean(enabled);
+  const banner = document.querySelector("#offlineReadOnlyBanner");
+  const title = document.querySelector("#offlineReadOnlyTitle");
+  const text = document.querySelector("#offlineReadOnlyText");
+  const meta = document.querySelector("#offlineReadOnlyMeta");
+  if (banner) {
+    banner.classList.toggle("hidden", !isOfflineReadOnly);
+    if (isOfflineReadOnly) {
+      if (title) title.textContent = hasCache ? "Mode Offline (Read-Only)" : "Koneksi Cloud Gagal";
+      if (text) {
+        text.textContent = hasCache
+          ? "Offline: menampilkan data terakhir tersimpan, perubahan tidak disimpan ke cloud"
+          : "Gagal terhubung ke cloud Supabase dan belum ada data cache tersimpan.";
+      }
+      if (meta) {
+        meta.textContent = reason || "Form tambah/edit/hapus dinonaktifkan sementara.";
+      }
+    }
+  }
+  applyWriteFormLockState();
+}
+
+async function runInvestmentWrite(applyMutation, persistFn, { errorStatus = "Simpan cloud gagal", onSuccess } = {}) {
+  if (isWriteLocked()) return false;
+  const prevInvestments = isInvestmentsOnlyLayout ? structuredClone(state.investments) : null;
+  applyMutation();
+  renderInvestments();
+  try {
+    await persistFn();
+    onSuccess?.();
+    return true;
+  } catch (error) {
+    console.error(error);
+    if (isInvestmentsOnlyLayout && prevInvestments) {
+      state.investments = prevInvestments;
+      saveState();
+      renderInvestments();
+      setSyncStatus(errorStatus, "error");
+      setOfflineReadOnlyMode(true, {
+        hasCache: true,
+        reason: `${errorStatus}. Mode baca saja aktif.`,
+      });
+      showToast(`${errorStatus}. Perubahan dibatalkan.`, "info");
+    } else {
+      setSyncStatus(errorStatus, "error");
+    }
+    return false;
+  }
+}
+
 async function initRemoteStore() {
   if (!hasSupabaseConfig()) {
-    setSyncStatus("Mode lokal");
+    isCloudConnecting = false;
+    if (isInvestmentsOnlyLayout) {
+      if (!hasInitialLocalCache) {
+        state = normalizeState({ categories: [], transactions: [], investments: defaultState.investments });
+      }
+      setSyncStatus(hasInitialLocalCache ? "Offline (Read-only)" : "Cloud gagal (Kosong)", "error");
+      setOfflineReadOnlyMode(true, {
+        hasCache: hasInitialLocalCache,
+        reason: "Konfigurasi Supabase belum tersedia.",
+      });
+    } else {
+      setSyncStatus("Mode lokal");
+    }
     return;
   }
 
@@ -672,23 +780,34 @@ async function initRemoteStore() {
 
   try {
     await loadRemoteState();
-    const remoteIsEmpty = state.categories.length === 0 && state.transactions.length === 0;
-    const localHasData = localSnapshot.categories.length > 0 || localSnapshot.transactions.length > 0;
+    isCloudConnecting = false;
+    if (isInvestmentsOnlyLayout) {
+      if (!remoteStore.investmentsEnabled) {
+        throw new Error("Tabel investasi Supabase gagal dimuat.");
+      }
+      setOfflineReadOnlyMode(false);
+    } else {
+      const remoteIsEmpty = state.categories.length === 0 && state.transactions.length === 0;
+      const localHasData = localSnapshot.categories.length > 0 || localSnapshot.transactions.length > 0;
 
-    if (remoteIsEmpty && localHasData) {
-      state = localSnapshot;
-      await syncFullStateToRemote();
-    } else if (!state.categories.length) {
-      await remoteStore.client.from("categories").upsert(defaultState.categories.map(toDbCategory));
-      await loadRemoteState();
+      if (remoteIsEmpty && localHasData) {
+        state = localSnapshot;
+        await syncFullStateToRemote();
+      } else if (!state.categories.length) {
+        await remoteStore.client.from("categories").upsert(defaultState.categories.map(toDbCategory));
+        await loadRemoteState();
+      }
     }
 
     remoteStore.enabled = true;
     setSyncStatus("Cloud realtime aktif", "cloud");
-    remoteStore.channel = remoteStore.client
-      .channel("catatan-kas-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "categories" }, refreshFromRemote)
-      .on("postgres_changes", { event: "*", schema: "public", table: "transactions" }, refreshFromRemote)
+    let channel = remoteStore.client.channel("catatan-kas-realtime");
+    if (!isInvestmentsOnlyLayout) {
+      channel = channel
+        .on("postgres_changes", { event: "*", schema: "public", table: "categories" }, refreshFromRemote)
+        .on("postgres_changes", { event: "*", schema: "public", table: "transactions" }, refreshFromRemote);
+    }
+    remoteStore.channel = channel
       .on("postgres_changes", { event: "*", schema: "public", table: "investment_settings" }, refreshFromRemote)
       .on("postgres_changes", { event: "*", schema: "public", table: "investment_tickers" }, refreshFromRemote)
       .on("postgres_changes", { event: "*", schema: "public", table: "stock_purchases" }, refreshFromRemote)
@@ -696,14 +815,47 @@ async function initRemoteStore() {
       .on("postgres_changes", { event: "*", schema: "public", table: "btc_purchases" }, refreshFromRemote)
       .subscribe();
   } catch (error) {
+    isCloudConnecting = false;
     console.error(error);
     remoteStore.enabled = false;
-    setSyncStatus("Cloud gagal, mode lokal", "error");
+    if (isInvestmentsOnlyLayout) {
+      if (!hasInitialLocalCache) {
+        state = normalizeState({
+          categories: [],
+          transactions: [],
+          investments: {
+            ...defaultState.investments,
+            stockPurchases: [],
+            rdpuPurchases: [],
+            btcPurchases: [],
+          },
+        });
+      }
+      markInvestmentsDirty();
+      setSyncStatus(hasInitialLocalCache ? "Offline (Read-only)" : "Cloud gagal (Kosong)", "error");
+      setOfflineReadOnlyMode(true, { hasCache: hasInitialLocalCache });
+    } else {
+      setSyncStatus("Cloud gagal, mode lokal", "error");
+    }
   }
 }
 
 async function loadRemoteState() {
   const localInvestments = structuredClone(state.investments);
+  if (isInvestmentsOnlyLayout) {
+    state = {
+      categories: [],
+      transactions: [],
+      investments: state.investments,
+    };
+    await loadRemoteInvestments(localInvestments);
+    if (remoteStore.investmentsEnabled) {
+      saveState();
+    }
+    markInvestmentsDirty();
+    return;
+  }
+
   const [categoriesResult, transactionsResult] = await Promise.all([
     remoteStore.client.from("categories").select("*").order("created_at", { ascending: true }),
     remoteStore.client
@@ -723,6 +875,7 @@ async function loadRemoteState() {
   };
   await loadRemoteInvestments(localInvestments);
   saveState();
+  markInvestmentsDirty();
 }
 
 function isMissingInvestmentTableError(error) {
@@ -777,13 +930,15 @@ async function loadRemoteInvestments(localInvestments = state.investments) {
 }
 
 async function syncFullStateToRemote() {
-  if (state.categories.length) {
-    const categoriesResult = await remoteStore.client.from("categories").upsert(state.categories.map(toDbCategory));
-    if (categoriesResult.error) throw categoriesResult.error;
-  }
-  if (state.transactions.length) {
-    const transactionsResult = await remoteStore.client.from("transactions").upsert(state.transactions.map(toDbTransaction));
-    if (transactionsResult.error) throw transactionsResult.error;
+  if (!isInvestmentsOnlyLayout) {
+    if (state.categories.length) {
+      const categoriesResult = await remoteStore.client.from("categories").upsert(state.categories.map(toDbCategory));
+      if (categoriesResult.error) throw categoriesResult.error;
+    }
+    if (state.transactions.length) {
+      const transactionsResult = await remoteStore.client.from("transactions").upsert(state.transactions.map(toDbTransaction));
+      if (transactionsResult.error) throw transactionsResult.error;
+    }
   }
   await syncInvestmentsToRemote();
   saveState();
@@ -901,11 +1056,24 @@ async function refreshFromRemote() {
   remoteStore.refreshing = true;
   try {
     await loadRemoteState();
+    if (isInvestmentsOnlyLayout) {
+      if (!remoteStore.investmentsEnabled) throw new Error("Tabel investasi Supabase gagal dimuat.");
+      setOfflineReadOnlyMode(false);
+      setSyncStatus("Cloud realtime aktif", "cloud");
+    }
     markInvestmentsDirty();
     renderAll();
   } catch (error) {
     console.error(error);
-    setSyncStatus("Sync bermasalah", "error");
+    if (isInvestmentsOnlyLayout) {
+      setSyncStatus("Sync bermasalah (Read-only)", "error");
+      setOfflineReadOnlyMode(true, {
+        hasCache: hasInitialLocalCache || state.investments.stockPurchases.length > 0 || state.investments.rdpuPurchases.length > 0 || state.investments.btcPurchases.length > 0,
+        reason: "Sinkronisasi cloud gagal sementara.",
+      });
+    } else {
+      setSyncStatus("Sync bermasalah", "error");
+    }
   } finally {
     remoteStore.refreshing = false;
   }
@@ -978,6 +1146,77 @@ function uid(prefix) {
 
 function formatMoney(value) {
   return rupiah.format(value || 0);
+}
+
+const compactNumber1 = new Intl.NumberFormat("id-ID", {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
+
+const compactNumber2 = new Intl.NumberFormat("id-ID", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+function fmtCompact(value) {
+  if (value === null || value === undefined) return "—";
+  const num = Number(value);
+  if (!Number.isFinite(num)) return "—";
+  const abs = Math.abs(num);
+  const sign = num < 0 ? "-" : "";
+  if (abs >= 1e9) return `${sign}Rp ${compactNumber2.format(abs / 1e9)} M`;
+  if (abs >= 1e7) return `${sign}Rp ${compactNumber1.format(abs / 1e6)} jt`;
+  if (abs >= 1e6) return `${sign}Rp ${compactNumber2.format(abs / 1e6)} jt`;
+  return formatMoney(num);
+}
+
+function setProgramKpiValue(targetEl, value) {
+  if (!targetEl) return;
+  if (!isInvestmentsOnlyLayout) {
+    targetEl.textContent = formatMoney(value);
+    return;
+  }
+  const formatted = fmtCompact(value);
+  targetEl.textContent = formatted;
+  if (formatted === "—") {
+    targetEl.removeAttribute("title");
+  } else {
+    targetEl.title = formatMoney(value);
+  }
+}
+
+function showToast(message, variant = "success") {
+  const stack = document.querySelector("#toastStack");
+  if (!stack) return;
+  const item = document.createElement("div");
+  item.className = `toast-item ${variant}`;
+  const icon = variant === "info"
+    ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`
+    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`;
+  item.innerHTML = `${icon}<span>${escapeHtml(message)}</span>`;
+  stack.append(item);
+  while (stack.children.length > 3) stack.firstElementChild.remove();
+  window.setTimeout(() => {
+    item.classList.add("closing");
+    window.setTimeout(() => item.remove(), 200);
+  }, 2800);
+}
+
+function triggerKpiFlash() {
+  const grid = document.querySelector("#simKpiGrid");
+  if (!grid) return;
+  window.clearTimeout(kpiFlashTimer);
+  const cards = grid.querySelectorAll(".kpi-card");
+  cards.forEach((card) => card.classList.remove("flash"));
+  void grid.offsetWidth;
+  cards.forEach((card) => card.classList.add("flash"));
+  kpiFlashTimer = window.setTimeout(() => cards.forEach((card) => card.classList.remove("flash")), 480);
+}
+
+function updateSliderTrack(slider, pct) {
+  if (!slider) return;
+  const p = clampNumber(pct, 0, 100);
+  slider.style.background = `linear-gradient(90deg, var(--blue) 0%, var(--blue) ${p}%, var(--border) ${p}%, var(--border) 100%)`;
 }
 
 function formatNumberInput(value) {
@@ -1341,18 +1580,24 @@ function simulationSourceStatus(actualMonths) {
 
 function formatSimulationSourceBadge(actualMonths) {
   const status = simulationSourceStatus(actualMonths);
+  if (isInvestmentsOnlyLayout) {
+    const badgeClass = status.key === "actual" ? "badge-emerald" : status.key === "mixed" ? "badge-amber" : "badge-secondary";
+    return `<span class="badge ${badgeClass}">${status.label}</span>`;
+  }
   return `<span class="source-badge source-${status.key}">${status.label}</span>`;
 }
 
 function formatAnnualActualPurchase(row) {
-  if (!row.actualMonths) return "-";
+  if (!row.actualMonths) {
+    return isInvestmentsOnlyLayout ? `<span style="color:var(--muted-foreground)">-</span>` : "-";
+  }
   const parts = [
     `BMRI ${row.actualBmriLots.toLocaleString("id-ID")} lot`,
     `BBRI ${row.actualBbriLots.toLocaleString("id-ID")} lot`,
     `RDPU ${formatMoney(row.actualRdpuContributions)}`,
   ];
   return `
-    <div class="actual-sync-cell">
+    <div class="${isInvestmentsOnlyLayout ? "period-cell" : "actual-sync-cell"}">
       <strong>${row.actualMonths.toLocaleString("id-ID")} bulan aktual</strong>
       <span>${parts.join(" · ")}</span>
       <small>Total ${formatMoney(row.actualContribution)}</small>
@@ -1400,9 +1645,13 @@ function updateCustomLotSummary(inputs) {
 }
 
 function readSimulationInputs() {
-  const stockAllocation = clampNumber(Math.round(readNumber(el.simStockAllocationNumber, 80)), 0, 100);
+  const allocInput = el.simStockAllocationNumber || el.simStockAllocation;
+  const stockAllocation = clampNumber(Math.round(readNumber(allocInput, 80)), 0, 100);
+  const monthlyDeposit = isInvestmentsOnlyLayout
+    ? Math.max(0, parseNumberInput(el.simMonthlyDeposit.value))
+    : Math.max(0, readNumber(el.simMonthlyDeposit, 1100000));
   return {
-    monthlyDeposit: Math.max(0, readNumber(el.simMonthlyDeposit, 1100000)),
+    monthlyDeposit,
     btcMonthlyContribution: parseNumberInput(el.simBtcMonthlyContribution.value),
     btcReturnAnnual: readNumber(el.simBtcReturn, 0),
     durationMonths: clampNumber(Math.round(readNumber(el.simDurationYears, 15)), 1, 50) * 12,
@@ -1444,14 +1693,23 @@ function applyStockFieldStates() {
 
 function applySimulatorConfigToForm(config) {
   const normalized = normalizeSimulatorConfig(config);
-  el.simMonthlyDeposit.value = String(normalized.monthlyDeposit);
-  el.simBtcMonthlyContribution.value = String(normalized.btcMonthlyContribution);
+  if (el.simStartMonth && !el.simStartMonth.options.length) {
+    el.simStartMonth.innerHTML = INVESTMENT_MONTHS.map((m, i) => `<option value="${i + 1}">${escapeHtml(m)}</option>`).join("");
+  }
+  el.simMonthlyDeposit.value = isInvestmentsOnlyLayout
+    ? (normalized.monthlyDeposit ? normalized.monthlyDeposit.toLocaleString("id-ID") : "0")
+    : String(normalized.monthlyDeposit);
+  el.simBtcMonthlyContribution.value = isInvestmentsOnlyLayout
+    ? (normalized.btcMonthlyContribution ? normalized.btcMonthlyContribution.toLocaleString("id-ID") : "0")
+    : String(normalized.btcMonthlyContribution);
   el.simBtcReturn.value = String(normalized.btcReturnAnnual);
   el.simDurationYears.value = String(normalized.durationMonths / 12);
   el.simStartMonth.value = String(normalized.startMonth);
   el.simStartYear.value = String(normalized.startYear);
   el.simStockAllocation.value = String(normalized.stockAllocation);
-  el.simStockAllocationNumber.value = String(normalized.stockAllocation);
+  if (el.simStockAllocationNumber) {
+    el.simStockAllocationNumber.value = String(normalized.stockAllocation);
+  }
   el.simPurchaseMode.value = normalized.purchaseMode;
   el.simReinvestCustomDividends.checked = normalized.reinvestCustomDividends;
   el.simBmriMonthlyLots.value = String(normalized.bmriMonthlyLots);
@@ -1469,6 +1727,7 @@ function applySimulatorConfigToForm(config) {
 }
 
 function saveSimulatorConfigFromInputs() {
+  if (isWriteLocked()) return;
   const inputs = readSimulationInputs();
   state.investments.simulatorConfig = normalizeSimulatorConfig({
     ...inputs,
@@ -1702,167 +1961,274 @@ function simulateInvestment(inputs) {
   };
 }
 
-function initInvestmentCharts() {
-  if (!window.Chart) return;
-
-  investmentGrowthChart = new Chart(el.investmentGrowthChart, {
-    type: "line",
-    data: {
-      labels: [],
-      datasets: [
-        {
-          label: "Total Modal",
-          data: [],
-          borderColor: "#dc2626",
-          backgroundColor: "rgba(220, 38, 38, 0.10)",
-          borderWidth: 3,
-          pointRadius: 3,
-          tension: 0.28,
-        },
-        {
-          label: "Pertumbuhan Total Aset",
-          data: [],
-          borderColor: "#0f9f6e",
-          backgroundColor: "rgba(15, 159, 110, 0.12)",
-          borderWidth: 3,
-          pointRadius: 3,
-          tension: 0.28,
-          fill: true,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { intersect: false, mode: "index" },
-      plugins: {
-        legend: { labels: { boxWidth: 12, boxHeight: 12, color: "#172033", font: { weight: "bold" } } },
-        tooltip: {
-          callbacks: {
-            label(context) {
-              return `${context.dataset.label}: ${formatMoney(context.raw)}`;
-            },
-          },
-        },
-      },
-      scales: {
-        x: { grid: { display: false }, ticks: { color: "#64748b" } },
-        y: {
-          ticks: { color: "#64748b", callback: compactMoney },
-          grid: { color: "rgba(15, 23, 42, 0.08)" },
-        },
-      },
-    },
-  });
-
-  investmentStockChart = new Chart(el.investmentStockChart, {
-    type: "line",
-    data: {
-      labels: [],
-      datasets: [
-        {
-          label: "Harga / Lot",
-          data: [],
-          borderColor: "#dc2626",
-          backgroundColor: "rgba(220, 38, 38, 0.10)",
-          borderWidth: 3,
-          pointRadius: 3,
-          pointHoverRadius: 6,
-          tension: 0.28,
-          yAxisID: "y",
-        },
-        {
-          label: "Jumlah Lot",
-          data: [],
-          borderColor: "#0f9f6e",
-          backgroundColor: "rgba(15, 159, 110, 0.12)",
-          borderWidth: 3,
-          pointRadius: 3,
-          pointHoverRadius: 6,
-          tension: 0.28,
-          fill: true,
-          yAxisID: "y1",
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { intersect: false, mode: "index" },
-      plugins: {
-        legend: { labels: { boxWidth: 12, boxHeight: 12, color: "#172033", font: { weight: "bold" } } },
-        tooltip: {
-          callbacks: {
-            title(items) {
-              const purchase = investmentStockChartPurchases[items[0]?.dataIndex];
-              return purchase ? `${purchase.ticker} - ${formatInvestmentDate(purchase)}` : "";
-            },
-            label(context) {
-              const purchase = investmentStockChartPurchases[context.dataIndex];
-              if (!purchase) return "";
-              if (context.dataset.label === "Harga / Lot") return `Harga / lot: ${formatMoney(purchase.lotPrice)}`;
-              return `Jumlah lot: ${purchase.lots.toLocaleString("id-ID")} lot`;
-            },
-            afterBody(items) {
-              const purchase = investmentStockChartPurchases[items[0]?.dataIndex];
-              return purchase ? `Nominal: ${formatMoney(investmentValue(purchase))}` : "";
-            },
-          },
-        },
-      },
-      scales: {
-        x: { grid: { display: false }, ticks: { color: "#64748b", maxRotation: 0, autoSkip: true } },
-        y: {
-          beginAtZero: true,
-          ticks: { color: "#64748b", callback: compactMoney },
-          grid: { color: "rgba(15, 23, 42, 0.08)" },
-        },
-        y1: {
-          beginAtZero: true,
-          position: "right",
-          ticks: {
-            color: "#64748b",
-            precision: 0,
-            callback(value) {
-              return `${value} lot`;
-            },
-          },
-          grid: { drawOnChartArea: false },
-        },
-      },
-    },
-  });
+function chartThemeColors() {
+  if (!isInvestmentsOnlyLayout) {
+    return {
+      grid: "rgba(15, 23, 42, 0.08)",
+      tick: "#64748b",
+      legend: "#172033",
+    };
+  }
+  const styles = getComputedStyle(document.documentElement);
+  return {
+    grid: styles.getPropertyValue("--border").trim() || "#e2e8f0",
+    tick: styles.getPropertyValue("--muted-foreground").trim() || "#64748b",
+    legend: styles.getPropertyValue("--muted-foreground").trim() || "#64748b",
+  };
 }
 
-function updateInvestmentSimulator({ persistConfig = true } = {}) {
+function updateInvestmentThemeCharts() {
+  const colors = chartThemeColors();
+  if (investmentGrowthChart) {
+    investmentGrowthChart.options.scales.y.grid.color = colors.grid;
+    investmentGrowthChart.options.scales.x.ticks.color = colors.tick;
+    investmentGrowthChart.options.scales.y.ticks.color = colors.tick;
+    investmentGrowthChart.options.plugins.legend.labels.color = colors.legend;
+    investmentGrowthChart.update();
+  }
+  if (investmentStockChart) {
+    investmentStockChart.options.scales.y.grid.color = colors.grid;
+    investmentStockChart.options.scales.x.ticks.color = colors.tick;
+    investmentStockChart.options.scales.y.ticks.color = colors.tick;
+    investmentStockChart.options.scales.y1.ticks.color = colors.tick;
+    investmentStockChart.options.plugins.legend.labels.color = colors.legend;
+    investmentStockChart.update();
+  }
+}
+
+function initInvestmentCharts() {
+  if (!window.Chart) return;
+  const colors = chartThemeColors();
+
+  if (el.investmentGrowthChart) {
+    investmentGrowthChart = new Chart(el.investmentGrowthChart, {
+      type: "line",
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: "Total Modal",
+            data: [],
+            borderColor: "#dc2626",
+            backgroundColor: "rgba(220, 38, 38, 0.10)",
+            borderWidth: 2.5,
+            pointRadius: 2.5,
+            tension: 0.25,
+          },
+          {
+            label: "Pertumbuhan Total Aset",
+            data: [],
+            borderColor: isInvestmentsOnlyLayout ? "#059669" : "#0f9f6e",
+            backgroundColor: isInvestmentsOnlyLayout ? "rgba(5, 150, 105, 0.12)" : "rgba(15, 159, 110, 0.12)",
+            borderWidth: 2.5,
+            pointRadius: 2.5,
+            tension: 0.25,
+            fill: true,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { intersect: false, mode: "index" },
+        plugins: {
+          legend: { labels: { boxWidth: 12, boxHeight: 12, color: colors.legend, usePointStyle: isInvestmentsOnlyLayout } },
+          tooltip: {
+            callbacks: {
+              label(context) {
+                return `${context.dataset.label}: ${formatMoney(context.raw)}`;
+              },
+            },
+          },
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: colors.tick } },
+          y: {
+            ticks: { color: colors.tick, callback: compactMoney },
+            grid: { color: colors.grid },
+          },
+        },
+      },
+    });
+  }
+
+  if (el.investmentStockChart) {
+    investmentStockChart = new Chart(el.investmentStockChart, {
+      type: "line",
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: "Harga / Lot",
+            data: [],
+            borderColor: "#dc2626",
+            backgroundColor: "rgba(220, 38, 38, 0.10)",
+            borderWidth: 2.5,
+            pointRadius: 3,
+            pointHoverRadius: 6,
+            tension: 0.28,
+            yAxisID: "y",
+          },
+          {
+            label: "Jumlah Lot",
+            data: [],
+            borderColor: isInvestmentsOnlyLayout ? "#059669" : "#0f9f6e",
+            backgroundColor: isInvestmentsOnlyLayout ? "rgba(5, 150, 105, 0.12)" : "rgba(15, 159, 110, 0.12)",
+            borderWidth: 2.5,
+            pointRadius: 3,
+            pointHoverRadius: 6,
+            tension: 0.28,
+            fill: true,
+            yAxisID: "y1",
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { intersect: false, mode: "index" },
+        plugins: {
+          legend: { labels: { boxWidth: 12, boxHeight: 12, color: colors.legend, usePointStyle: isInvestmentsOnlyLayout } },
+          tooltip: {
+            callbacks: {
+              title(items) {
+                const purchase = investmentStockChartPurchases[items[0]?.dataIndex];
+                return purchase ? `${purchase.ticker} - ${formatInvestmentDate(purchase)}` : "";
+              },
+              label(context) {
+                const purchase = investmentStockChartPurchases[context.dataIndex];
+                if (!purchase) return "";
+                if (context.dataset.label === "Harga / Lot") return `Harga / lot: ${formatMoney(purchase.lotPrice)}`;
+                return `Jumlah lot: ${purchase.lots.toLocaleString("id-ID")} lot`;
+              },
+              afterBody(items) {
+                const purchase = investmentStockChartPurchases[items[0]?.dataIndex];
+                return purchase ? `Nominal: ${formatMoney(investmentValue(purchase))}` : "";
+              },
+            },
+          },
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: colors.tick, maxRotation: 0, autoSkip: true } },
+          y: {
+            beginAtZero: true,
+            ticks: { color: colors.tick, callback: compactMoney },
+            grid: { color: colors.grid },
+          },
+          y1: {
+            beginAtZero: true,
+            position: "right",
+            ticks: {
+              color: colors.tick,
+              precision: 0,
+              callback(value) {
+                return `${value} lot`;
+              },
+            },
+            grid: { drawOnChartArea: false },
+          },
+        },
+      },
+    });
+  }
+}
+
+function renderStrategySummary(inputs, result) {
+  const stratHorizon = document.querySelector("#strategyHorizonBadge");
+  if (!stratHorizon) return;
+
+  const years = inputs.durationMonths / 12;
+  stratHorizon.textContent = `Horizon ${years} Tahun`;
+
+  const liqNet = result.finalAsset - result.sellingFee;
+  const roiPct = result.totalContribution > 0 ? (result.netProfit / result.totalContribution) * 100 : 0;
+  const roiBadge = document.querySelector("#stratRoiBadge");
+  const stratLiqNet = document.querySelector("#stratLiqNet");
+  const stratLiqProfit = document.querySelector("#stratLiqProfit");
+  const stratKeepMonthly = document.querySelector("#stratKeepMonthly");
+  const stratKeepReserve = document.querySelector("#stratKeepReserve");
+  const milestoneStrip = document.querySelector("#milestoneStrip");
+
+  if (stratLiqNet) stratLiqNet.textContent = formatMoney(liqNet);
+  if (stratLiqProfit) stratLiqProfit.textContent = formatMoney(result.netProfit);
+  if (roiBadge) roiBadge.textContent = `${roiPct >= 0 ? "+" : ""}${roiPct.toFixed(1).replace(".", ",")}% ROI`;
+  if (stratKeepMonthly) stratKeepMonthly.textContent = `${formatMoney(result.passiveIncomeFinalYear / 12)} / bln`;
+  if (stratKeepReserve) stratKeepReserve.textContent = formatMoney(result.rdpuBalance + result.btcBalance);
+
+  if (milestoneStrip) {
+    const rows = Array.isArray(result.yearlyRows) ? result.yearlyRows : [];
+    const picks = [];
+    if (rows.length >= 3) {
+      const idx1 = clampNumber(Math.floor(rows.length / 3) - 1, 0, rows.length - 1);
+      const idx2 = clampNumber(Math.max(idx1 + 1, Math.floor((rows.length * 2) / 3) - 1), 0, rows.length - 1);
+      const uniqueIndices = [...new Set([idx1, idx2, rows.length - 1])];
+      uniqueIndices.forEach((idx) => picks.push(rows[idx]));
+    } else if (rows.length > 0) {
+      rows.forEach((r) => picks.push(r));
+    }
+    milestoneStrip.style.gridTemplateColumns = picks.length === 0
+      ? "1fr"
+      : picks.length < 3
+      ? `repeat(${picks.length}, minmax(0, 1fr))`
+      : "";
+    milestoneStrip.innerHTML = picks.length
+      ? picks.map((r) => {
+          const multR = r.portfolioValue / Math.max(r.totalContribution, 1);
+          return `
+            <div class="milestone-pill">
+              <span>Milestone Tahun ${r.year} (${escapeHtml(r.periodLabel)})</span>
+              <strong class="num">${formatMoney(r.portfolioValue)}</strong>
+              <small class="num">${decimal.format(multR)}x modal · Dividen ${fmtCompact(r.annualDividends)}</small>
+            </div>
+          `;
+        }).join("")
+      : `<div class="empty-box">Belum ada data milestone.</div>`;
+  }
+}
+
+function updateInvestmentSimulator({ persistConfig = true, withFlash = false } = {}) {
   const inputs = readSimulationInputs();
   if (persistConfig) {
     saveSimulatorConfigFromInputs();
   }
   const durationMonths = inputs.durationMonths || SIMULATION_MONTHS;
-  const durationLabel = `${decimal.format(durationMonths / 12)} tahun (${durationMonths} bulan)`;
-  const durationTabLabel = document.querySelector("[data-investment-tab-button='simulator'] strong");
+  const yearsCount = durationMonths / 12;
+  const durationLabel = `${decimal.format(yearsCount)} tahun (${durationMonths} bulan)`;
+  const durationTabLabel = document.querySelector("#tabLabelSimulator") || document.querySelector("[data-investment-tab-button='simulator'] strong");
   if (durationTabLabel) durationTabLabel.textContent = `Proyeksi ${durationMonths} Bulan`;
+  const tabBadgeYears = document.querySelector("#tabBadgeYears");
+  if (tabBadgeYears) tabBadgeYears.textContent = `${yearsCount} Thn`;
+  const sidePillYears = document.querySelector("#sidePillYears");
+  if (sidePillYears) sidePillYears.textContent = `${yearsCount} Thn`;
+  const quickStatusBadge = document.querySelector("#quickStatusBadge");
+  if (quickStatusBadge) quickStatusBadge.textContent = `BMRI ${formatMoney(inputs.bmriPrice)} · BBRI ${formatMoney(inputs.bbriPrice)}`;
+
   const totalContributionMeta = el.simTotalContribution?.closest("article")?.querySelector("small");
   if (totalContributionMeta) totalContributionMeta.textContent = `setoran ${durationLabel}`;
-  const historyDescription = el.simHistoryTable?.closest(".surface")?.querySelector(".section-head p");
+  const historyDescription = el.simHistoryTable?.closest(".surface, .card")?.querySelector(".section-head p, .card-description");
   if (historyDescription) historyDescription.textContent = `Snapshot tahunan hasil simulasi ${durationLabel}.`;
-  const dividendDescription = el.simDividendPurchaseTable?.closest(".surface")?.querySelector(".section-head p");
+  const dividendDescription = el.simDividendPurchaseTable?.closest(".surface, .card")?.querySelector(".section-head p, .card-description");
   if (dividendDescription) dividendDescription.textContent = `Lot dan RDPU aktual ikut masuk; bulan kosong mengikuti pola pembelian simulator ${durationLabel}.`;
+
   const isCustomPurchase = inputs.purchaseMode === "custom";
   el.simStockAllocation.value = String(inputs.stockAllocation);
-  el.simStockAllocationNumber.value = String(inputs.stockAllocation);
+  if (el.simStockAllocationNumber) {
+    el.simStockAllocationNumber.value = String(inputs.stockAllocation);
+    el.simStockAllocationNumber.disabled = isCustomPurchase;
+  }
   el.simStockAllocation.disabled = isCustomPurchase;
-  el.simStockAllocationNumber.disabled = isCustomPurchase;
+  updateSliderTrack(el.simStockAllocation, isCustomPurchase ? 0 : inputs.stockAllocation);
   el.simCustomLotPanel.classList.toggle("hidden", !isCustomPurchase);
   el.simReinvestCustomDividends.disabled = !isCustomPurchase;
-  el.simPriceChangePanel.classList.toggle("active", inputs.priceChangeEnabled);
-  el.simPriceChangeToggle.classList.toggle("active", inputs.priceChangeEnabled);
-  el.simPriceChangeFields.classList.toggle("disabled", !inputs.priceChangeEnabled);
+  if (el.simPriceChangePanel) el.simPriceChangePanel.classList.toggle("active", inputs.priceChangeEnabled);
+  if (el.simPriceChangeToggle) el.simPriceChangeToggle.classList.toggle("active", inputs.priceChangeEnabled);
+  if (el.simPriceChangeFields) el.simPriceChangeFields.classList.toggle("disabled", !inputs.priceChangeEnabled);
   el.simPriceChangeStatus.textContent = inputs.priceChangeEnabled
     ? "Aktif - persentase perubahan harga per tahun dipakai dalam simulasi."
     : "Mati - harga saham tetap memakai harga awal.";
   applyStockFieldStates();
+
+  if (el.simAllocLabel) el.simAllocLabel.textContent = isCustomPurchase ? "Custom" : `${inputs.stockAllocation}%`;
   el.simRdpuAllocationLabel.textContent = isCustomPurchase ? "Sisa kas" : `${inputs.rdpuAllocation}%`;
   el.simStockAllocationAmount.textContent = isCustomPurchase
     ? `${inputs.bmriMonthlyLots.toLocaleString("id-ID")} lot BMRI + ${inputs.bbriMonthlyLots.toLocaleString("id-ID")} lot BBRI`
@@ -1870,6 +2236,20 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
   el.simRdpuAllocationAmount.textContent = isCustomPurchase
     ? "Sisa setelah beli saham"
     : formatMoney((inputs.monthlyDeposit * inputs.rdpuAllocation) / 100);
+
+  const acc01 = document.querySelector("#acc01Summary");
+  if (acc01) acc01.textContent = `${fmtCompact(inputs.monthlyDeposit)}/bln · BTC ${fmtCompact(inputs.btcMonthlyContribution)} · ${yearsCount} thn`;
+  const acc02 = document.querySelector("#acc02Summary");
+  if (acc02) acc02.textContent = isCustomPurchase
+    ? `Custom ${inputs.bmriMonthlyLots} BMRI + ${inputs.bbriMonthlyLots} BBRI lot`
+    : `Selang-seling · Saham ${inputs.stockAllocation}% / RDPU ${inputs.rdpuAllocation}%`;
+  const acc03 = document.querySelector("#acc03Summary");
+  if (acc03) acc03.textContent = inputs.priceChangeEnabled
+    ? `Aktif · BMRI ${inputs.bmriPriceChangeAnnual >= 0 ? "+" : ""}${inputs.bmriPriceChangeAnnual}% / BBRI ${inputs.bbriPriceChangeAnnual >= 0 ? "+" : ""}${inputs.bbriPriceChangeAnnual}%`
+    : "Nonaktif · harga tetap awal";
+  const acc04 = document.querySelector("#acc04Summary");
+  if (acc04) acc04.textContent = `RDPU ${inputs.rdpuReturnAnnual}% · BTC ${inputs.btcReturnAnnual}% · Div +${inputs.dividendGrowthAnnual}%/thn`;
+
   if (isCustomPurchase) {
     updateCustomLotSummary(inputs);
   }
@@ -1877,31 +2257,39 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
   renderCurrentActualSummary(inputs);
 
   const result = simulateInvestment(inputs);
-  el.simTotalContribution.textContent = formatMoney(result.totalContribution);
+  setProgramKpiValue(el.simTotalContribution, result.totalContribution);
   el.simTotalContributionMeta.textContent = `total setoran saham/RDPU + BTC selama ${inputs.durationMonths / 12} tahun`;
-  el.simFinalAsset.textContent = formatMoney(result.finalAsset);
-  el.simNetProfit.textContent = formatMoney(result.netProfit);
+  setProgramKpiValue(el.simFinalAsset, result.finalAsset);
+  setProgramKpiValue(el.simNetProfit, result.netProfit);
   el.simNetProfit.classList.toggle("negative", result.netProfit < 0);
   el.simNetProfit.classList.toggle("positive", result.netProfit >= 0);
-  el.simPassiveIncome.textContent = formatMoney(result.passiveIncomeFinalYear);
+  setProgramKpiValue(el.simPassiveIncome, result.passiveIncomeFinalYear);
   el.simSellingFee.textContent = formatMoney(result.sellingFee);
   el.simTotalDividends.textContent = formatMoney(result.totalDividends);
   el.simTotalRdpuContributions.textContent = formatMoney(result.totalRdpuContributions);
   el.simRdpuReturnGain.textContent = formatMoney(result.rdpuReturnGain);
-  el.simBtcValue.textContent = formatMoney(result.btcBalance);
-  el.simBtcContributionInfo.textContent = `Setoran proyeksi ${formatMoney(inputs.btcMonthlyContribution)} / bulan · aktual ${result.actualBtcMonths} bulan`;
+  setProgramKpiValue(el.simBtcValue, result.btcBalance);
+  if (el.simBtcContributionInfo) el.simBtcContributionInfo.textContent = `Setoran proyeksi ${formatMoney(inputs.btcMonthlyContribution)} / bulan · aktual ${result.actualBtcMonths} bulan`;
   el.simBtcKpiContribution.textContent = `Total setoran ${formatMoney(result.totalBtcContributions)} · return ${formatMoney(result.btcReturnGain)}`;
-  el.simBtcReturnGain.textContent = `Total setoran ${formatMoney(result.totalBtcContributions)} · return ${formatMoney(result.btcReturnGain)}`;
+  if (el.simBtcReturnGain) el.simBtcReturnGain.textContent = `Total setoran ${formatMoney(result.totalBtcContributions)} · return ${formatMoney(result.btcReturnGain)}`;
   el.simBtcPositionShare.textContent = `${decimal.format((result.btcBalance / Math.max(result.finalAsset, 1)) * 100)}%`;
-  el.simBtcPositionValue.textContent = formatMoney(result.btcBalance);
-  el.simBtcPositionReturn.textContent = `Total setoran ${formatMoney(result.totalBtcContributions)} · return ${formatMoney(result.btcReturnGain)}`;
+  el.simBtcPositionValue.textContent = isInvestmentsOnlyLayout
+    ? `${formatMoney(result.btcBalance)} (Modal ${formatMoney(result.totalBtcContributions)} · Return ${formatMoney(result.btcReturnGain)})`
+    : formatMoney(result.btcBalance);
+  if (el.simBtcPositionReturn) el.simBtcPositionReturn.textContent = `Total setoran ${formatMoney(result.totalBtcContributions)} · return ${formatMoney(result.btcReturnGain)}`;
   el.simBtcPositionBar.style.width = `${Math.min((result.btcBalance / Math.max(result.finalAsset, 1)) * 100, 100)}%`;
   el.investmentBtcTotal.textContent = formatMoney(state.investments.btcPurchases.reduce((sum, item) => sum + item.amount, 0));
   el.investmentBtcTable.innerHTML = state.investments.btcPurchases
     .slice().sort((a, b) => investmentTimestamp(a) - investmentTimestamp(b))
-    .map((purchase) => `<tr><td>${formatInvestmentDate(purchase)}</td><td>${formatMoney(purchase.amount)}</td><td><div class="table-actions"><button class="icon-button" data-edit-btc-purchase="${purchase.id}" type="button">Edit</button><button class="icon-button delete" data-delete-btc-purchase="${purchase.id}" type="button">Hapus</button></div></td></tr>`)
-    .join("") || `<tr><td colspan="3"><div class="empty-state">Belum ada catatan BTC.</div></td></tr>`;
-  el.simAssetMultiple.textContent = `${decimal.format(result.finalAsset / Math.max(result.totalContribution, 1))}x modal`;
+    .map((purchase) => isInvestmentsOnlyLayout
+      ? `<tr><td>${formatInvestmentDate(purchase)}</td><td class="right num"><strong>${formatMoney(purchase.amount)}</strong></td><td class="right"><div class="row-actions"><button class="btn btn-ghost btn-sm" data-edit-btc-purchase="${purchase.id}" type="button">Edit</button><button class="btn btn-destructive-ghost btn-sm" data-delete-btc-purchase="${purchase.id}" type="button">Hapus</button></div></td></tr>`
+      : `<tr><td>${formatInvestmentDate(purchase)}</td><td>${formatMoney(purchase.amount)}</td><td><div class="table-actions"><button class="icon-button" data-edit-btc-purchase="${purchase.id}" type="button">Edit</button><button class="icon-button delete" data-delete-btc-purchase="${purchase.id}" type="button">Hapus</button></div></td></tr>`)
+    .join("") || `<tr><td colspan="3"><div class="${isInvestmentsOnlyLayout ? "empty-box" : "empty-state"}">Belum ada catatan BTC.</div></td></tr>`;
+  applyWriteFormLockState();
+
+  const multipleText = `${decimal.format(result.finalAsset / Math.max(result.totalContribution, 1))}x`;
+  if (el.simAssetMultiple) el.simAssetMultiple.textContent = `${multipleText} modal`;
+  if (el.simAssetMultipleKpi) el.simAssetMultipleKpi.textContent = multipleText;
 
   const total = Math.max(result.finalAsset, 1);
   const bmriPct = (result.bmriValue / total) * 100;
@@ -1910,15 +2298,22 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
 
   el.simBmriLots.textContent = `${result.bmriLots.toLocaleString("id-ID")} lot`;
   el.simBbriLots.textContent = `${result.bbriLots.toLocaleString("id-ID")} lot`;
-  el.simBmriValue.textContent = formatMoney(result.bmriValue);
-  el.simBbriValue.textContent = formatMoney(result.bbriValue);
+  el.simBmriValue.textContent = isInvestmentsOnlyLayout
+    ? `${formatMoney(result.bmriValue)} (${decimal.format(bmriPct)}%)`
+    : formatMoney(result.bmriValue);
+  el.simBbriValue.textContent = isInvestmentsOnlyLayout
+    ? `${formatMoney(result.bbriValue)} (${decimal.format(bbriPct)}%)`
+    : formatMoney(result.bbriValue);
   el.simRdpuValue.textContent = formatMoney(result.rdpuBalance);
   el.simRdpuShare.textContent = `${decimal.format(rdpuPct)}%`;
   el.simBmriBar.style.width = `${Math.min(bmriPct, 100)}%`;
   el.simBbriBar.style.width = `${Math.min(bbriPct, 100)}%`;
   el.simRdpuBar.style.width = `${Math.min(rdpuPct, 100)}%`;
 
+  renderStrategySummary(inputs, result);
+
   const btcActualPurchases = state.investments.btcPurchases;
+  const numCell = isInvestmentsOnlyLayout ? ' class="right num"' : "";
   el.simHistoryTable.innerHTML = result.yearlyRows
     .map(
       (row, rowIndex) => {
@@ -1932,27 +2327,29 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
           })
           .reduce((sum, purchase) => sum + purchase.amount, 0);
         return `
-        <tr class="source-row-${status.key}">
+        <tr${isInvestmentsOnlyLayout ? "" : ` class="source-row-${status.key}"`}>
           <td>
-            <div class="history-period-head">
-              <strong>Tahun ${row.year}</strong>
-              ${formatSimulationSourceBadge(row.actualMonths)}
+            <div class="${isInvestmentsOnlyLayout ? "period-cell" : ""}">
+              <div class="${isInvestmentsOnlyLayout ? "period-top" : "history-period-head"}">
+                <strong>Tahun ${row.year}</strong>
+                ${formatSimulationSourceBadge(row.actualMonths)}
+              </div>
+              <small>${row.periodLabel}${row.actualMonths ? ` - ${row.actualMonths} bulan aktual Program 2` : ""}</small>
             </div>
-            <small>${row.periodLabel}${row.actualMonths ? ` - ${row.actualMonths} bulan aktual Program 2` : ""}</small>
           </td>
           <td>${formatAnnualActualPurchase(row)}</td>
-          <td>${formatMoney(row.totalContribution)}</td>
-          <td>${formatMoney(row.btcContributions)}${rowActualBtc ? `<small> · aktual ${formatMoney(rowActualBtc)}</small>` : ""}</td>
-          <td>${formatMoney(row.btcBalance)}</td>
-          <td>${formatMoney(row.bmriPrice)}</td>
-          <td>${row.bmriLots.toLocaleString("id-ID")} lot</td>
-          <td>${formatMoney(row.bbriPrice)}</td>
-          <td>${row.bbriLots.toLocaleString("id-ID")} lot</td>
-          <td>${formatMoney(row.annualDividends)}</td>
-          <td>${formatMoney(row.rdpuContributions)}</td>
-          <td>${formatMoney(row.rdpuReturnGain)}</td>
-          <td>${formatMoney(row.rdpuBalance)}</td>
-          <td><strong>${formatMoney(row.portfolioValue)}</strong></td>
+          <td${numCell}>${formatMoney(row.totalContribution)}</td>
+          <td${numCell}>${formatMoney(row.btcContributions)}${rowActualBtc ? `<small> · aktual ${formatMoney(rowActualBtc)}</small>` : ""}</td>
+          <td${numCell}>${formatMoney(row.btcBalance)}</td>
+          <td${numCell}>${formatMoney(row.bmriPrice)}</td>
+          <td${numCell}>${row.bmriLots.toLocaleString("id-ID")} lot</td>
+          <td${numCell}>${formatMoney(row.bbriPrice)}</td>
+          <td${numCell}>${row.bbriLots.toLocaleString("id-ID")} lot</td>
+          <td${numCell}>${formatMoney(row.annualDividends)}</td>
+          <td${numCell}>${formatMoney(row.rdpuContributions)}</td>
+          <td${numCell}>${formatMoney(row.rdpuReturnGain)}</td>
+          <td${numCell}>${formatMoney(row.rdpuBalance)}</td>
+          <td${numCell}><strong>${formatMoney(row.portfolioValue)}</strong></td>
         </tr>
       `;
       },
@@ -1962,31 +2359,35 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
   const dividendPurchaseRows = result.yearlyRows.filter(
     (row) => row.dividendBmriLots + row.dividendBbriLots > 0 || row.actualMonths > 0,
   );
-  el.simDividendPurchaseTableWrap.classList.toggle("hidden", dividendPurchaseRows.length === 0);
-  el.simDividendPurchaseEmpty.classList.toggle("hidden", dividendPurchaseRows.length > 0);
-  el.simDividendPurchaseTable.innerHTML = dividendPurchaseRows
-    .map(
-      (row) => {
-        const status = simulationSourceStatus(row.actualMonths);
-        return `
-        <tr class="source-row-${status.key}">
-          <td>
-            <div class="history-period-head">
-              <strong>Tahun ${row.year}</strong>
-              ${formatSimulationSourceBadge(row.actualMonths)}
-            </div>
-            <small>${row.periodLabel}${row.actualMonths ? ` - ${row.actualMonths} bulan aktual Program 2` : ""}</small>
-          </td>
-          <td>${formatMoney(row.annualDividends)}</td>
-          <td>${formatDividendStockPurchase(row)}</td>
-          <td>${formatMoney(row.dividendStockCashUsed)}</td>
-          <td>${formatMoney(row.dividendLeftoverToRdpu)}</td>
-          <td>${formatAnnualActualPurchase(row)}</td>
-        </tr>
-      `;
-      },
-    )
-    .join("");
+  if (el.simDividendPurchaseTableWrap) el.simDividendPurchaseTableWrap.classList.toggle("hidden", dividendPurchaseRows.length === 0);
+  if (el.simDividendPurchaseEmpty) el.simDividendPurchaseEmpty.classList.toggle("hidden", dividendPurchaseRows.length > 0);
+  el.simDividendPurchaseTable.innerHTML = dividendPurchaseRows.length
+    ? dividendPurchaseRows
+        .map(
+          (row) => {
+            const status = simulationSourceStatus(row.actualMonths);
+            return `
+            <tr${isInvestmentsOnlyLayout ? "" : ` class="source-row-${status.key}"`}>
+              <td>
+                <div class="${isInvestmentsOnlyLayout ? "period-cell" : ""}">
+                  <div class="${isInvestmentsOnlyLayout ? "period-top" : "history-period-head"}">
+                    <strong>Tahun ${row.year}</strong>
+                    ${formatSimulationSourceBadge(row.actualMonths)}
+                  </div>
+                  <small>${row.periodLabel}${row.actualMonths ? ` - ${row.actualMonths} bulan aktual Program 2` : ""}</small>
+                </div>
+              </td>
+              <td${numCell}>${formatMoney(row.annualDividends)}</td>
+              <td>${formatDividendStockPurchase(row)}</td>
+              <td${numCell}>${formatMoney(row.dividendStockCashUsed)}</td>
+              <td${numCell}>${formatMoney(row.dividendLeftoverToRdpu)}</td>
+              <td>${formatAnnualActualPurchase(row)}</td>
+            </tr>
+          `;
+          },
+        )
+        .join("")
+    : `<tr><td colspan="6"><div class="${isInvestmentsOnlyLayout ? "empty-box" : "empty-state"}">Belum ada pembelian dari dividen pada konfigurasi ini.</div></td></tr>`;
 
   if (investmentGrowthChart) {
     investmentGrowthChart.data.labels = result.chartYears;
@@ -1994,6 +2395,7 @@ function updateInvestmentSimulator({ persistConfig = true } = {}) {
     investmentGrowthChart.data.datasets[1].data = result.chartAssets;
     investmentGrowthChart.update();
   }
+  if (withFlash) triggerKpiFlash();
 }
 
 function currentMonth() {
@@ -2021,10 +2423,12 @@ function typeLabel(type) {
 }
 
 function renderAll() {
-  renderCategoryOptions();
-  renderDashboard();
-  renderTransactions();
-  renderCategories();
+  if (!isInvestmentsOnlyLayout) {
+    renderCategoryOptions();
+    renderDashboard();
+    renderTransactions();
+    renderCategories();
+  }
   renderInvestmentsIfActive();
 }
 
@@ -2506,11 +2910,12 @@ function renderInvestmentTickers() {
       return `
         <span class="ticker-chip">
           ${escapeHtml(ticker)}
-          ${locked ? "" : `<button data-delete-investment-ticker="${ticker}" type="button" aria-label="Hapus ${ticker}">x</button>`}
+          ${locked ? "" : `<button data-delete-investment-ticker="${ticker}" type="button" aria-label="Hapus ${ticker}">&times;</button>`}
         </span>
       `;
     })
     .join("");
+  applyWriteFormLockState();
 }
 
 function calculatePortfolioAnalysis(investments) {
@@ -2644,6 +3049,79 @@ function calculateInvestmentSummary() {
 function renderInvestmentTables() {
   const stockRows = [...state.investments.stockPurchases].sort((a, b) => investmentTimestamp(a) - investmentTimestamp(b));
   const rdpuRows = [...state.investments.rdpuPurchases].sort((a, b) => investmentTimestamp(a) - investmentTimestamp(b));
+  const btcRows = [...state.investments.btcPurchases].sort((a, b) => investmentTimestamp(a) - investmentTimestamp(b));
+
+  const totalEntries = stockRows.length + rdpuRows.length + btcRows.length;
+  const tabBadgeRecords = document.querySelector("#tabBadgeRecords");
+  if (tabBadgeRecords) tabBadgeRecords.textContent = `${totalEntries} entri`;
+  const sidePillRecords = document.querySelector("#sidePillRecords");
+  if (sidePillRecords) sidePillRecords.textContent = `${totalEntries}`;
+
+  if (isInvestmentsOnlyLayout) {
+    el.investmentStockTable.innerHTML = stockRows.length
+      ? stockRows
+          .slice()
+          .reverse()
+          .map(
+            (purchase) => `
+              <tr>
+                <td>${formatInvestmentDate(purchase)}</td>
+                <td><span class="badge badge-secondary">${escapeHtml(purchase.ticker)}</span></td>
+                <td class="right num">${formatMoney(purchase.lotPrice)}</td>
+                <td class="right num">${purchase.lots.toLocaleString("id-ID")}</td>
+                <td class="right num"><strong>${formatMoney(investmentValue(purchase))}</strong></td>
+                <td class="right num">${purchase.dividendAmount > 0 ? `<span class="badge badge-emerald">${formatMoney(purchase.dividendAmount)}</span>` : "-"}</td>
+                <td class="right">
+                  <div class="row-actions">
+                    <button class="btn btn-ghost btn-sm" data-edit-stock-purchase="${purchase.id}" type="button">Edit</button>
+                    <button class="btn btn-destructive-ghost btn-sm" data-delete-stock-purchase="${purchase.id}" type="button">Hapus</button>
+                  </div>
+                </td>
+              </tr>
+            `,
+          )
+          .join("")
+      : `<tr><td colspan="7"><div class="empty-box">Belum ada pembelian saham.</div></td></tr>`;
+
+    el.investmentRdpuTable.innerHTML = rdpuRows.length
+      ? rdpuRows
+          .slice()
+          .reverse()
+          .map(
+            (purchase) => `
+              <tr>
+                <td>${formatInvestmentDate(purchase)}</td>
+                <td class="right num"><strong>${formatMoney(purchase.amount)}</strong></td>
+                <td class="right">
+                  <div class="row-actions">
+                    <button class="btn btn-ghost btn-sm" data-edit-rdpu-purchase="${purchase.id}" type="button">Edit</button>
+                    <button class="btn btn-destructive-ghost btn-sm" data-delete-rdpu-purchase="${purchase.id}" type="button">Hapus</button>
+                  </div>
+                </td>
+              </tr>
+            `,
+          )
+          .join("")
+      : `<tr><td colspan="3"><div class="empty-box">Belum ada pembelian RDPU.</div></td></tr>`;
+
+    el.investmentBtcTable.innerHTML = btcRows.length
+      ? btcRows
+          .slice()
+          .reverse()
+          .map((purchase) => `
+            <tr>
+              <td>${formatInvestmentDate(purchase)}</td>
+              <td class="right num"><strong>${formatMoney(purchase.amount)}</strong></td>
+              <td class="right"><div class="row-actions">
+                <button class="btn btn-ghost btn-sm" data-edit-btc-purchase="${purchase.id}" type="button">Edit</button>
+                <button class="btn btn-destructive-ghost btn-sm" data-delete-btc-purchase="${purchase.id}" type="button">Hapus</button>
+              </div></td>
+            </tr>`)
+          .join("")
+      : `<tr><td colspan="3"><div class="empty-box">Belum ada catatan BTC.</div></td></tr>`;
+    applyWriteFormLockState();
+    return;
+  }
 
   el.investmentStockTable.innerHTML = stockRows.length
     ? stockRows
@@ -2693,7 +3171,6 @@ function renderInvestmentTables() {
         .join("")
     : `<tr><td colspan="3"><div class="empty-state">Belum ada pembelian RDPU.</div></td></tr>`;
 
-  const btcRows = [...state.investments.btcPurchases].sort((a, b) => investmentTimestamp(a) - investmentTimestamp(b));
   el.investmentBtcTable.innerHTML = btcRows.length
     ? btcRows.map((purchase) => `
         <tr>
@@ -2714,16 +3191,29 @@ function renderInvestmentSummary() {
   el.investmentRdpuTotal.textContent = formatMoney(summary.rdpuTotal);
   el.investmentBtcTotal.textContent = formatMoney(summary.btcTotal);
   el.investmentPortfolioTotal.textContent = formatMoney(summary.portfolioTotal);
+
+  const sidebarModal = document.querySelector("#sidebarModalValue");
+  if (sidebarModal) sidebarModal.textContent = formatMoney(summary.portfolioTotal);
+  const sideLotTotal = document.querySelector("#sideLotTotal");
+  if (sideLotTotal) sideLotTotal.textContent = `${summary.lotTotal.toLocaleString("id-ID")} lot`;
+  const sideStockVal = document.querySelector("#sideStockVal");
+  if (sideStockVal) sideStockVal.textContent = formatMoney(summary.stockTotal);
+  const sideRdpuVal = document.querySelector("#sideRdpuVal");
+  if (sideRdpuVal) sideRdpuVal.textContent = formatMoney(summary.rdpuTotal);
+  const sideBtcVal = document.querySelector("#sideBtcVal");
+  if (sideBtcVal) sideBtcVal.textContent = formatMoney(summary.btcTotal);
+
+  const numCell = isInvestmentsOnlyLayout ? ' class="right num"' : "";
   el.investmentSummaryTable.innerHTML = summary.rows
     .map(
       (row) => `
         <tr>
           <td><strong>${row.year}</strong></td>
-          <td>${formatMoney(row.stockTotal)}</td>
-          <td>${row.lotTotal.toLocaleString("id-ID")} lot</td>
-          <td>${formatMoney(row.rdpuTotal)}</td>
-          <td>${formatMoney(row.btcTotal)}</td>
-          <td><strong>${formatMoney(row.portfolioTotal)}</strong></td>
+          <td${numCell}>${formatMoney(row.stockTotal)}</td>
+          <td${numCell}>${row.lotTotal.toLocaleString("id-ID")} lot</td>
+          <td${numCell}>${formatMoney(row.rdpuTotal)}</td>
+          <td${numCell}>${formatMoney(row.btcTotal)}</td>
+          <td${numCell}><strong>${formatMoney(row.portfolioTotal)}</strong></td>
         </tr>
       `,
     )
@@ -2760,9 +3250,11 @@ function renderCurrentActualSummary(inputs = readSimulationInputs()) {
   el.investmentActualBbri.textContent = `${actualInvestment.bbriLots.toLocaleString("id-ID")} lot - ${formatMoney(actualInvestment.bbriAmount)}`;
   el.investmentActualRdpu.textContent = formatMoney(actualInvestment.rdpuAmount);
   el.investmentActualTotal.textContent = formatMoney(totalActual);
-  el.investmentActualUsed.textContent = programStatus;
-  el.investmentActualUsed.classList.toggle("positive", actualInvestment.hasActual && inSimulation);
-  el.investmentActualUsed.classList.toggle("negative", actualInvestment.hasActual && !inSimulation);
+  if (el.investmentActualUsed) {
+    el.investmentActualUsed.textContent = programStatus;
+    el.investmentActualUsed.classList.toggle("positive", actualInvestment.hasActual && inSimulation);
+    el.investmentActualUsed.classList.toggle("negative", actualInvestment.hasActual && !inSimulation);
+  }
 }
 
 function investmentSaveFeedbackMessage(purchase, type) {
@@ -2784,8 +3276,13 @@ function investmentSaveFeedbackMessage(purchase, type) {
 }
 
 function showInvestmentSaveFeedback(purchase, type) {
+  const message = investmentSaveFeedbackMessage(purchase, type);
+  if (isInvestmentsOnlyLayout) {
+    showToast(message, "success");
+    return;
+  }
   if (!el.investmentSaveFeedback) return;
-  el.investmentSaveFeedback.textContent = investmentSaveFeedbackMessage(purchase, type);
+  el.investmentSaveFeedback.textContent = message;
   el.investmentSaveFeedback.classList.remove("hidden");
 }
 
@@ -2817,7 +3314,9 @@ function renderKalkulatorPorsi() {
   const total = saham + etf;
 
   if (total <= 0) {
-    output.innerHTML = '<p class="kalc-empty">Masukkan nilai untuk melihat hasil.</p>';
+    output.innerHTML = isInvestmentsOnlyLayout
+      ? `<div class="empty-box">Masukkan nominal Saham atau ETF untuk menghitung porsi.</div>`
+      : '<p class="kalc-empty">Masukkan nilai untuk melihat hasil.</p>';
     return;
   }
 
@@ -2826,6 +3325,27 @@ function renderKalkulatorPorsi() {
 
   function fmt(val) {
     return val.toLocaleString("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 });
+  }
+
+  if (isInvestmentsOnlyLayout) {
+    output.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:baseline;">
+        <span style="font-size:0.8rem;color:var(--muted-foreground);">Total Portofolio</span>
+        <strong class="num" style="font-size:1.1rem;">${fmt(total)}</strong>
+      </div>
+      <div class="kalc-bar-row">
+        <strong>Saham</strong>
+        <div class="comp-track"><span class="comp-fill bmri" style="width:${Math.min(sahamPct, 100).toFixed(1)}%"></span></div>
+        <span class="num" style="text-align:right;">${sahamPct.toFixed(1).replace(".", ",")}%</span>
+      </div>
+      <div class="kalc-bar-row">
+        <strong>ETF</strong>
+        <div class="comp-track"><span class="comp-fill rdpu" style="width:${Math.min(etfPct, 100).toFixed(1)}%"></span></div>
+        <span class="num" style="text-align:right;">${etfPct.toFixed(1).replace(".", ",")}%</span>
+      </div>
+      <small style="color:var(--muted-foreground);font-size:0.74rem;">Rumus: (% = Nilai Aset / Total Portofolio × 100%)</small>
+    `;
+    return;
   }
 
   function fmtShort(val) {
@@ -2876,16 +3396,16 @@ function renderKalkulatorPorsi() {
 }
 
 function initKalkulatorPorsi() {
-  const inputs = document.querySelectorAll(".kalc-input");
+  const inputs = document.querySelectorAll("#kalcSaham, #kalcEtf, .kalc-input");
   inputs.forEach((input) => {
+    if (input.dataset.kalcBound === "true") return;
+    input.dataset.kalcBound = "true";
     input.addEventListener("input", () => {
-      // Format ribuan saat mengetik
       const raw = parseRibuanInput(input.value);
       const pos  = input.selectionStart;
       const oldLen = input.value.length;
       if (raw > 0) {
         input.value = formatRibuan(raw);
-        // Jaga posisi cursor
         const newLen = input.value.length;
         input.setSelectionRange(pos + (newLen - oldLen), pos + (newLen - oldLen));
       } else {
@@ -2909,13 +3429,19 @@ function apCreateRow(name = "", value = "") {
   apRowCounter += 1;
   const rowId = `ap-row-${apRowCounter}`;
   const row = document.createElement("div");
-  row.className = "asetpersen-row";
+  row.className = isInvestmentsOnlyLayout ? "ap-row asetpersen-row" : "asetpersen-row";
   row.dataset.rowId = rowId;
-  row.innerHTML = `
-    <input class="kalc-input ap-row-name" type="text" placeholder="Nama bagian (opsional)" value="${name}" />
-    <input class="kalc-input ap-row-value" type="text" inputmode="numeric" placeholder="Nominal (Rp)" value="${value}" />
-    <button class="ap-row-remove" type="button" aria-label="Hapus baris">&times;</button>
-  `;
+  row.innerHTML = isInvestmentsOnlyLayout
+    ? `
+      <input class="input ap-row-name" type="text" placeholder="Nama aset" value="${escapeHtml(name)}" />
+      <input class="input num ap-row-value" type="text" inputmode="numeric" placeholder="Nominal (Rp)" value="${escapeHtml(value)}" />
+      <button class="btn btn-destructive-ghost btn-icon ap-row-remove" type="button" aria-label="Hapus baris">&times;</button>
+    `
+    : `
+      <input class="kalc-input ap-row-name" type="text" placeholder="Nama bagian (opsional)" value="${escapeHtml(name)}" />
+      <input class="kalc-input ap-row-value" type="text" inputmode="numeric" placeholder="Nominal (Rp)" value="${escapeHtml(value)}" />
+      <button class="ap-row-remove" type="button" aria-label="Hapus baris">&times;</button>
+    `;
   return row;
 }
 
@@ -2942,6 +3468,7 @@ function apAttachRowEvents(row) {
       row.querySelector(".ap-row-name").value = "";
       row.querySelector(".ap-row-value").value = "";
     }
+    if (isInvestmentsOnlyLayout) renderAsetPersenSimulator();
   });
 }
 
@@ -2955,8 +3482,8 @@ function apAddRow(name = "", value = "") {
 
 function initAsetPersenSimulator() {
   const totalInput = document.querySelector("#apTotalAset");
-  const addBtn = document.querySelector("#apAddRow");
-  const hitungBtn = document.querySelector("#apHitung");
+  const addBtn = document.querySelector("#apAddRowBtn") || document.querySelector("#apAddRow");
+  const hitungBtn = document.querySelector("#apCalcBtn") || document.querySelector("#apHitung");
   if (!totalInput || !addBtn || !hitungBtn) return;
 
   totalInput.addEventListener("input", () => {
@@ -2973,11 +3500,17 @@ function initAsetPersenSimulator() {
   });
 
   addBtn.addEventListener("click", () => apAddRow());
-  hitungBtn.addEventListener("click", () => renderAsetPersenSimulator());
+  hitungBtn.addEventListener("click", () => {
+    const pct = renderAsetPersenSimulator();
+    if (isInvestmentsOnlyLayout && pct !== null) {
+      showToast(`Komposisi persentase diperbarui (total ${pct.toFixed(1).replace(".", ",")}%).`, "info");
+    }
+  });
 
-  // Mulai dengan 2 baris kosong sebagai contoh input
+  // Mulai dengan 2 baris kosong tanpa data contoh dummy
   apAddRow();
   apAddRow();
+  if (isInvestmentsOnlyLayout) renderAsetPersenSimulator();
 }
 
 function apFmtCurrency(val) {
@@ -2987,7 +3520,7 @@ function apFmtCurrency(val) {
 function renderAsetPersenSimulator() {
   const output = document.querySelector("#apOutput");
   const totalInput = document.querySelector("#apTotalAset");
-  if (!output || !totalInput) return;
+  if (!output || !totalInput) return null;
 
   const totalAset = parseRibuanInput(totalInput.value);
   const rows = [...document.querySelectorAll("#apRows .asetpersen-row")]
@@ -2998,8 +3531,10 @@ function renderAsetPersenSimulator() {
     .filter((item) => item.value > 0);
 
   if (totalAset <= 0 || rows.length === 0) {
-    output.innerHTML = '<p class="kalc-empty">Masukkan Total Aset dan minimal satu nilai bagian, lalu klik "Hitung Persentase".</p>';
-    return;
+    output.innerHTML = isInvestmentsOnlyLayout
+      ? `<div class="empty-box">Isi Total Aset dan minimal satu bagian aset.</div>`
+      : '<p class="kalc-empty">Masukkan Total Aset dan minimal satu nilai bagian, lalu klik "Hitung Persentase".</p>';
+    return null;
   }
 
   const withPct = rows.map((item, index) => ({
@@ -3015,6 +3550,76 @@ function renderAsetPersenSimulator() {
   const selisihPct = sumPct - 100;
   const isPas = Math.abs(selisihPct) <= epsilon;
 
+  let cursor = 0;
+  const gradientStops = withPct.map((item) => {
+    const start = cursor;
+    const end = cursor + Math.max(0, Math.min(item.pct, 100 - start));
+    cursor = end;
+    return `${item.color} ${start}% ${end}%`;
+  });
+  if (cursor < 100) {
+    gradientStops.push(`${isInvestmentsOnlyLayout ? "var(--border)" : "#e2e8f0"} ${cursor}% 100%`);
+  }
+  const pieStyle = `background: conic-gradient(${gradientStops.join(", ")});`;
+
+  const legendHtml = withPct
+    .map(
+      (item) => `
+      <div class="ap-legend-item">
+        <span class="ap-swatch" style="background:${item.color}"></span>
+        <span class="ap-legend-name">${escapeHtml(item.displayName)}</span>
+      </div>`
+    )
+    .join("");
+
+  if (isInvestmentsOnlyLayout) {
+    const statusBadge = isPas
+      ? `<span class="badge badge-emerald">Pas 100% dari Total Aset</span>`
+      : selisihPct < 0
+      ? `<span class="badge badge-amber">Kurang ${Math.abs(selisihPct).toFixed(2).replace(".", ",")}% (${apFmtCurrency(Math.max(0, totalAset - sumValue))})</span>`
+      : `<span class="badge badge-destructive">Lebih ${selisihPct.toFixed(2).replace(".", ",")}% (${apFmtCurrency(sumValue - totalAset)})</span>`;
+
+    const tableRowsHtml = withPct
+      .map(
+        (item) => `
+        <tr>
+          <td><span class="ap-swatch" style="background:${item.color}"></span>${escapeHtml(item.displayName)}</td>
+          <td class="right num">${apFmtCurrency(item.value)}</td>
+          <td class="right num">${item.pct.toFixed(2).replace(".", ",")}%</td>
+        </tr>`
+      )
+      .join("");
+
+    output.innerHTML = `
+      <div class="ap-result-grid">
+        <div class="ap-pie-wrap">
+          <div class="ap-pie" style="${pieStyle}"></div>
+          <div class="ap-legend">${legendHtml}</div>
+        </div>
+        <div class="field-group">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+            <strong style="font-size:0.86rem;">Rincian Proporsi</strong>
+            ${statusBadge}
+          </div>
+          <div class="table-wrap" style="background:var(--card);">
+            <table>
+              <thead><tr><th>Bagian</th><th class="right">Nominal</th><th class="right">Porsi</th></tr></thead>
+              <tbody>
+                ${tableRowsHtml}
+                <tr>
+                  <td><strong>Total Bagian</strong></td>
+                  <td class="right num"><strong>${apFmtCurrency(sumValue)}</strong></td>
+                  <td class="right num"><strong>${sumPct.toFixed(2).replace(".", ",")}%</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+    return sumPct;
+  }
+
   let statusHtml;
   if (isPas) {
     statusHtml = `<div class="ap-status ap-status-ok">✓ Total sudah pas 100% dari Total Aset</div>`;
@@ -3024,34 +3629,11 @@ function renderAsetPersenSimulator() {
     statusHtml = `<div class="ap-status ap-status-warn">Belum pas — kelebihan <strong>${selisihPct.toFixed(2).replace(".", ",")}%</strong> (melebihi Total Aset sebesar ${apFmtCurrency(sumValue - totalAset)})</div>`;
   }
 
-  // Grafik lingkaran sederhana pakai conic-gradient
-  let cursor = 0;
-  const gradientStops = withPct.map((item) => {
-    const start = cursor;
-    const end = cursor + Math.max(0, Math.min(item.pct, 100 - start));
-    cursor = end;
-    return `${item.color} ${start}% ${end}%`;
-  });
-  if (cursor < 100) {
-    gradientStops.push(`#e2e8f0 ${cursor}% 100%`);
-  }
-  const pieStyle = `background: conic-gradient(${gradientStops.join(", ")});`;
-
-  const legendHtml = withPct
-    .map(
-      (item) => `
-      <div class="ap-legend-item">
-        <span class="ap-swatch" style="background:${item.color}"></span>
-        <span class="ap-legend-name">${item.displayName}</span>
-      </div>`
-    )
-    .join("");
-
   const tableRowsHtml = withPct
     .map(
       (item) => `
       <tr>
-        <td><span class="ap-swatch" style="background:${item.color}"></span>${item.displayName}</td>
+        <td><span class="ap-swatch" style="background:${item.color}"></span>${escapeHtml(item.displayName)}</td>
         <td class="ap-num">${apFmtCurrency(item.value)}</td>
         <td class="ap-num">${item.pct.toFixed(2).replace(".", ",")}%</td>
       </tr>`
@@ -3087,6 +3669,7 @@ function renderAsetPersenSimulator() {
       </div>
     </div>
   `;
+  return sumPct;
 }
 
 // ============================================================
@@ -3136,6 +3719,30 @@ function avgSimRenderResult(avgLama, lotLama, hargaBaru, lotBaru) {
   const hasil = avgSimCalcScenario(lotLama, avgLama, lotBaru, hargaBaru);
   const risk = avgSimRiskOpinion(hasil.pctChange, hargaBaru, avgLama);
 
+  if (isInvestmentsOnlyLayout) {
+    const isDown = hasil.pctChange <= 0;
+    const badgeCls = risk.level === "aman" && isDown
+      ? "badge-emerald"
+      : risk.level === "aman"
+      ? "badge-blue"
+      : risk.level === "warn"
+      ? "badge-amber"
+      : "badge-destructive";
+    return `
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <strong style="font-size:0.86rem;">Hasil Weighted Average</strong>
+        <span class="badge ${badgeCls}">${risk.label}</span>
+      </div>
+      <div class="mini-stat-grid">
+        <div class="mini-stat" style="background:var(--card);"><span>Average Baru</span><strong class="num">${formatMoney(hasil.avgBaru)}</strong></div>
+        <div class="mini-stat" style="background:var(--card);"><span>Perubahan Avg</span><strong class="num" style="color:${isDown ? "var(--emerald)" : "var(--amber)"}">${hasil.pctChange >= 0 ? "+" : ""}${hasil.pctChange.toFixed(2).replace(".", ",")}%</strong></div>
+        <div class="mini-stat" style="background:var(--card);"><span>Total Lot Baru</span><strong class="num">${hasil.totalLot.toLocaleString("id-ID")} lot</strong></div>
+        <div class="mini-stat" style="background:var(--card);"><span>Modal Tambahan</span><strong class="num">${formatMoney(hasil.modalTambahan)}</strong></div>
+      </div>
+      <small style="font-size:0.76rem;color:var(--muted-foreground);">${risk.text}</small>
+    `;
+  }
+
   return `
     <div class="avgsim-card">
       <div class="avgsim-card-head">
@@ -3184,18 +3791,18 @@ function avgSimBindRibuanInput(input) {
 }
 
 function initAvgDownUpSimulator() {
-  const btn = document.querySelector("#avgSimHitung");
-  const avgNowInput = document.querySelector("#avgSimAvgNow");
-  const lotNowInput = document.querySelector("#avgSimLotNow");
-  const hargaBaruInput = document.querySelector("#avgSimHargaBaru");
-  const lotBaruInput = document.querySelector("#avgSimLotBaru");
+  const btn = document.querySelector("#avgCalcBtn") || document.querySelector("#avgSimHitung");
+  const avgNowInput = document.querySelector("#avgNow") || document.querySelector("#avgSimAvgNow");
+  const lotNowInput = document.querySelector("#lotNow") || document.querySelector("#avgSimLotNow");
+  const hargaBaruInput = document.querySelector("#hargaBaru") || document.querySelector("#avgSimHargaBaru");
+  const lotBaruInput = document.querySelector("#lotBaru") || document.querySelector("#avgSimLotBaru");
   if (!btn || !avgNowInput || !lotNowInput || !hargaBaruInput || !lotBaruInput) return;
 
   [avgNowInput, lotNowInput, hargaBaruInput, lotBaruInput].forEach(avgSimBindRibuanInput);
 
-  btn.addEventListener("click", () => {
-    const output = document.querySelector("#avgSimOutput");
-    const errorEl = document.querySelector("#avgSimError");
+  function computeAndRenderAvg({ notify = false } = {}) {
+    const output = document.querySelector("#avgOutput") || document.querySelector("#avgSimOutput");
+    const errorEl = document.querySelector("#avgError") || document.querySelector("#avgSimError");
     if (!output || !errorEl) return;
 
     errorEl.classList.add("hidden");
@@ -3214,11 +3821,42 @@ function initAvgDownUpSimulator() {
     }
 
     output.innerHTML = avgSimRenderResult(avgLama, lotLama, hargaBaru, lotBaru);
-  });
+    if (notify && isInvestmentsOnlyLayout) {
+      const hasil = avgSimCalcScenario(lotLama, avgLama, lotBaru, hargaBaru);
+      showToast(`Average baru dihitung: ${formatMoney(hasil.avgBaru)} (${hasil.pctChange <= 0 ? "Average Down" : "Average Up"})`, "info");
+    }
+  }
+
+  btn.addEventListener("click", () => computeAndRenderAvg({ notify: true }));
+  if (isInvestmentsOnlyLayout) {
+    const hasPrefilledValues = [avgNowInput, lotNowInput, hargaBaruInput, lotBaruInput].every(
+      (input) => parseRibuanInput(input.value) > 0,
+    );
+    if (hasPrefilledValues) {
+      computeAndRenderAvg({ notify: false });
+    } else {
+      const output = document.querySelector("#avgOutput") || document.querySelector("#avgSimOutput");
+      if (output) {
+        output.innerHTML = `<div class="empty-box">Masukkan posisi awal dan rencana beli baru, lalu klik "Hitung Average Baru".</div>`;
+      }
+    }
+  }
 }
 
 
 function setupInvestmentTabs() {
+  if (isInvestmentsOnlyLayout) {
+    document.querySelectorAll(".tab-trigger[data-tab]").forEach((button) => {
+      button.addEventListener("click", () => switchInvestmentTab(button.dataset.tab));
+    });
+    document.querySelectorAll("[data-tab-nav]").forEach((button) => {
+      button.addEventListener("click", () => switchInvestmentTab(button.dataset.tabNav));
+    });
+    initKalkulatorPorsi();
+    initAsetPersenSimulator();
+    initAvgDownUpSimulator();
+    return;
+  }
   const stack = document.querySelector(".investment-stack");
   if (!stack || stack.dataset.investmentTabsReady === "true") return;
   stack.dataset.investmentTabsReady = "true";
@@ -3480,14 +4118,40 @@ function setupInvestmentTabs() {
 
 function switchInvestmentTab(tab) {
   activeInvestmentTab = ["simulator", "actual", "analysis"].includes(tab) ? tab : "simulator";
-  document.querySelectorAll("[data-investment-tab-button]").forEach((button) => {
-    const active = button.dataset.investmentTabButton === activeInvestmentTab;
-    button.classList.toggle("active", active);
-    button.setAttribute("aria-selected", String(active));
-  });
-  document.querySelectorAll("[data-investment-tab-panel]").forEach((panel) => {
-    panel.classList.toggle("active", panel.dataset.investmentTabPanel === activeInvestmentTab);
-  });
+  if (isInvestmentsOnlyLayout) {
+    const subtitles = {
+      simulator: "Proyeksi compounding saham, RDPU, & BTC",
+      actual: "Catatan pembelian aktual saham, RDPU, & BTC",
+      analysis: "Kalkulator komposisi, average down/up, & persentase aset",
+    };
+    const subtitleEl = document.querySelector("#topbarSubtitle");
+    if (subtitleEl) subtitleEl.textContent = subtitles[activeInvestmentTab] || subtitles.simulator;
+    document.querySelectorAll(".tab-trigger[data-tab]").forEach((button) => {
+      const active = button.dataset.tab === activeInvestmentTab;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-selected", String(active));
+    });
+    document.querySelectorAll("[data-tab-nav]").forEach((button) => {
+      button.classList.toggle("active", button.dataset.tabNav === activeInvestmentTab);
+    });
+    const panelMap = {
+      simulator: document.querySelector("#panelSimulator"),
+      actual: document.querySelector("#panelActual"),
+      analysis: document.querySelector("#panelAnalysis"),
+    };
+    Object.entries(panelMap).forEach(([key, panel]) => {
+      if (panel) panel.classList.toggle("active", key === activeInvestmentTab);
+    });
+  } else {
+    document.querySelectorAll("[data-investment-tab-button]").forEach((button) => {
+      const active = button.dataset.investmentTabButton === activeInvestmentTab;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-selected", String(active));
+    });
+    document.querySelectorAll("[data-investment-tab-panel]").forEach((panel) => {
+      panel.classList.toggle("active", panel.dataset.investmentTabPanel === activeInvestmentTab);
+    });
+  }
 
   if (activeInvestmentTab === "simulator" && investmentGrowthChart) {
     investmentGrowthChart.resize();
@@ -3580,7 +4244,9 @@ function filteredInvestmentChartStocks() {
 function updateInvestmentStockChart() {
   const purchases = filteredInvestmentChartStocks();
   investmentStockChartPurchases = purchases;
-  el.investmentStockChartEmpty.classList.toggle("hidden", purchases.length > 0);
+  if (el.investmentStockChartEmpty) {
+    el.investmentStockChartEmpty.classList.toggle("hidden", purchases.length > 0);
+  }
 
   if (!investmentStockChart) return;
   investmentStockChart.data.labels = purchases.map((purchase) => `${purchase.ticker} - ${formatInvestmentDate(purchase)}`);
@@ -3694,79 +4360,111 @@ function download(filename, content, type) {
 }
 
 function initEvents() {
-  document.querySelectorAll(".nav-item").forEach((button) => {
-    button.addEventListener("click", () => switchView(button.dataset.view));
-  });
-
-  document.querySelector("#quickAddButton").addEventListener("click", () => {
-    switchView("transactions");
-    el.transactionTitle.focus();
-  });
-
-  document.querySelectorAll(".segment").forEach((button) => {
-    button.addEventListener("click", () => {
-      activeChartType = button.dataset.chartType;
-      document.querySelectorAll(".segment").forEach((node) => node.classList.remove("active"));
-      button.classList.add("active");
-      renderDashboard();
+  if (!isInvestmentsOnlyLayout) {
+    document.querySelectorAll(".nav-item").forEach((button) => {
+      button.addEventListener("click", () => switchView(button.dataset.view));
     });
-  });
 
-  el.monthFilter.addEventListener("change", renderAll);
-  el.transactionType.addEventListener("change", renderCategoryOptions);
-  el.searchInput.addEventListener("input", renderTransactions);
-  el.typeFilter.addEventListener("change", renderTransactions);
-  el.categoryFilter.addEventListener("change", renderTransactions);
-  el.allMonthsFilter.addEventListener("change", renderTransactions);
-  el.toggleSelectionButton.addEventListener("click", () => {
-    transactionSelectionMode = !transactionSelectionMode;
-    selectedTransactionIds.clear();
-    renderTransactions();
-  });
-  window.addEventListener("resize", () => renderChart(monthTransactions()));
-  el.categoryChart.addEventListener("mousemove", showChartTooltip);
-  el.categoryChart.addEventListener("mouseleave", () => el.chartTooltip.classList.add("hidden"));
+    document.querySelector("#quickAddButton")?.addEventListener("click", () => {
+      switchView("transactions");
+      el.transactionTitle?.focus();
+    });
 
-  el.transactionAmount.addEventListener("input", () => {
-    el.transactionAmount.value = formatNumberInput(el.transactionAmount.value);
-  });
+    document.querySelectorAll(".segment").forEach((button) => {
+      button.addEventListener("click", () => {
+        activeChartType = button.dataset.chartType;
+        document.querySelectorAll(".segment").forEach((node) => node.classList.remove("active"));
+        button.classList.add("active");
+        renderDashboard();
+      });
+    });
+
+    el.monthFilter?.addEventListener("change", renderAll);
+    el.transactionType?.addEventListener("change", renderCategoryOptions);
+    el.searchInput?.addEventListener("input", renderTransactions);
+    el.typeFilter?.addEventListener("change", renderTransactions);
+    el.categoryFilter?.addEventListener("change", renderTransactions);
+    el.allMonthsFilter?.addEventListener("change", renderTransactions);
+    el.toggleSelectionButton?.addEventListener("click", () => {
+      transactionSelectionMode = !transactionSelectionMode;
+      selectedTransactionIds.clear();
+      renderTransactions();
+    });
+    window.addEventListener("resize", () => renderChart(monthTransactions()));
+    el.categoryChart?.addEventListener("mousemove", showChartTooltip);
+    el.categoryChart?.addEventListener("mouseleave", () => el.chartTooltip?.classList.add("hidden"));
+
+    el.transactionAmount?.addEventListener("input", () => {
+      el.transactionAmount.value = formatNumberInput(el.transactionAmount.value);
+    });
+  } else {
+    const toggleAllAccBtn = document.querySelector("#toggleAllAccBtn");
+    toggleAllAccBtn?.addEventListener("click", (event) => {
+      const accs = [...document.querySelectorAll(".param-acc")];
+      const allOpen = accs.every((d) => d.open);
+      accs.forEach((d, idx) => { d.open = allOpen ? idx === 0 : true; });
+      event.target.textContent = allOpen ? "Buka Semua" : "Ringkas";
+    });
+
+    const themeToggleBtn = document.querySelector("#themeToggle");
+    themeToggleBtn?.addEventListener("click", () => {
+      const html = document.documentElement;
+      const next = html.dataset.theme === "dark" ? "light" : "dark";
+      html.dataset.theme = next;
+      localStorage.setItem("catatan-kas-theme", next);
+      const label = document.querySelector("#themeToggleLabel");
+      if (label) label.textContent = next === "dark" ? "Light Mode" : "Dark Mode";
+      document.querySelector("#themeIconSun")?.classList.toggle("hidden", next !== "dark");
+      document.querySelector("#themeIconMoon")?.classList.toggle("hidden", next === "dark");
+      updateInvestmentThemeCharts();
+      showToast(`Beralih ke ${next === "dark" ? "Dark Mode" : "Light Mode"}.`, "info");
+    });
+
+    el.simMonthlyDeposit?.addEventListener("input", () => {
+      el.simMonthlyDeposit.value = formatNumberInput(el.simMonthlyDeposit.value);
+    });
+  }
 
   el.investmentSimulatorForm.addEventListener("submit", (event) => event.preventDefault());
   el.simStockAllocation.addEventListener("input", () => {
-    el.simStockAllocationNumber.value = el.simStockAllocation.value;
-    updateInvestmentSimulator();
+    if (el.simStockAllocationNumber) {
+      el.simStockAllocationNumber.value = el.simStockAllocation.value;
+    }
+    updateInvestmentSimulator({ withFlash: isInvestmentsOnlyLayout });
   });
-  el.simStockAllocationNumber.addEventListener("input", () => {
-    updateInvestmentSimulator();
+  el.simStockAllocationNumber?.addEventListener("input", () => {
+    updateInvestmentSimulator({ withFlash: isInvestmentsOnlyLayout });
   });
-  el.simStartMonth.addEventListener("change", updateInvestmentSimulator);
+  el.simStartMonth.addEventListener("change", () => updateInvestmentSimulator({ withFlash: isInvestmentsOnlyLayout }));
   el.simPurchaseMode.addEventListener("change", () => {
-    updateInvestmentSimulator();
+    updateInvestmentSimulator({ withFlash: isInvestmentsOnlyLayout });
   });
   el.investmentSimulatorForm.addEventListener("input", (event) => {
     if (event.target !== el.simStockAllocation && event.target !== el.simStockAllocationNumber) {
-      updateInvestmentSimulator();
+      updateInvestmentSimulator({ withFlash: isInvestmentsOnlyLayout });
     }
   });
-  el.simEnablePriceChange.addEventListener("change", updateInvestmentSimulator);
+  el.simEnablePriceChange.addEventListener("change", () => updateInvestmentSimulator({ withFlash: isInvestmentsOnlyLayout }));
   [el.simBmriPriceChange, el.simBbriPriceChange].forEach((input) => {
     input.addEventListener("blur", () => {
       input.value = String(clampNumber(readNumber(input, 5), -99, 1000));
-      updateInvestmentSimulator();
+      updateInvestmentSimulator({ withFlash: isInvestmentsOnlyLayout });
     });
   });
   [el.simBmriMonthlyLots, el.simBbriMonthlyLots].forEach((input) => {
     input.addEventListener("blur", () => {
       input.value = String(readWholeLots(input, 0));
-      updateInvestmentSimulator();
+      updateInvestmentSimulator({ withFlash: isInvestmentsOnlyLayout });
     });
   });
-  document.querySelectorAll("[data-sim-lot-preset]").forEach((button) => {
+  document.querySelectorAll("[data-sim-lot-preset], [data-lot-preset]").forEach((button) => {
     button.addEventListener("click", () => {
-      const [bmriLots, bbriLots = 0] = button.dataset.simLotPreset.split("-").map((value) => Number(value));
+      const raw = button.dataset.simLotPreset || button.dataset.lotPreset || "";
+      const [bmriLots, bbriLots = 0] = raw.split("-").map((value) => Number(value));
       el.simBmriMonthlyLots.value = String(bmriLots);
       el.simBbriMonthlyLots.value = String(bbriLots);
-      updateInvestmentSimulator();
+      updateInvestmentSimulator({ withFlash: isInvestmentsOnlyLayout });
+      if (isInvestmentsOnlyLayout) showToast(`Preset lot ${bmriLots} BMRI + ${bbriLots} BBRI diterapkan.`, "info");
     });
   });
 
@@ -3792,9 +4490,10 @@ function initEvents() {
     editingBtcPurchaseId = purchase.id;
     el.investmentBtcMonth.value = String(purchase.month);
     el.investmentBtcYear.value = String(purchase.year);
-    el.investmentBtcAmount.value = String(purchase.amount);
+    el.investmentBtcAmount.value = isInvestmentsOnlyLayout ? formatNumberInput(purchase.amount) : String(purchase.amount);
     el.investmentBtcSubmit.textContent = "Update BTC";
     el.investmentBtcCancelEdit.hidden = false;
+    el.investmentBtcCancelEdit.classList.remove("hidden");
     el.investmentBtcForm.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
@@ -3803,10 +4502,12 @@ function initEvents() {
     el.investmentBtcForm.reset();
     el.investmentBtcSubmit.textContent = "Simpan BTC";
     el.investmentBtcCancelEdit.hidden = true;
+    el.investmentBtcCancelEdit.classList.add("hidden");
   }
 
   el.investmentBtcForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (isWriteLocked()) return;
     const amount = parseNumberInput(el.investmentBtcAmount.value);
     if (amount <= 0) {
       alert("Nominal BTC harus lebih dari 0.");
@@ -3822,24 +4523,26 @@ function initEvents() {
       amount,
       createdAt: existing?.createdAt || new Date().toISOString(),
     };
-    if (existing) {
-      state.investments.btcPurchases = state.investments.btcPurchases.map((item) => item.id === purchase.id ? purchase : item);
-    } else {
-      state.investments.btcPurchases.push(purchase);
-    }
-    exitBtcEditMode();
-    renderInvestments();
-    showInvestmentSaveFeedback(purchase, "btc");
-    try {
-      await persistBtcPurchase(purchase);
-    } catch (error) {
-      console.error(error);
-      setSyncStatus("Simpan BTC cloud gagal", "error");
-    }
+    await runInvestmentWrite(
+      () => {
+        if (existing) {
+          state.investments.btcPurchases = state.investments.btcPurchases.map((item) => item.id === purchase.id ? purchase : item);
+        } else {
+          state.investments.btcPurchases.push(purchase);
+        }
+        exitBtcEditMode();
+      },
+      () => persistBtcPurchase(purchase),
+      {
+        errorStatus: "Simpan BTC cloud gagal",
+        onSuccess: () => showInvestmentSaveFeedback(purchase, "btc"),
+      },
+    );
   });
 
   el.investmentBtcCancelEdit.addEventListener("click", exitBtcEditMode);
   el.investmentBtcTable.addEventListener("click", async (event) => {
+    if (isWriteLocked()) return;
     const button = event.target.closest("[data-edit-btc-purchase], [data-delete-btc-purchase]");
     if (!button) return;
     const editId = button.dataset.editBtcPurchase;
@@ -3852,39 +4555,40 @@ function initEvents() {
     if (!id) return;
     const purchase = state.investments.btcPurchases.find((item) => item.id === id);
     if (!purchase || !confirm(`Hapus catatan setoran BTC ${formatInvestmentDate(purchase)} sebesar ${formatMoney(purchase.amount)}?`)) return;
-    if (editingBtcPurchaseId === id) exitBtcEditMode();
-    state.investments.btcPurchases = state.investments.btcPurchases.filter((item) => item.id !== id);
-    renderInvestments();
-    try {
-      await deleteBtcPurchaseRemote(id);
-    } catch (error) {
-      console.error(error);
-      state.investments.btcPurchases.push(purchase);
-      renderInvestments();
-      setSyncStatus("Hapus BTC cloud gagal; catatan dipulihkan lokal", "error");
-    }
+    await runInvestmentWrite(
+      () => {
+        if (editingBtcPurchaseId === id) exitBtcEditMode();
+        state.investments.btcPurchases = state.investments.btcPurchases.filter((item) => item.id !== id);
+      },
+      () => deleteBtcPurchaseRemote(id),
+      {
+        errorStatus: "Hapus BTC cloud gagal",
+        onSuccess: () => { if (isInvestmentsOnlyLayout) showToast("Catatan BTC dihapus.", "info"); },
+      },
+    );
   });
 
   el.investmentHorizon.addEventListener("change", async () => {
-    state.investments.horizonYears = clampNumber(Math.round(Number(el.investmentHorizon.value) || 11), 1, 50);
-    renderInvestments();
-    try {
-      await persistInvestmentSettings();
-    } catch (error) {
-      console.error(error);
-      setSyncStatus("Simpan investasi cloud gagal", "error");
-    }
+    if (isWriteLocked()) return;
+    const nextHorizon = clampNumber(Math.round(Number(el.investmentHorizon.value) || 11), 1, 50);
+    await runInvestmentWrite(
+      () => { state.investments.horizonYears = nextHorizon; },
+      () => persistInvestmentSettings(),
+      { errorStatus: "Simpan investasi cloud gagal" },
+    );
   });
 
   el.addInvestmentYearButton.addEventListener("click", async () => {
-    state.investments.horizonYears = clampNumber(state.investments.horizonYears + 1, 1, 50);
-    renderInvestments();
-    try {
-      await persistInvestmentSettings();
-    } catch (error) {
-      console.error(error);
-      setSyncStatus("Simpan investasi cloud gagal", "error");
-    }
+    if (isWriteLocked()) return;
+    const nextHorizon = clampNumber(state.investments.horizonYears + 1, 1, 50);
+    await runInvestmentWrite(
+      () => { state.investments.horizonYears = nextHorizon; },
+      () => persistInvestmentSettings(),
+      {
+        errorStatus: "Simpan investasi cloud gagal",
+        onSuccess: () => { if (isInvestmentsOnlyLayout) showToast(`Horizon ditambah menjadi ${state.investments.horizonYears} tahun.`); },
+      },
+    );
   });
 
   el.investmentInfoTickerFilter.addEventListener("change", updateInvestmentInfo);
@@ -3898,35 +4602,45 @@ function initEvents() {
 
   el.investmentTickerForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (isWriteLocked()) return;
     const ticker = sanitizeTicker(el.investmentTickerInput.value);
     if (!ticker || state.investments.tickers.includes(ticker)) return;
 
-    state.investments.tickers.push(ticker);
-    el.investmentTickerInput.value = "";
-    renderInvestments();
-    el.investmentStockTicker.value = ticker;
-    try {
-      await persistInvestmentTicker(ticker);
-    } catch (error) {
-      console.error(error);
-      setSyncStatus("Simpan saham cloud gagal", "error");
-    }
+    await runInvestmentWrite(
+      () => {
+        state.investments.tickers.push(ticker);
+        el.investmentTickerInput.value = "";
+      },
+      () => persistInvestmentTicker(ticker),
+      {
+        errorStatus: "Simpan saham cloud gagal",
+        onSuccess: () => {
+          el.investmentStockTicker.value = ticker;
+          if (isInvestmentsOnlyLayout) showToast(`Emiten ${ticker} ditambahkan ke daftar saham.`);
+        },
+      },
+    );
   });
 
   el.investmentTickerList.addEventListener("click", async (event) => {
+    if (isWriteLocked()) return;
     const ticker = event.target.dataset.deleteInvestmentTicker;
     if (!ticker) return;
 
-    state.investments.tickers = state.investments.tickers.filter((item) => item !== ticker);
-    state.investments.stockPurchases = state.investments.stockPurchases.filter((purchase) => purchase.ticker !== ticker);
-    renderInvestments();
-    try {
-      await deleteInvestmentTickerRemote(ticker);
-      await syncInvestmentsToRemote();
-    } catch (error) {
-      console.error(error);
-      setSyncStatus("Hapus saham cloud gagal", "error");
-    }
+    await runInvestmentWrite(
+      () => {
+        state.investments.tickers = state.investments.tickers.filter((item) => item !== ticker);
+        state.investments.stockPurchases = state.investments.stockPurchases.filter((purchase) => purchase.ticker !== ticker);
+      },
+      async () => {
+        await deleteInvestmentTickerRemote(ticker);
+        await syncInvestmentsToRemote();
+      },
+      {
+        errorStatus: "Hapus saham cloud gagal",
+        onSuccess: () => { if (isInvestmentsOnlyLayout) showToast(`Emiten ${ticker} dihapus.`, "info"); },
+      },
+    );
   });
 
   function enterStockEditMode(purchase) {
@@ -3934,11 +4648,14 @@ function initEvents() {
     el.investmentStockTicker.value = purchase.ticker;
     el.investmentStockMonth.value = String(purchase.month);
     el.investmentStockYear.value = String(purchase.year);
-    el.investmentStockLotPrice.value = String(purchase.lotPrice);
+    el.investmentStockLotPrice.value = isInvestmentsOnlyLayout ? formatNumberInput(purchase.lotPrice) : String(purchase.lotPrice);
     el.investmentStockLots.value = String(purchase.lots);
-    el.investmentStockDividend.value = purchase.dividendAmount > 0 ? String(purchase.dividendAmount) : "";
+    el.investmentStockDividend.value = purchase.dividendAmount > 0
+      ? (isInvestmentsOnlyLayout ? formatNumberInput(purchase.dividendAmount) : String(purchase.dividendAmount))
+      : "";
     el.investmentStockSubmit.textContent = "Update Saham";
     el.investmentStockCancelEdit.hidden = false;
+    el.investmentStockCancelEdit.classList.remove("hidden");
     el.investmentStockForm.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
@@ -3947,15 +4664,17 @@ function initEvents() {
     el.investmentStockForm.reset();
     el.investmentStockSubmit.textContent = "Simpan Saham";
     el.investmentStockCancelEdit.hidden = true;
+    el.investmentStockCancelEdit.classList.add("hidden");
   }
 
   function enterRdpuEditMode(purchase) {
     editingRdpuPurchaseId = purchase.id;
     el.investmentRdpuMonth.value = String(purchase.month);
     el.investmentRdpuYear.value = String(purchase.year);
-    el.investmentRdpuAmount.value = String(purchase.amount);
+    el.investmentRdpuAmount.value = isInvestmentsOnlyLayout ? formatNumberInput(purchase.amount) : String(purchase.amount);
     el.investmentRdpuSubmit.textContent = "Update RDPU";
     el.investmentRdpuCancelEdit.hidden = false;
+    el.investmentRdpuCancelEdit.classList.remove("hidden");
     el.investmentRdpuForm.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
@@ -3964,10 +4683,12 @@ function initEvents() {
     el.investmentRdpuForm.reset();
     el.investmentRdpuSubmit.textContent = "Simpan RDPU";
     el.investmentRdpuCancelEdit.hidden = true;
+    el.investmentRdpuCancelEdit.classList.add("hidden");
   }
 
   el.investmentStockForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (isWriteLocked()) return;
     const lotPrice = parseNumberInput(el.investmentStockLotPrice.value);
     const lots = Math.floor(Number(el.investmentStockLots.value) || 0);
     if (!el.investmentStockTicker.value || lotPrice <= 0 || lots <= 0) {
@@ -3996,23 +4717,23 @@ function initEvents() {
       createdAt: existing ? existing.createdAt : new Date().toISOString(),
     };
 
-    if (isEditing) {
-      state.investments.stockPurchases = state.investments.stockPurchases.map((item) =>
-        item.id === purchase.id ? purchase : item,
-      );
-    } else {
-      state.investments.stockPurchases.push(purchase);
-    }
-
-    exitStockEditMode();
-    renderInvestments();
-    showInvestmentSaveFeedback(purchase, "stock");
-    try {
-      await persistStockPurchase(purchase);
-    } catch (error) {
-      console.error(error);
-      setSyncStatus(isEditing ? "Update pembelian saham cloud gagal" : "Simpan pembelian saham cloud gagal", "error");
-    }
+    await runInvestmentWrite(
+      () => {
+        if (isEditing) {
+          state.investments.stockPurchases = state.investments.stockPurchases.map((item) =>
+            item.id === purchase.id ? purchase : item,
+          );
+        } else {
+          state.investments.stockPurchases.push(purchase);
+        }
+        exitStockEditMode();
+      },
+      () => persistStockPurchase(purchase),
+      {
+        errorStatus: isEditing ? "Update pembelian saham cloud gagal" : "Simpan pembelian saham cloud gagal",
+        onSuccess: () => showInvestmentSaveFeedback(purchase, "stock"),
+      },
+    );
   });
 
   el.investmentStockCancelEdit.addEventListener("click", () => {
@@ -4021,6 +4742,7 @@ function initEvents() {
 
   el.investmentRdpuForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (isWriteLocked()) return;
     const amount = parseNumberInput(el.investmentRdpuAmount.value);
     if (amount <= 0) {
       alert("Nominal RDPU harus lebih dari 0.");
@@ -4040,23 +4762,23 @@ function initEvents() {
       createdAt: existing ? existing.createdAt : new Date().toISOString(),
     };
 
-    if (isEditing) {
-      state.investments.rdpuPurchases = state.investments.rdpuPurchases.map((item) =>
-        item.id === purchase.id ? purchase : item,
-      );
-    } else {
-      state.investments.rdpuPurchases.push(purchase);
-    }
-
-    exitRdpuEditMode();
-    renderInvestments();
-    showInvestmentSaveFeedback(purchase, "rdpu");
-    try {
-      await persistRdpuPurchase(purchase);
-    } catch (error) {
-      console.error(error);
-      setSyncStatus(isEditing ? "Update RDPU cloud gagal" : "Simpan RDPU cloud gagal", "error");
-    }
+    await runInvestmentWrite(
+      () => {
+        if (isEditing) {
+          state.investments.rdpuPurchases = state.investments.rdpuPurchases.map((item) =>
+            item.id === purchase.id ? purchase : item,
+          );
+        } else {
+          state.investments.rdpuPurchases.push(purchase);
+        }
+        exitRdpuEditMode();
+      },
+      () => persistRdpuPurchase(purchase),
+      {
+        errorStatus: isEditing ? "Update RDPU cloud gagal" : "Simpan RDPU cloud gagal",
+        onSuccess: () => showInvestmentSaveFeedback(purchase, "rdpu"),
+      },
+    );
   });
 
   el.investmentRdpuCancelEdit.addEventListener("click", () => {
@@ -4064,6 +4786,7 @@ function initEvents() {
   });
 
   el.investmentStockTable.addEventListener("click", async (event) => {
+    if (isWriteLocked()) return;
     const editId = event.target.dataset.editStockPurchase;
     if (editId) {
       const purchase = state.investments.stockPurchases.find((item) => item.id === editId);
@@ -4074,18 +4797,21 @@ function initEvents() {
     const id = event.target.dataset.deleteStockPurchase;
     if (!id) return;
 
-    if (editingStockPurchaseId === id) exitStockEditMode();
-    state.investments.stockPurchases = state.investments.stockPurchases.filter((purchase) => purchase.id !== id);
-    renderInvestments();
-    try {
-      await deleteStockPurchaseRemote(id);
-    } catch (error) {
-      console.error(error);
-      setSyncStatus("Hapus saham cloud gagal", "error");
-    }
+    await runInvestmentWrite(
+      () => {
+        if (editingStockPurchaseId === id) exitStockEditMode();
+        state.investments.stockPurchases = state.investments.stockPurchases.filter((purchase) => purchase.id !== id);
+      },
+      () => deleteStockPurchaseRemote(id),
+      {
+        errorStatus: "Hapus saham cloud gagal",
+        onSuccess: () => { if (isInvestmentsOnlyLayout) showToast("Catatan saham dihapus.", "info"); },
+      },
+    );
   });
 
   el.investmentRdpuTable.addEventListener("click", async (event) => {
+    if (isWriteLocked()) return;
     const editId = event.target.dataset.editRdpuPurchase;
     if (editId) {
       const purchase = state.investments.rdpuPurchases.find((item) => item.id === editId);
@@ -4096,248 +4822,264 @@ function initEvents() {
     const id = event.target.dataset.deleteRdpuPurchase;
     if (!id) return;
 
-    if (editingRdpuPurchaseId === id) exitRdpuEditMode();
-    state.investments.rdpuPurchases = state.investments.rdpuPurchases.filter((purchase) => purchase.id !== id);
-    renderInvestments();
-    try {
-      await deleteRdpuPurchaseRemote(id);
-    } catch (error) {
-      console.error(error);
-      setSyncStatus("Hapus RDPU cloud gagal", "error");
-    }
+    await runInvestmentWrite(
+      () => {
+        if (editingRdpuPurchaseId === id) exitRdpuEditMode();
+        state.investments.rdpuPurchases = state.investments.rdpuPurchases.filter((purchase) => purchase.id !== id);
+      },
+      () => deleteRdpuPurchaseRemote(id),
+      {
+        errorStatus: "Hapus RDPU cloud gagal",
+        onSuccess: () => { if (isInvestmentsOnlyLayout) showToast("Catatan RDPU dihapus.", "info"); },
+      },
+    );
   });
 
-  el.transactionForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    if (!el.transactionCategory.value) {
-      alert("Buat tab untuk tipe transaksi ini terlebih dahulu.");
-      return;
-    }
-
-    const selectedCategory = categoryById(el.transactionCategory.value);
-    if (!selectedCategory || selectedCategory.type !== el.transactionType.value) {
-      alert("Tab/Jenis tidak valid. Pilih ulang tab transaksi.");
-      renderCategoryOptions();
-      return;
-    }
-
-    const payload = {
-      type: el.transactionType.value,
-      categoryId: el.transactionCategory.value,
-      title: el.transactionTitle.value.trim(),
-      amount: parseNumberInput(el.transactionAmount.value),
-      date: el.transactionDate.value,
-      note: el.transactionNote.value.trim(),
-    };
-
-    if (payload.amount <= 0) {
-      alert("Nominal harus lebih dari 0.");
-      return;
-    }
-
-    const editingId = el.editingTransactionId.value;
-    let savedTransaction;
-    if (editingId) {
-      const existingTransaction = state.transactions.find((item) => item.id === editingId);
-      savedTransaction = {
-        id: editingId,
-        createdAt: transactionCreatedAt(existingTransaction || { id: editingId, ...payload }),
-        ...payload,
-      };
-      state.transactions = state.transactions.map((item) => (item.id === editingId ? savedTransaction : item));
-    } else {
-      savedTransaction = { id: uid("trx"), createdAt: new Date().toISOString(), ...payload };
-      state.transactions.push(savedTransaction);
-    }
-
-    showSavedTransaction(savedTransaction);
-    resetTransactionForm();
-    renderAll();
-
-    try {
-      await persistTransaction(savedTransaction);
-    } catch (error) {
-      console.error(error);
-      setSyncStatus("Simpan cloud gagal", "error");
-      renderAll();
-      alert(`Transaksi tersimpan lokal, tapi gagal sync ke cloud: ${error.message}`);
-    }
-  });
-
-  el.cancelEditButton.addEventListener("click", resetTransactionForm);
-
-  el.transactionTable.addEventListener("change", (event) => {
-    const selectedId = event.target.dataset.selectTransaction;
-    if (!selectedId) return;
-
-    if (event.target.checked) {
-      selectedTransactionIds.add(selectedId);
-    } else {
-      selectedTransactionIds.delete(selectedId);
-    }
-    renderTransactions();
-  });
-
-  el.transactionTable.addEventListener("click", async (event) => {
-    const editId = event.target.dataset.edit;
-    const deleteId = event.target.dataset.delete;
-
-    if (editId) {
-      const item = state.transactions.find((transaction) => transaction.id === editId);
-      if (!item) return;
-      el.transactionFormTitle.textContent = "Edit Transaksi";
-      el.editingTransactionId.value = item.id;
-      el.transactionType.value = item.type;
-      renderCategoryOptions();
-      el.transactionCategory.value = item.categoryId;
-      el.transactionTitle.value = item.title;
-      el.transactionAmount.value = formatNumberInput(item.amount);
-      el.transactionDate.value = item.date;
-      el.transactionNote.value = item.note;
-      el.transactionTitle.focus();
-    }
-
-    if (deleteId && confirm("Hapus transaksi ini?")) {
-      state.transactions = state.transactions.filter((transaction) => transaction.id !== deleteId);
-      selectedTransactionIds.delete(deleteId);
-      try {
-        await deleteTransactionRemote(deleteId);
-        renderAll();
-      } catch (error) {
-        console.error(error);
-        setSyncStatus("Hapus cloud gagal", "error");
-        alert(`Gagal menghapus di cloud: ${error.message}`);
-      }
-    }
-  });
-
-  el.categoryForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const name = el.categoryName.value.trim();
-    if (!name) return;
-
-    const category = {
-      id: uid("cat"),
-      type: el.categoryType.value,
-      name,
-      color: el.categoryColor.value,
-    };
-
-    state.categories.push(category);
-    try {
-      await persistCategory(category);
-      el.categoryForm.reset();
-      el.categoryColor.value = "#2563eb";
-      renderAll();
-    } catch (error) {
-      console.error(error);
-      setSyncStatus("Simpan cloud gagal", "error");
-      alert(`Gagal menyimpan tab ke cloud: ${error.message}`);
-    }
-  });
-
-  el.categoryBoard.addEventListener("click", async (event) => {
-    const renameId = event.target.dataset.renameCategory;
-    const deleteId = event.target.dataset.deleteCategory;
-
-    if (renameId) {
-      const category = categoryById(renameId);
-      const nextName = prompt("Nama tab baru:", category.name);
-      if (nextName?.trim()) {
-        const previousName = category.name;
-        category.name = nextName.trim();
-        saveState();
-        renderAll();
-        try {
-          await persistCategory(category);
-        } catch (error) {
-          console.error(error);
-          category.name = previousName;
-          saveState();
-          renderAll();
-          setSyncStatus("Update cloud gagal", "error");
-          alert(`Gagal mengubah tab di cloud: ${error.message}`);
-        }
-      }
-    }
-
-    if (deleteId) {
-      const used = countTransactions(deleteId);
-      if (used > 0) {
-        alert("Tab ini masih dipakai transaksi. Pindahkan atau hapus transaksinya dulu.");
+  if (!isInvestmentsOnlyLayout) {
+    el.transactionForm?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!el.transactionCategory.value) {
+        alert("Buat tab untuk tipe transaksi ini terlebih dahulu.");
         return;
       }
-      if (confirm("Hapus tab ini?")) {
-        state.categories = state.categories.filter((category) => category.id !== deleteId);
+
+      const selectedCategory = categoryById(el.transactionCategory.value);
+      if (!selectedCategory || selectedCategory.type !== el.transactionType.value) {
+        alert("Tab/Jenis tidak valid. Pilih ulang tab transaksi.");
+        renderCategoryOptions();
+        return;
+      }
+
+      const payload = {
+        type: el.transactionType.value,
+        categoryId: el.transactionCategory.value,
+        title: el.transactionTitle.value.trim(),
+        amount: parseNumberInput(el.transactionAmount.value),
+        date: el.transactionDate.value,
+        note: el.transactionNote.value.trim(),
+      };
+
+      if (payload.amount <= 0) {
+        alert("Nominal harus lebih dari 0.");
+        return;
+      }
+
+      const editingId = el.editingTransactionId.value;
+      let savedTransaction;
+      if (editingId) {
+        const existingTransaction = state.transactions.find((item) => item.id === editingId);
+        savedTransaction = {
+          id: editingId,
+          createdAt: transactionCreatedAt(existingTransaction || { id: editingId, ...payload }),
+          ...payload,
+        };
+        state.transactions = state.transactions.map((item) => (item.id === editingId ? savedTransaction : item));
+      } else {
+        savedTransaction = { id: uid("trx"), createdAt: new Date().toISOString(), ...payload };
+        state.transactions.push(savedTransaction);
+      }
+
+      showSavedTransaction(savedTransaction);
+      resetTransactionForm();
+      renderAll();
+
+      try {
+        await persistTransaction(savedTransaction);
+      } catch (error) {
+        console.error(error);
+        setSyncStatus("Simpan cloud gagal", "error");
+        renderAll();
+        alert(`Transaksi tersimpan lokal, tapi gagal sync ke cloud: ${error.message}`);
+      }
+    });
+
+    el.cancelEditButton?.addEventListener("click", resetTransactionForm);
+
+    el.transactionTable?.addEventListener("change", (event) => {
+      const selectedId = event.target.dataset.selectTransaction;
+      if (!selectedId) return;
+
+      if (event.target.checked) {
+        selectedTransactionIds.add(selectedId);
+      } else {
+        selectedTransactionIds.delete(selectedId);
+      }
+      renderTransactions();
+    });
+
+    el.transactionTable?.addEventListener("click", async (event) => {
+      const editId = event.target.dataset.edit;
+      const deleteId = event.target.dataset.delete;
+
+      if (editId) {
+        const item = state.transactions.find((transaction) => transaction.id === editId);
+        if (!item) return;
+        el.transactionFormTitle.textContent = "Edit Transaksi";
+        el.editingTransactionId.value = item.id;
+        el.transactionType.value = item.type;
+        renderCategoryOptions();
+        el.transactionCategory.value = item.categoryId;
+        el.transactionTitle.value = item.title;
+        el.transactionAmount.value = formatNumberInput(item.amount);
+        el.transactionDate.value = item.date;
+        el.transactionNote.value = item.note;
+        el.transactionTitle.focus();
+      }
+
+      if (deleteId && confirm("Hapus transaksi ini?")) {
+        state.transactions = state.transactions.filter((transaction) => transaction.id !== deleteId);
+        selectedTransactionIds.delete(deleteId);
         try {
-          await deleteCategoryRemote(deleteId);
+          await deleteTransactionRemote(deleteId);
           renderAll();
         } catch (error) {
           console.error(error);
           setSyncStatus("Hapus cloud gagal", "error");
-          alert(`Gagal menghapus tab di cloud: ${error.message}`);
+          alert(`Gagal menghapus di cloud: ${error.message}`);
         }
       }
-    }
-  });
+    });
 
-  el.exportJsonButton.addEventListener("click", () => {
-    download(`catatan-kas-${el.monthFilter.value}.json`, JSON.stringify(state, null, 2), "application/json");
-  });
+    el.categoryForm?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const name = el.categoryName.value.trim();
+      if (!name) return;
 
-  el.exportCsvButton.addEventListener("click", () => {
-    const header = ["tanggal", "tipe", "tab", "judul", "nominal", "catatan"];
-    const rows = state.transactions.map((item) =>
-      [item.date, typeLabel(item.type), categoryName(item.categoryId), item.title, item.amount, item.note]
-        .map((value) => `"${String(value).replaceAll('"', '""')}"`)
-        .join(","),
-    );
-    download(`transaksi-${el.monthFilter.value}.csv`, [header.join(","), ...rows].join("\n"), "text/csv");
-  });
+      const category = {
+        id: uid("cat"),
+        type: el.categoryType.value,
+        name,
+        color: el.categoryColor.value,
+      };
 
-  el.importFile.addEventListener("change", async () => {
-    const file = el.importFile.files[0];
-    if (!file) return;
-    const text = await file.text();
-    try {
-      const imported = JSON.parse(text);
-      if (!Array.isArray(imported.categories) || !Array.isArray(imported.transactions)) {
-        throw new Error("Format tidak sesuai.");
-      }
-      state = normalizeState(imported);
-      saveState();
-      if (remoteStore.enabled) {
-        await remoteStore.client.from("categories").upsert(state.categories.map(toDbCategory));
-        await remoteStore.client.from("transactions").upsert(state.transactions.map(toDbTransaction));
-        await syncInvestmentsToRemote();
-      }
-      renderAll();
-      alert("Import berhasil.");
-    } catch (error) {
-      alert(`Import gagal: ${error.message}`);
-    } finally {
-      el.importFile.value = "";
-    }
-  });
-
-  el.resetButton.addEventListener("click", async () => {
-    if (confirm("Reset semua data? Aksi ini tidak bisa dibatalkan.")) {
-      state = normalizeState(structuredClone(defaultState));
+      state.categories.push(category);
       try {
-        await resetRemoteData();
+        await persistCategory(category);
+        el.categoryForm.reset();
+        el.categoryColor.value = "#2563eb";
         renderAll();
       } catch (error) {
         console.error(error);
-        setSyncStatus("Reset cloud gagal", "error");
-        alert(`Gagal reset data cloud: ${error.message}`);
+        setSyncStatus("Simpan cloud gagal", "error");
+        alert(`Gagal menyimpan tab ke cloud: ${error.message}`);
       }
-    }
-  });
+    });
+
+    el.categoryBoard?.addEventListener("click", async (event) => {
+      const renameId = event.target.dataset.renameCategory;
+      const deleteId = event.target.dataset.deleteCategory;
+
+      if (renameId) {
+        const category = categoryById(renameId);
+        const nextName = prompt("Nama tab baru:", category.name);
+        if (nextName?.trim()) {
+          const previousName = category.name;
+          category.name = nextName.trim();
+          saveState();
+          renderAll();
+          try {
+            await persistCategory(category);
+          } catch (error) {
+            console.error(error);
+            category.name = previousName;
+            saveState();
+            renderAll();
+            setSyncStatus("Update cloud gagal", "error");
+            alert(`Gagal mengubah tab di cloud: ${error.message}`);
+          }
+        }
+      }
+
+      if (deleteId) {
+        const used = countTransactions(deleteId);
+        if (used > 0) {
+          alert("Tab ini masih dipakai transaksi. Pindahkan atau hapus transaksinya dulu.");
+          return;
+        }
+        if (confirm("Hapus tab ini?")) {
+          state.categories = state.categories.filter((category) => category.id !== deleteId);
+          try {
+            await deleteCategoryRemote(deleteId);
+            renderAll();
+          } catch (error) {
+            console.error(error);
+            setSyncStatus("Hapus cloud gagal", "error");
+            alert(`Gagal menghapus tab di cloud: ${error.message}`);
+          }
+        }
+      }
+    });
+
+    el.exportJsonButton?.addEventListener("click", () => {
+      download(`catatan-kas-${el.monthFilter.value}.json`, JSON.stringify(state, null, 2), "application/json");
+    });
+
+    el.exportCsvButton?.addEventListener("click", () => {
+      const header = ["tanggal", "tipe", "tab", "judul", "nominal", "catatan"];
+      const rows = state.transactions.map((item) =>
+        [item.date, typeLabel(item.type), categoryName(item.categoryId), item.title, item.amount, item.note]
+          .map((value) => `"${String(value).replaceAll('"', '""')}"`)
+          .join(","),
+      );
+      download(`transaksi-${el.monthFilter.value}.csv`, [header.join(","), ...rows].join("\n"), "text/csv");
+    });
+
+    el.importFile?.addEventListener("change", async () => {
+      const file = el.importFile.files[0];
+      if (!file) return;
+      const text = await file.text();
+      try {
+        const imported = JSON.parse(text);
+        if (!Array.isArray(imported.categories) || !Array.isArray(imported.transactions)) {
+          throw new Error("Format tidak sesuai.");
+        }
+        state = normalizeState(imported);
+        saveState();
+        if (remoteStore.enabled) {
+          await remoteStore.client.from("categories").upsert(state.categories.map(toDbCategory));
+          await remoteStore.client.from("transactions").upsert(state.transactions.map(toDbTransaction));
+          await syncInvestmentsToRemote();
+        }
+        renderAll();
+        alert("Import berhasil.");
+      } catch (error) {
+        alert(`Import gagal: ${error.message}`);
+      } finally {
+        el.importFile.value = "";
+      }
+    });
+  }
+
+  if (!isInvestmentsOnlyLayout) {
+    el.resetButton?.addEventListener("click", async () => {
+      if (confirm("Reset semua data? Aksi ini tidak bisa dibatalkan.")) {
+        state = normalizeState(structuredClone(defaultState));
+        try {
+          await resetRemoteData();
+          renderAll();
+        } catch (error) {
+          console.error(error);
+          setSyncStatus("Reset cloud gagal", "error");
+          alert(`Gagal reset data cloud: ${error.message}`);
+        }
+      }
+    });
+  }
 }
 
-el.monthFilter.value = currentMonth();
-el.transactionDate.value = new Date().toISOString().slice(0, 10);
-el.allMonthsFilter.checked = true;
+if (el.monthFilter) el.monthFilter.value = currentMonth();
+if (el.transactionDate) el.transactionDate.value = new Date().toISOString().slice(0, 10);
+if (el.allMonthsFilter) el.allMonthsFilter.checked = true;
+if (isInvestmentsOnlyLayout) {
+  const savedTheme = localStorage.getItem("catatan-kas-theme");
+  if (savedTheme === "dark" || savedTheme === "light") {
+    document.documentElement.dataset.theme = savedTheme;
+    const label = document.querySelector("#themeToggleLabel");
+    if (label) label.textContent = savedTheme === "dark" ? "Light Mode" : "Dark Mode";
+    document.querySelector("#themeIconSun")?.classList.toggle("hidden", savedTheme !== "dark");
+    document.querySelector("#themeIconMoon")?.classList.toggle("hidden", savedTheme === "dark");
+  }
+}
 setupInvestmentTabs();
 initEvents();
 initInvestmentCharts();

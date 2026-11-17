@@ -1,0 +1,4031 @@
+<!doctype html>
+<html lang="id" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mockup Tab Investasi — Catatan Kas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* =========================================================
+         DESIGN TOKENS (shadcn/ui Zinc-Slate + Precision Fintech)
+      ========================================================= */
+      :root {
+        --background: #f8fafc;
+        --foreground: #0f172a;
+        --card: #ffffff;
+        --card-foreground: #0f172a;
+        --muted: #f1f5f9;
+        --muted-foreground: #64748b;
+        --border: #e2e8f0;
+        --input: #cbd5e1;
+        --ring: #0f172a;
+
+        --primary: #0f172a;
+        --primary-foreground: #f8fafc;
+        --secondary: #f1f5f9;
+        --secondary-foreground: #0f172a;
+
+        --emerald: #059669;
+        --emerald-soft: rgba(5, 150, 105, 0.1);
+        --emerald-border: rgba(5, 150, 105, 0.25);
+
+        --blue: #2563eb;
+        --blue-soft: rgba(37, 99, 235, 0.1);
+        --blue-border: rgba(37, 99, 235, 0.25);
+
+        --amber: #d97706;
+        --amber-soft: rgba(217, 119, 6, 0.1);
+        --amber-border: rgba(217, 119, 6, 0.28);
+
+        --destructive: #dc2626;
+        --destructive-soft: rgba(220, 38, 38, 0.1);
+        --destructive-border: rgba(220, 38, 38, 0.25);
+
+        --sidebar-bg: #0b1220;
+        --sidebar-fg: #f8fafc;
+        --sidebar-muted: #94a3b8;
+        --sidebar-border: rgba(148, 163, 184, 0.14);
+
+        --radius-sm: 6px;
+        --radius-md: 10px;
+        --radius-lg: 14px;
+        --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+        --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+        --shadow-md: 0 10px 24px -6px rgba(15, 23, 42, 0.12), 0 4px 8px -4px rgba(15, 23, 42, 0.06);
+
+        --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+
+      html[data-theme="dark"] {
+        --background: #090d16;
+        --foreground: #f1f5f9;
+        --card: #0f1623;
+        --card-foreground: #f1f5f9;
+        --muted: #172033;
+        --muted-foreground: #94a3b8;
+        --border: #1e293b;
+        --input: #334155;
+        --ring: #e2e8f0;
+
+        --primary: #f8fafc;
+        --primary-foreground: #0f172a;
+        --secondary: #1e293b;
+        --secondary-foreground: #f1f5f9;
+
+        --emerald: #10b981;
+        --emerald-soft: rgba(16, 185, 129, 0.14);
+        --emerald-border: rgba(16, 185, 129, 0.3);
+
+        --blue: #3b82f6;
+        --blue-soft: rgba(59, 130, 246, 0.15);
+        --blue-border: rgba(59, 130, 246, 0.3);
+
+        --amber: #f59e0b;
+        --amber-soft: rgba(245, 158, 11, 0.15);
+        --amber-border: rgba(245, 158, 11, 0.3);
+
+        --destructive: #ef4444;
+        --destructive-soft: rgba(239, 68, 68, 0.14);
+        --destructive-border: rgba(239, 68, 68, 0.3);
+
+        --sidebar-bg: #05080f;
+        --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.25);
+        --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
+        --shadow-md: 0 12px 28px -6px rgba(0, 0, 0, 0.55);
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--background);
+        color: var(--foreground);
+        font-family: var(--font-sans);
+        font-size: 14px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+        transition: background 0.2s ease, color 0.2s ease;
+      }
+
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+        color: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      .num {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      /* =========================================================
+         APP SHELL & DEDICATED INVESTASI SIDEBAR
+      ========================================================= */
+      .app-shell {
+        display: grid;
+        grid-template-columns: 256px minmax(0, 1fr);
+        min-height: 100vh;
+        transition: grid-template-columns 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      .app-shell.sidebar-collapsed {
+        grid-template-columns: 0 minmax(0, 1fr);
+      }
+
+      .sidebar {
+        background: var(--sidebar-bg);
+        color: var(--sidebar-fg);
+        padding: 20px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        border-right: 1px solid var(--sidebar-border);
+        overflow: hidden;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+      }
+
+      .app-shell.sidebar-collapsed .sidebar {
+        padding: 0;
+        border-right: 0;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 4px 6px;
+      }
+
+      .brand-mark {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: #ffffff;
+        font-weight: 800;
+        font-size: 0.9rem;
+        flex-shrink: 0;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.28);
+      }
+
+      .brand h1 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .brand p {
+        margin: 0;
+        font-size: 0.74rem;
+        color: var(--sidebar-muted);
+      }
+
+      .sidebar-section-label {
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--sidebar-muted);
+        padding: 0 10px;
+        margin-bottom: 4px;
+        font-weight: 700;
+      }
+
+      .nav-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        border: 1px solid transparent;
+        border-radius: var(--radius-md);
+        padding: 10px 12px;
+        background: transparent;
+        color: #cbd5e1;
+        text-align: left;
+        font-weight: 500;
+        font-size: 0.85rem;
+        transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease, transform 0.12s ease;
+      }
+
+      .nav-item:hover {
+        background: rgba(255, 255, 255, 0.06);
+        color: #ffffff;
+      }
+
+      .nav-item:active {
+        transform: scale(0.985);
+      }
+
+      .nav-item-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .nav-item svg {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+        opacity: 0.8;
+      }
+
+      .nav-item.active {
+        background: rgba(16, 185, 129, 0.14);
+        color: #ffffff;
+        border-color: rgba(16, 185, 129, 0.34);
+        font-weight: 600;
+      }
+
+      .nav-item.active svg {
+        opacity: 1;
+        color: #34d399;
+      }
+
+      .nav-pill {
+        font-size: 0.67rem;
+        padding: 1px 7px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        color: #cbd5e1;
+        font-weight: 600;
+      }
+
+      .nav-item.active .nav-pill {
+        background: rgba(16, 185, 129, 0.25);
+        color: #a7f3d0;
+      }
+
+      .sidebar-panel {
+        padding: 14px;
+        border-radius: var(--radius-md);
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .sidebar-panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.71rem;
+        color: #a7f3d0;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 700;
+      }
+
+      .sidebar-panel > strong {
+        font-size: 1.1rem;
+        color: #ffffff;
+        letter-spacing: -0.02em;
+      }
+
+      .sidebar-breakdown {
+        display: grid;
+        gap: 5px;
+        padding-top: 8px;
+        border-top: 1px solid rgba(148, 163, 184, 0.14);
+        font-size: 0.75rem;
+      }
+
+      .sidebar-breakdown div {
+        display: flex;
+        justify-content: space-between;
+        color: var(--sidebar-muted);
+      }
+
+      .sidebar-breakdown span:last-child {
+        color: #e2e8f0;
+      }
+
+      .sidebar-note {
+        margin-top: auto;
+        padding: 11px 12px;
+        border-radius: var(--radius-md);
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px dashed rgba(148, 163, 184, 0.22);
+        font-size: 0.73rem;
+        color: var(--sidebar-muted);
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .sidebar-note strong {
+        color: #f8fafc;
+        font-size: 0.78rem;
+      }
+
+      /* =========================================================
+         MAIN & TOPBAR
+      ========================================================= */
+      .main {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        background: color-mix(in srgb, var(--background) 88%, transparent);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--border);
+        padding: 12px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+
+      .topbar-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .topbar-titles h2 {
+        margin: 0;
+        font-size: 1.18rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+      }
+
+      .topbar-titles p {
+        margin: 0;
+        font-size: 0.78rem;
+        color: var(--muted-foreground);
+      }
+
+      .topbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .content {
+        padding: 18px 24px 48px;
+        max-width: 1520px;
+        width: 100%;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      /* =========================================================
+         SHADCN-STYLE PRIMITIVES & MICRO-INTERACTIONS
+      ========================================================= */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        height: 34px;
+        padding: 0 13px;
+        border-radius: var(--radius-sm);
+        font-size: 0.82rem;
+        font-weight: 600;
+        border: 1px solid transparent;
+        transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+        white-space: nowrap;
+      }
+
+      .btn:active {
+        transform: scale(0.97);
+      }
+
+      .btn svg {
+        width: 15px;
+        height: 15px;
+        flex-shrink: 0;
+      }
+
+      .btn-sm {
+        height: 29px;
+        padding: 0 10px;
+        font-size: 0.77rem;
+      }
+
+      .btn-icon {
+        width: 34px;
+        height: 34px;
+        padding: 0;
+      }
+
+      .btn-primary {
+        background: var(--primary);
+        color: var(--primary-foreground);
+        box-shadow: var(--shadow-xs);
+      }
+
+      .btn-primary:hover {
+        opacity: 0.9;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .btn-outline {
+        background: var(--card);
+        border-color: var(--border);
+        color: var(--foreground);
+        box-shadow: var(--shadow-xs);
+      }
+
+      .btn-outline:hover {
+        background: var(--muted);
+        border-color: var(--input);
+      }
+
+      .btn-ghost {
+        background: transparent;
+        color: var(--muted-foreground);
+      }
+
+      .btn-ghost:hover {
+        background: var(--muted);
+        color: var(--foreground);
+      }
+
+      .btn-destructive-ghost {
+        background: transparent;
+        color: var(--destructive);
+      }
+
+      .btn-destructive-ghost:hover {
+        background: var(--destructive-soft);
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 2px 9px;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        border: 1px solid transparent;
+        white-space: nowrap;
+      }
+
+      .badge-secondary {
+        background: var(--secondary);
+        color: var(--secondary-foreground);
+        border-color: var(--border);
+      }
+
+      .badge-emerald {
+        background: var(--emerald-soft);
+        color: var(--emerald);
+        border-color: var(--emerald-border);
+      }
+
+      .badge-blue {
+        background: var(--blue-soft);
+        color: var(--blue);
+        border-color: var(--blue-border);
+      }
+
+      .badge-amber {
+        background: var(--amber-soft);
+        color: var(--amber);
+        border-color: var(--amber-border);
+      }
+
+      .badge-destructive {
+        background: var(--destructive-soft);
+        color: var(--destructive);
+        border-color: var(--destructive-border);
+      }
+
+      .pulse-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: currentColor;
+        position: relative;
+      }
+
+      .pulse-dot::after {
+        content: "";
+        position: absolute;
+        inset: -3px;
+        border-radius: 999px;
+        border: 1.5px solid currentColor;
+        opacity: 0;
+        animation: livePing 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+      }
+
+      @keyframes livePing {
+        0% { transform: scale(0.8); opacity: 0.7; }
+        75%, 100% { transform: scale(1.7); opacity: 0; }
+      }
+
+      /* Card with subtle hover lift */
+      .card {
+        background: var(--card);
+        color: var(--card-foreground);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-xs);
+        transition: border-color 0.18s ease, box-shadow 0.18s ease;
+      }
+
+      .card:hover {
+        border-color: color-mix(in srgb, var(--input) 85%, var(--border));
+      }
+
+      .card-header {
+        padding: 15px 18px 11px;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .card-title {
+        margin: 0;
+        font-size: 0.96rem;
+        font-weight: 700;
+        letter-spacing: -0.015em;
+      }
+
+      .card-description {
+        margin: 2px 0 0;
+        font-size: 0.78rem;
+        color: var(--muted-foreground);
+      }
+
+      .card-content {
+        padding: 0 18px 18px;
+      }
+
+      /* Tabs */
+      .tabs-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        flex-wrap: wrap;
+      }
+
+      .tabs-list {
+        display: inline-grid;
+        grid-template-columns: repeat(3, minmax(175px, auto));
+        gap: 4px;
+        padding: 4px;
+        background: var(--muted);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+      }
+
+      .tab-trigger {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 7px 13px;
+        border: 0;
+        border-radius: 7px;
+        background: transparent;
+        color: var(--muted-foreground);
+        text-align: left;
+        transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+      }
+
+      .tab-trigger:hover {
+        color: var(--foreground);
+      }
+
+      .tab-trigger:active {
+        transform: scale(0.985);
+      }
+
+      .tab-trigger .kicker {
+        display: block;
+        font-size: 0.67rem;
+        font-weight: 600;
+        opacity: 0.8;
+      }
+
+      .tab-trigger strong {
+        display: block;
+        font-size: 0.83rem;
+        font-weight: 600;
+      }
+
+      .tab-trigger.active {
+        background: var(--card);
+        color: var(--foreground);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .tab-trigger.active .kicker {
+        color: var(--emerald);
+        opacity: 1;
+      }
+
+      .tab-panel {
+        display: none;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .tab-panel.active {
+        display: flex;
+        animation: panelEnter 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      @keyframes panelEnter {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      /* Form Inputs & Compact Field Groups */
+      .field-group {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .field > label,
+      .field-label {
+        font-size: 0.76rem;
+        font-weight: 600;
+        color: var(--foreground);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .field-hint {
+        font-size: 0.72rem;
+        color: var(--muted-foreground);
+      }
+
+      .input,
+      .select {
+        width: 100%;
+        height: 34px;
+        padding: 0 10px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--input);
+        background: var(--card);
+        color: var(--foreground);
+        font-size: 0.83rem;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      .input:focus,
+      .select:focus {
+        outline: none;
+        border-color: var(--blue);
+        box-shadow: 0 0 0 3px var(--blue-soft);
+      }
+
+      .input:disabled,
+      .select:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        background: var(--muted);
+      }
+
+      .input-pair {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .input-triple {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      /* Switch */
+      .switch-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 8px 11px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+        background: var(--card);
+        cursor: pointer;
+        transition: border-color 0.15s ease;
+      }
+
+      .switch-row:hover {
+        border-color: var(--input);
+      }
+
+      .switch-copy strong {
+        display: block;
+        font-size: 0.79rem;
+        font-weight: 600;
+      }
+
+      .switch-copy small {
+        display: block;
+        font-size: 0.71rem;
+        color: var(--muted-foreground);
+      }
+
+      .switch-input {
+        position: relative;
+        appearance: none;
+        width: 36px;
+        height: 20px;
+        border-radius: 999px;
+        background: var(--input);
+        flex-shrink: 0;
+        transition: background 0.15s ease;
+        cursor: pointer;
+        border: 0;
+      }
+
+      .switch-input::after {
+        content: "";
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 16px;
+        height: 16px;
+        border-radius: 999px;
+        background: #ffffff;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+        transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      .switch-input:checked {
+        background: var(--emerald);
+      }
+
+      .switch-input:checked::after {
+        transform: translateX(16px);
+      }
+
+      /* Custom Styled Range Slider */
+      input[type="range"].slider {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 6px;
+        border-radius: 999px;
+        outline: none;
+        cursor: pointer;
+        margin: 6px 0;
+      }
+
+      input[type="range"].slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 999px;
+        background: var(--card);
+        border: 2.5px solid var(--blue);
+        box-shadow: var(--shadow-sm);
+        transition: transform 0.12s ease;
+      }
+
+      input[type="range"].slider:hover::-webkit-slider-thumb {
+        transform: scale(1.14);
+      }
+
+      input[type="range"].slider:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+      /* Alert / Callout */
+      .alert {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 11px 16px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--emerald-border);
+        background: var(--emerald-soft);
+        flex-wrap: wrap;
+      }
+
+      .alert-main {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      .alert-main svg {
+        width: 17px;
+        height: 17px;
+        color: var(--emerald);
+        flex-shrink: 0;
+        margin-top: 2px;
+      }
+
+      .alert-main strong {
+        display: block;
+        font-size: 0.84rem;
+      }
+
+      .alert-main span {
+        font-size: 0.78rem;
+        color: var(--muted-foreground);
+      }
+
+      .alert-meta {
+        font-size: 0.76rem;
+        color: var(--muted-foreground);
+      }
+
+      /* =========================================================
+         KPI STRIP + VALUE FLASH FEEDBACK
+      ========================================================= */
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .kpi-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 13px 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        box-shadow: var(--shadow-xs);
+        transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-sm);
+        border-color: var(--input);
+      }
+
+      .kpi-card.hero-kpi {
+        border-color: var(--emerald-border);
+        background: linear-gradient(180deg, var(--emerald-soft), var(--card) 68%);
+      }
+
+      .kpi-card.flash {
+        animation: kpiFlash 0.45s ease;
+      }
+
+      @keyframes kpiFlash {
+        0% { box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.35); border-color: var(--emerald); }
+        100% { box-shadow: var(--shadow-xs); }
+      }
+
+      .kpi-label {
+        font-size: 0.74rem;
+        font-weight: 600;
+        color: var(--muted-foreground);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+      }
+
+      .kpi-value {
+        font-size: 1.18rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+      }
+
+      .kpi-value.positive {
+        color: var(--emerald);
+      }
+
+      .kpi-value.negative {
+        color: var(--destructive);
+      }
+
+      .kpi-sub {
+        font-size: 0.72rem;
+        color: var(--muted-foreground);
+      }
+
+      /* =========================================================
+         PROGRAM 1: COMPACT WORKBENCH + ACCORDION PARAMETERS
+      ========================================================= */
+      .sim-workbench {
+        display: grid;
+        grid-template-columns: 380px minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+      }
+
+      .sim-sidebar-card {
+        position: sticky;
+        top: 74px;
+      }
+
+      /* Accordion / Collapsible Parameter Sections */
+      .param-acc {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        background: color-mix(in srgb, var(--muted) 38%, var(--card));
+        overflow: hidden;
+        transition: border-color 0.15s ease;
+      }
+
+      .param-acc[open] {
+        border-color: var(--input);
+      }
+
+      .param-acc summary {
+        list-style: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 12px;
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.15s ease;
+      }
+
+      .param-acc summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .param-acc summary:hover {
+        background: color-mix(in srgb, var(--muted) 75%, transparent);
+      }
+
+      .param-acc-left {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        min-width: 0;
+      }
+
+      .step-pill {
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        background: var(--primary);
+        color: var(--primary-foreground);
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        font-weight: 700;
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+      }
+
+      .param-acc-titles strong {
+        display: block;
+        font-size: 0.82rem;
+        line-height: 1.2;
+      }
+
+      .param-acc-titles small {
+        display: block;
+        font-size: 0.71rem;
+        color: var(--muted-foreground);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 240px;
+      }
+
+      .acc-chevron {
+        width: 15px;
+        height: 15px;
+        color: var(--muted-foreground);
+        flex-shrink: 0;
+        transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      .param-acc[open] .acc-chevron {
+        transform: rotate(180deg);
+      }
+
+      .param-acc-body {
+        padding: 4px 12px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+        border-top: 1px solid var(--border);
+        padding-top: 10px;
+        animation: accOpen 0.18s ease;
+      }
+
+      @keyframes accOpen {
+        from { opacity: 0; transform: translateY(-4px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .sim-results-col {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        min-width: 0;
+      }
+
+      .subpanel {
+        padding: 10px 12px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        background: var(--card);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .preset-row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .preset-btn {
+        border: 1px solid var(--border);
+        background: var(--muted);
+        border-radius: var(--radius-sm);
+        padding: 7px 10px;
+        text-align: left;
+        transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+      }
+
+      .preset-btn:hover {
+        border-color: var(--blue);
+        background: var(--blue-soft);
+      }
+
+      .preset-btn:active {
+        transform: scale(0.98);
+      }
+
+      .preset-btn strong {
+        display: block;
+        font-size: 0.78rem;
+      }
+
+      .preset-btn span {
+        font-size: 0.7rem;
+        color: var(--muted-foreground);
+      }
+
+      .mini-stat-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .mini-stat-grid.cols-4 {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .mini-stat {
+        padding: 9px 11px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+        background: var(--muted);
+      }
+
+      .mini-stat span {
+        display: block;
+        font-size: 0.71rem;
+        color: var(--muted-foreground);
+      }
+
+      .mini-stat strong {
+        display: block;
+        font-size: 0.87rem;
+        margin-top: 2px;
+      }
+
+      .dividend-note {
+        font-size: 0.73rem;
+        color: var(--muted-foreground);
+        background: var(--card);
+        border: 1px dashed var(--border);
+        border-radius: var(--radius-sm);
+        padding: 7px 10px;
+      }
+
+      .dividend-note summary {
+        font-weight: 600;
+        color: var(--foreground);
+        cursor: pointer;
+      }
+
+      .dividend-note ul {
+        margin: 6px 0 0;
+        padding-left: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+
+      /* Charts */
+      .chart-container {
+        position: relative;
+        height: 270px;
+        width: 100%;
+      }
+
+      .chart-container.tall {
+        height: 250px;
+      }
+
+      /* Composition bars */
+      .comp-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px 18px;
+      }
+
+      .comp-item {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+
+      .comp-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.82rem;
+      }
+
+      .comp-track {
+        height: 8px;
+        border-radius: 999px;
+        background: var(--muted);
+        overflow: hidden;
+      }
+
+      .comp-fill {
+        display: block;
+        height: 100%;
+        border-radius: 999px;
+        transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      .comp-fill.bmri { background: #2563eb; }
+      .comp-fill.bbri { background: #0ea5e9; }
+      .comp-fill.rdpu { background: #059669; }
+      .comp-fill.btc  { background: #d97706; }
+
+      .comp-sub {
+        font-size: 0.73rem;
+        color: var(--muted-foreground);
+      }
+
+      /* Strategy Comparison & Milestones Card (Solusi ruang kosong bawah) */
+      .strategy-split {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .strategy-box {
+        padding: 13px 14px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        background: color-mix(in srgb, var(--muted) 45%, var(--card));
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .strategy-box.emerald {
+        border-color: var(--emerald-border);
+        background: linear-gradient(180deg, var(--emerald-soft), transparent 85%);
+      }
+
+      .strategy-box.blue {
+        border-color: var(--blue-border);
+        background: linear-gradient(180deg, var(--blue-soft), transparent 85%);
+      }
+
+      .strategy-box-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .strategy-box-head strong {
+        font-size: 0.85rem;
+      }
+
+      .strategy-metrics {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .strategy-metrics div span {
+        display: block;
+        font-size: 0.7rem;
+        color: var(--muted-foreground);
+      }
+
+      .strategy-metrics div strong {
+        font-size: 0.9rem;
+      }
+
+      .milestone-strip {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .milestone-pill {
+        padding: 10px 12px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+        background: var(--card);
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .milestone-pill span {
+        font-size: 0.71rem;
+        color: var(--muted-foreground);
+      }
+
+      .milestone-pill strong {
+        font-size: 0.92rem;
+      }
+
+      .milestone-pill small {
+        font-size: 0.7rem;
+        color: var(--emerald);
+      }
+
+      /* =========================================================
+         DATA TABLES
+      ========================================================= */
+      .table-wrap {
+        width: 100%;
+        overflow-x: auto;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+      }
+
+      .table-wrap.scroll-y {
+        max-height: 320px;
+        overflow-y: auto;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8rem;
+      }
+
+      thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: var(--muted);
+        color: var(--muted-foreground);
+        font-weight: 600;
+        font-size: 0.73rem;
+        text-align: left;
+        padding: 9px 11px;
+        border-bottom: 1px solid var(--border);
+        white-space: nowrap;
+      }
+
+      tbody td {
+        padding: 9px 11px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: middle;
+        white-space: nowrap;
+      }
+
+      tbody tr:last-child td {
+        border-bottom: 0;
+      }
+
+      tbody tr {
+        transition: background 0.12s ease;
+      }
+
+      tbody tr:hover {
+        background: color-mix(in srgb, var(--muted) 55%, transparent);
+      }
+
+      th.right,
+      td.right {
+        text-align: right;
+      }
+
+      .period-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .period-top {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .period-cell small {
+        font-size: 0.71rem;
+        color: var(--muted-foreground);
+      }
+
+      .row-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .empty-box {
+        padding: 26px 16px;
+        text-align: center;
+        color: var(--muted-foreground);
+        font-size: 0.81rem;
+        border: 1px dashed var(--border);
+        border-radius: var(--radius-md);
+      }
+
+      /* =========================================================
+         PROGRAM 2: CATATAN AKTUAL
+      ========================================================= */
+      .actual-month-banner {
+        display: grid;
+        grid-template-columns: minmax(220px, 1.1fr) repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        padding: 14px 18px;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--blue-border);
+        background: linear-gradient(90deg, var(--blue-soft), var(--card) 55%);
+        align-items: center;
+      }
+
+      .actual-month-stat {
+        padding: 8px 12px;
+        border-radius: var(--radius-sm);
+        background: var(--card);
+        border: 1px solid var(--border);
+      }
+
+      .actual-month-stat span {
+        display: block;
+        font-size: 0.71rem;
+        color: var(--muted-foreground);
+      }
+
+      .actual-month-stat strong {
+        display: block;
+        font-size: 0.85rem;
+        margin-top: 2px;
+      }
+
+      .ledger-grid {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .col-span-5 { grid-column: span 5; }
+      .col-span-6 { grid-column: span 6; }
+      .col-span-7 { grid-column: span 7; }
+      .col-span-12 { grid-column: span 12; }
+
+      .ticker-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .ticker-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px 4px 10px;
+        border-radius: 999px;
+        background: var(--muted);
+        border: 1px solid var(--border);
+        font-size: 0.75rem;
+        font-weight: 700;
+        transition: border-color 0.15s ease;
+      }
+
+      .ticker-chip:hover {
+        border-color: var(--input);
+      }
+
+      .ticker-chip button {
+        border: 0;
+        background: transparent;
+        color: var(--muted-foreground);
+        padding: 0 2px;
+        line-height: 1;
+        font-size: 0.9rem;
+      }
+
+      .ticker-chip button:hover {
+        color: var(--destructive);
+      }
+
+      .info-cards-split {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .info-cards-2x2 {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      /* =========================================================
+         TOOLS: ANALISIS & KALKULATOR (Tanpa Posisi Portofolio Aktual)
+      ========================================================= */
+      .tools-bento {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .calc-grid {
+        display: grid;
+        grid-template-columns: minmax(220px, 0.9fr) minmax(0, 1.1fr);
+        gap: 16px;
+        align-items: start;
+      }
+
+      .result-box {
+        padding: 14px 16px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        background: var(--muted);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .kalc-bar-row {
+        display: grid;
+        grid-template-columns: 56px 1fr 56px;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.8rem;
+      }
+
+      .ap-rows {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .ap-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr 34px;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .ap-result-grid {
+        display: grid;
+        grid-template-columns: 180px minmax(0, 1fr);
+        gap: 18px;
+        align-items: center;
+      }
+
+      .ap-pie-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .ap-pie {
+        width: 146px;
+        height: 146px;
+        border-radius: 999px;
+        position: relative;
+        box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+        transition: transform 0.25s ease;
+      }
+
+      .ap-pie:hover {
+        transform: scale(1.03);
+      }
+
+      .ap-pie::after {
+        content: "";
+        position: absolute;
+        inset: 34px;
+        border-radius: 999px;
+        background: var(--card);
+        border: 1px solid var(--border);
+      }
+
+      .ap-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 10px;
+        justify-content: center;
+        font-size: 0.73rem;
+      }
+
+      .ap-legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .ap-swatch {
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        border-radius: 2px;
+        margin-right: 6px;
+      }
+
+      .ap-legend-item .ap-swatch {
+        margin-right: 0;
+      }
+
+      /* =========================================================
+         SONNER-STYLE FLOATING TOAST STACK
+      ========================================================= */
+      .toast-stack {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        z-index: 60;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        pointer-events: none;
+        max-width: 380px;
+      }
+
+      .toast-item {
+        pointer-events: auto;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 11px 14px;
+        border-radius: var(--radius-md);
+        background: var(--card);
+        color: var(--foreground);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-md);
+        font-size: 0.81rem;
+        font-weight: 500;
+        animation: toastIn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      .toast-item.success svg { color: var(--emerald); }
+      .toast-item.info svg { color: var(--blue); }
+
+      .toast-item svg {
+        width: 17px;
+        height: 17px;
+        flex-shrink: 0;
+      }
+
+      .toast-item.closing {
+        opacity: 0;
+        transform: translateY(8px);
+        transition: opacity 0.18s ease, transform 0.18s ease;
+      }
+
+      @keyframes toastIn {
+        from { opacity: 0; transform: translateY(12px) scale(0.97); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+
+      /* =========================================================
+         REDUCED MOTION & RESPONSIVE BREAKPOINTS
+      ========================================================= */
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.01ms !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+
+      @media (max-width: 1280px) {
+        .sim-workbench {
+          grid-template-columns: 350px minmax(0, 1fr);
+        }
+        .kpi-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .col-span-5,
+        .col-span-7 {
+          grid-column: span 6;
+        }
+        .actual-month-banner {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 1024px) {
+        .app-shell {
+          grid-template-columns: 0 minmax(0, 1fr);
+        }
+        .sidebar {
+          display: none;
+        }
+        .sim-workbench,
+        .tools-bento,
+        .info-cards-split,
+        .calc-grid,
+        .ap-result-grid,
+        .strategy-split {
+          grid-template-columns: 1fr;
+        }
+        .sim-sidebar-card {
+          position: static;
+        }
+        .col-span-5,
+        .col-span-6,
+        .col-span-7 {
+          grid-column: span 12;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .content {
+          padding: 14px;
+        }
+        .topbar {
+          padding: 12px 14px;
+        }
+        .tabs-list {
+          grid-template-columns: 1fr;
+          width: 100%;
+        }
+        .kpi-grid,
+        .comp-grid,
+        .mini-stat-grid.cols-4,
+        .milestone-strip,
+        .input-pair,
+        .input-triple {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell" id="appShell">
+      <!-- SIDEBAR KHUSUS INVESTASI (Tab lain dihapus) -->
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">INV</div>
+          <div>
+            <h1>Catatan Kas</h1>
+            <p>Workspace Investasi</p>
+          </div>
+        </div>
+
+        <div>
+          <div class="sidebar-section-label">Menu Investasi</div>
+          <nav class="nav-list" aria-label="Navigasi Investasi">
+            <button class="nav-item active" data-tab-nav="simulator" type="button">
+              <span class="nav-item-left">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                Proyeksi Simulator
+              </span>
+              <span class="nav-pill" id="sidePillYears">15 Thn</span>
+            </button>
+            <button class="nav-item" data-tab-nav="actual" type="button">
+              <span class="nav-item-left">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                Catatan Aktual
+              </span>
+              <span class="nav-pill" id="sidePillRecords">16</span>
+            </button>
+            <button class="nav-item" data-tab-nav="analysis" type="button">
+              <span class="nav-item-left">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="10" y2="10"/><line x1="12" y1="10" x2="14" y2="10"/><line x1="16" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="10" y2="14"/><line x1="12" y1="14" x2="14" y2="14"/><line x1="8" y1="18" x2="16" y2="18"/></svg>
+                Kalkulator &amp; Analisis
+              </span>
+              <span class="nav-pill">3 alat</span>
+            </button>
+          </nav>
+        </div>
+
+        <div class="sidebar-panel">
+          <div class="sidebar-panel-head">
+            <span>Modal Tercatat</span>
+            <span id="sideLotTotal" class="num">12 lot</span>
+          </div>
+          <strong class="num" id="sidebarModalValue">Rp0</strong>
+          <div class="sidebar-breakdown">
+            <div><span>Saham</span><span class="num" id="sideStockVal">Rp0</span></div>
+            <div><span>RDPU</span><span class="num" id="sideRdpuVal">Rp0</span></div>
+            <div><span>BTC</span><span class="num" id="sideBtcVal">Rp0</span></div>
+          </div>
+        </div>
+
+        <div class="sidebar-note">
+          <strong>Fokus Tab Investasi</strong>
+          <span>Tab non-investasi telah disingkirkan sesuai permintaan. Semua perubahan simulator &amp; ledger tersinkron live.</span>
+        </div>
+      </aside>
+
+      <!-- MAIN WORKSPACE -->
+      <main class="main">
+        <header class="topbar">
+          <div class="topbar-left">
+            <button class="btn btn-outline btn-icon" id="sidebarToggle" type="button" title="Toggle Sidebar" aria-label="Sembunyikan atau tampilkan sidebar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+            </button>
+            <div class="topbar-titles">
+              <h2>Investasi</h2>
+              <p id="topbarSubtitle">Proyeksi compounding saham, RDPU, &amp; BTC</p>
+            </div>
+          </div>
+
+          <div class="topbar-actions">
+            <span class="badge badge-emerald">
+              <span class="pulse-dot"></span>
+              Mockup Interaktif · Live Sync
+            </span>
+            <button class="btn btn-outline btn-sm" id="themeToggle" type="button">
+              <svg id="themeIconSun" class="hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+              <svg id="themeIconMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+              <span id="themeToggleLabel">Dark Mode</span>
+            </button>
+            <button class="btn btn-outline btn-sm" id="resetDummyBtn" type="button">Reset Dummy</button>
+          </div>
+        </header>
+
+        <div class="content">
+          <!-- SUB-TAB NAVIGATION -->
+          <div class="tabs-bar">
+            <div class="tabs-list" role="tablist" aria-label="Sub-tab Investasi">
+              <button class="tab-trigger active" data-tab="simulator" role="tab" aria-selected="true" type="button">
+                <div>
+                  <span class="kicker">Program 1</span>
+                  <strong id="tabLabelSimulator">Proyeksi 180 Bulan</strong>
+                </div>
+                <span class="badge badge-secondary" id="tabBadgeYears">15 Thn</span>
+              </button>
+              <button class="tab-trigger" data-tab="actual" role="tab" aria-selected="false" type="button">
+                <div>
+                  <span class="kicker">Program 2</span>
+                  <strong>Catatan Aktual</strong>
+                </div>
+                <span class="badge badge-blue" id="tabBadgeRecords">16 entri</span>
+              </button>
+              <button class="tab-trigger" data-tab="analysis" role="tab" aria-selected="false" type="button">
+                <div>
+                  <span class="kicker">Tools</span>
+                  <strong>Analisis &amp; Kalkulator</strong>
+                </div>
+                <span class="badge badge-secondary">3 alat</span>
+              </button>
+            </div>
+
+            <div class="row-actions">
+              <span class="badge badge-secondary num" id="quickStatusBadge">BMRI Rp4.320 · BBRI Rp4.080</span>
+            </div>
+          </div>
+
+          <!-- =====================================================
+               PANEL 1: PROGRAM 1 — PROYEKSI SIMULATOR
+          ===================================================== -->
+          <section class="tab-panel active" id="panelSimulator" role="tabpanel">
+            <div class="alert" id="syncBanner">
+              <div class="alert-main">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <div>
+                  <strong id="syncBannerTitle">Sinkron Program 2 aktif</strong>
+                  <span id="syncBannerText">5 bulan aktual dari Catatan Pembelian menggantikan asumsi simulasi pada periode tersebut.</span>
+                </div>
+              </div>
+              <span class="alert-meta" id="syncBannerMeta">Bulan kosong berikutnya memakai konfigurasi simulator.</span>
+            </div>
+
+            <div class="sim-workbench">
+              <!-- LEFT COMPACT ACCORDION PARAMETER CARD (Solusi #3) -->
+              <form class="card sim-sidebar-card" id="simulatorForm">
+                <div class="card-header">
+                  <div>
+                    <h3 class="card-title">Parameter Simulasi</h3>
+                    <p class="card-description">Klik bagian 03/04 untuk ubah asumsi lanjutan.</p>
+                  </div>
+                  <button class="btn btn-ghost btn-sm" id="toggleAllAccBtn" type="button">Buka Semua</button>
+                </div>
+                <div class="card-content field-group">
+                  <!-- 01 Periode & Modal (Open by default) -->
+                  <details class="param-acc" open>
+                    <summary>
+                      <div class="param-acc-left">
+                        <span class="step-pill">01</span>
+                        <div class="param-acc-titles">
+                          <strong>Periode &amp; modal</strong>
+                          <small id="acc01Summary">Rp1.800.000/bln · BTC Rp300rb · 15 thn</small>
+                        </div>
+                      </div>
+                      <svg class="acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                    </summary>
+                    <div class="param-acc-body">
+                      <div class="input-pair">
+                        <div class="field">
+                          <label for="simMonthlyDeposit">Setoran Bulanan</label>
+                          <input class="input num" id="simMonthlyDeposit" type="text" inputmode="numeric" />
+                        </div>
+                        <div class="field">
+                          <label for="simBtcMonthly">Setoran BTC / Bln</label>
+                          <input class="input num" id="simBtcMonthly" type="text" inputmode="numeric" />
+                        </div>
+                      </div>
+                      <div class="input-triple">
+                        <div class="field">
+                          <label for="simDurationYears">Durasi (Thn)</label>
+                          <input class="input num" id="simDurationYears" type="number" min="1" max="50" step="1" />
+                        </div>
+                        <div class="field">
+                          <label for="simStartMonth">Mulai Bln</label>
+                          <select class="select" id="simStartMonth"></select>
+                        </div>
+                        <div class="field">
+                          <label for="simStartYear">Tahun</label>
+                          <input class="input num" id="simStartYear" type="number" min="2000" max="2100" step="1" />
+                        </div>
+                      </div>
+                    </div>
+                  </details>
+
+                  <!-- 02 Harga & Pola Beli (Open by default) -->
+                  <details class="param-acc" open>
+                    <summary>
+                      <div class="param-acc-left">
+                        <span class="step-pill">02</span>
+                        <div class="param-acc-titles">
+                          <strong>Harga &amp; pola beli</strong>
+                          <small id="acc02Summary">Selang-seling · Saham 80% / RDPU 20%</small>
+                        </div>
+                      </div>
+                      <svg class="acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                    </summary>
+                    <div class="param-acc-body">
+                      <div class="input-pair">
+                        <div class="field">
+                          <label for="simBmriPrice">Harga BMRI</label>
+                          <input class="input num" id="simBmriPrice" type="number" min="10" step="10" />
+                        </div>
+                        <div class="field">
+                          <label for="simBbriPrice">Harga BBRI</label>
+                          <input class="input num" id="simBbriPrice" type="number" min="10" step="10" />
+                        </div>
+                      </div>
+
+                      <div class="field">
+                        <label for="simPurchaseMode">Pola Pembelian Saham</label>
+                        <select class="select" id="simPurchaseMode">
+                          <option value="alternating">Default selang-seling otomatis</option>
+                          <option value="custom">Custom lot bulanan</option>
+                        </select>
+                      </div>
+
+                      <!-- Custom Lot Panel -->
+                      <div class="subpanel hidden" id="simCustomLotPanel">
+                        <label class="switch-row">
+                          <span class="switch-copy">
+                            <strong>Reinvest dividen setelah target</strong>
+                            <small>ON: beli lot tambahan. OFF: ke RDPU.</small>
+                          </span>
+                          <input class="switch-input" id="simReinvestCustomDividends" type="checkbox" />
+                        </label>
+                        <div class="preset-row">
+                          <button class="preset-btn" type="button" data-lot-preset="2-1">
+                            <strong>Preset 2 + 1</strong>
+                            <span>BMRI 2 · BBRI 1 lot</span>
+                          </button>
+                          <button class="preset-btn" type="button" data-lot-preset="3-1">
+                            <strong>Preset 3 + 1</strong>
+                            <span>BMRI 3 · BBRI 1 lot</span>
+                          </button>
+                        </div>
+                        <div class="input-pair">
+                          <div class="field">
+                            <label for="simBmriLots">BMRI Lot / Bln</label>
+                            <input class="input num" id="simBmriLots" type="number" min="0" step="1" />
+                          </div>
+                          <div class="field">
+                            <label for="simBbriLots">BBRI Lot / Bln</label>
+                            <input class="input num" id="simBbriLots" type="number" min="0" step="1" />
+                          </div>
+                        </div>
+                        <div class="mini-stat-grid">
+                          <div class="mini-stat"><span>BMRI terbeli</span><strong class="num" id="customBmriOut">0 lot</strong></div>
+                          <div class="mini-stat"><span>BBRI terbeli</span><strong class="num" id="customBbriOut">0 lot</strong></div>
+                          <div class="mini-stat"><span>Total saham</span><strong class="num" id="customStockOut">Rp0</strong></div>
+                          <div class="mini-stat"><span>Masuk RDPU</span><strong class="num" id="customRdpuOut">Rp0</strong></div>
+                        </div>
+                        <span class="field-hint" id="customLotStatus">Bulan normal tanpa dividen.</span>
+                      </div>
+
+                      <!-- Alokasi Slider -->
+                      <div class="subpanel">
+                        <div class="field">
+                          <label for="simStockAllocation">
+                            <span>Alokasi Saham vs RDPU</span>
+                            <span class="num"><strong id="simAllocLabel">80%</strong> / <span id="simRdpuAllocLabel">20%</span></span>
+                          </label>
+                          <input class="slider" id="simStockAllocation" type="range" min="0" max="100" step="1" />
+                        </div>
+                        <div class="mini-stat-grid">
+                          <div class="mini-stat"><span>Nominal Saham</span><strong class="num" id="simStockAllocAmount">Rp0</strong></div>
+                          <div class="mini-stat"><span>Nominal RDPU</span><strong class="num" id="simRdpuAllocAmount">Rp0</strong></div>
+                        </div>
+                      </div>
+
+                      <details class="dividend-note">
+                        <summary>Cara kerja sistem dividen simulator</summary>
+                        <ul>
+                          <li><strong>Selang-seling:</strong> dividen cair menambah kas untuk beli saham sesuai giliran bulan itu.</li>
+                          <li><strong>Custom lot:</strong> dividen membantu capai target lot; jika reinvest ON, sisa membeli lot tambahan.</li>
+                          <li><strong>Program 2 sinkron:</strong> kolom "Dari Dividen" dipisahkan dari setoran modal.</li>
+                        </ul>
+                      </details>
+                    </div>
+                  </details>
+
+                  <!-- 03 Asumsi Harga (Collapsed by default with live summary) -->
+                  <details class="param-acc" id="accPrice">
+                    <summary>
+                      <div class="param-acc-left">
+                        <span class="step-pill">03</span>
+                        <div class="param-acc-titles">
+                          <strong>Asumsi harga tahunan</strong>
+                          <small id="acc03Summary">Aktif · BMRI +6,5% / BBRI +5,5%</small>
+                        </div>
+                      </div>
+                      <svg class="acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                    </summary>
+                    <div class="param-acc-body">
+                      <label class="switch-row">
+                        <span class="switch-copy">
+                          <strong>Aktifkan perubahan harga saham</strong>
+                          <small id="simPriceChangeStatus">Aktif — kenaikan tahunan dihitung.</small>
+                        </span>
+                        <input class="switch-input" id="simEnablePriceChange" type="checkbox" />
+                      </label>
+                      <div class="input-pair">
+                        <div class="field">
+                          <label for="simBmriPriceChange">BMRI % / Thn</label>
+                          <input class="input num" id="simBmriPriceChange" type="number" step="0.1" />
+                        </div>
+                        <div class="field">
+                          <label for="simBbriPriceChange">BBRI % / Thn</label>
+                          <input class="input num" id="simBbriPriceChange" type="number" step="0.1" />
+                        </div>
+                      </div>
+                    </div>
+                  </details>
+
+                  <!-- 04 Return & Dividen (Collapsed by default with live summary) -->
+                  <details class="param-acc" id="accReturn">
+                    <summary>
+                      <div class="param-acc-left">
+                        <span class="step-pill">04</span>
+                        <div class="param-acc-titles">
+                          <strong>Return &amp; dividen</strong>
+                          <small id="acc04Summary">RDPU 4,5% · BTC 14% · Div +5%/thn</small>
+                        </div>
+                      </div>
+                      <svg class="acc-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                    </summary>
+                    <div class="param-acc-body">
+                      <div class="input-triple">
+                        <div class="field">
+                          <label for="simRdpuReturn">RDPU %/Thn</label>
+                          <input class="input num" id="simRdpuReturn" type="number" min="0" step="0.01" />
+                        </div>
+                        <div class="field">
+                          <label for="simBtcReturn">BTC %/Thn</label>
+                          <input class="input num" id="simBtcReturn" type="number" step="0.1" />
+                        </div>
+                        <div class="field">
+                          <label for="simDividendGrowth">Div. Growth %</label>
+                          <input class="input num" id="simDividendGrowth" type="number" min="0" step="0.1" />
+                        </div>
+                      </div>
+                      <div class="input-pair">
+                        <div class="field">
+                          <label for="simBmriDiv">Dividen BMRI / Lbr</label>
+                          <input class="input num" id="simBmriDiv" type="text" inputmode="decimal" />
+                        </div>
+                        <div class="field">
+                          <label for="simBbriDiv">Dividen BBRI / Lbr</label>
+                          <input class="input num" id="simBbriDiv" type="text" inputmode="decimal" />
+                        </div>
+                      </div>
+                    </div>
+                  </details>
+                </div>
+              </form>
+
+              <!-- RIGHT OUTPUT CANVAS -->
+              <div class="sim-results-col">
+                <div class="kpi-grid" id="simKpiGrid">
+                  <article class="kpi-card">
+                    <span class="kpi-label">Total Modal</span>
+                    <strong class="kpi-value num" id="kpiTotalContribution">Rp0</strong>
+                    <small class="kpi-sub" id="kpiTotalContributionMeta">15 tahun setoran</small>
+                  </article>
+                  <article class="kpi-card hero-kpi">
+                    <span class="kpi-label">Aset Akhir <span class="badge badge-emerald" id="kpiMultiple">0,00x</span></span>
+                    <strong class="kpi-value positive num" id="kpiFinalAsset">Rp0</strong>
+                    <small class="kpi-sub">saham + RDPU + BTC</small>
+                  </article>
+                  <article class="kpi-card">
+                    <span class="kpi-label">Keuntungan Bersih</span>
+                    <strong class="kpi-value positive num" id="kpiNetProfit">Rp0</strong>
+                    <small class="kpi-sub">setelah fee jual 0,35%</small>
+                  </article>
+                  <article class="kpi-card">
+                    <span class="kpi-label">Gaji Pasif Tahun Akhir</span>
+                    <strong class="kpi-value num" id="kpiPassiveIncome">Rp0</strong>
+                    <small class="kpi-sub">estimasi dividen tahunan</small>
+                  </article>
+                  <article class="kpi-card">
+                    <span class="kpi-label">Nilai BTC Akhir</span>
+                    <strong class="kpi-value num" id="kpiBtcValue">Rp0</strong>
+                    <small class="kpi-sub" id="kpiBtcSub">setoran &amp; return BTC</small>
+                  </article>
+                </div>
+
+                <!-- Chart Card -->
+                <section class="card">
+                  <div class="card-header">
+                    <div>
+                      <h3 class="card-title">Modal vs Pertumbuhan Aset</h3>
+                      <p class="card-description">Snapshot tahunan sepanjang jangka waktu simulasi (termasuk data aktual Program 2).</p>
+                    </div>
+                    <span class="badge badge-emerald num" id="chartMultipleBadge">0,00x modal</span>
+                  </div>
+                  <div class="card-content">
+                    <div class="chart-container">
+                      <canvas id="growthChartCanvas"></canvas>
+                      <div id="growthChartFallback" class="hidden"></div>
+                    </div>
+                  </div>
+                </section>
+
+                <!-- Posisi Akhir Card -->
+                <section class="card">
+                  <div class="card-header">
+                    <div>
+                      <h3 class="card-title">Posisi Akhir &amp; Komposisi Aset</h3>
+                      <p class="card-description">Distribusi akhir lot saham, saldo RDPU, dan BTC di akhir periode.</p>
+                    </div>
+                  </div>
+                  <div class="card-content field-group">
+                    <div class="comp-grid">
+                      <div class="comp-item">
+                        <div class="comp-head"><strong>BMRI</strong><span class="num" id="posBmriLots">0 lot</span></div>
+                        <div class="comp-track"><span class="comp-fill bmri" id="posBmriBar" style="width:0%"></span></div>
+                        <span class="comp-sub num" id="posBmriVal">Rp0</span>
+                      </div>
+                      <div class="comp-item">
+                        <div class="comp-head"><strong>BBRI</strong><span class="num" id="posBbriLots">0 lot</span></div>
+                        <div class="comp-track"><span class="comp-fill bbri" id="posBbriBar" style="width:0%"></span></div>
+                        <span class="comp-sub num" id="posBbriVal">Rp0</span>
+                      </div>
+                      <div class="comp-item">
+                        <div class="comp-head"><strong>RDPU</strong><span class="num" id="posRdpuShare">0%</span></div>
+                        <div class="comp-track"><span class="comp-fill rdpu" id="posRdpuBar" style="width:0%"></span></div>
+                        <span class="comp-sub num" id="posRdpuVal">Rp0</span>
+                      </div>
+                      <div class="comp-item">
+                        <div class="comp-head"><strong>BTC</strong><span class="num" id="posBtcShare">0%</span></div>
+                        <div class="comp-track"><span class="comp-fill btc" id="posBtcBar" style="width:0%"></span></div>
+                        <span class="comp-sub num" id="posBtcVal">Rp0</span>
+                      </div>
+                    </div>
+
+                    <div class="mini-stat-grid cols-4">
+                      <div class="mini-stat"><span>Fee jual saham</span><strong class="num" id="statSellingFee">Rp0</strong></div>
+                      <div class="mini-stat"><span>Dividen cair total</span><strong class="num" id="statTotalDividends">Rp0</strong></div>
+                      <div class="mini-stat"><span>Setoran RDPU total</span><strong class="num" id="statTotalRdpu">Rp0</strong></div>
+                      <div class="mini-stat"><span>Return RDPU</span><strong class="num" id="statRdpuGain">Rp0</strong></div>
+                    </div>
+                  </div>
+                </section>
+
+                <!-- SOLUSI #2: Card Strategi Jalur Keluar & Milestone (Mengisi ruang bawah kanan dengan data bernilai tinggi) -->
+                <section class="card">
+                  <div class="card-header">
+                    <div>
+                      <h3 class="card-title">Ringkasan Jalur Strategi &amp; Milestone</h3>
+                      <p class="card-description">Perbandingan opsi likuidasi penuh vs mempertahankan lot untuk arus kas dividen.</p>
+                    </div>
+                    <span class="badge badge-blue" id="strategyHorizonBadge">Horizon 15 Tahun</span>
+                  </div>
+                  <div class="card-content field-group">
+                    <div class="strategy-split">
+                      <div class="strategy-box emerald">
+                        <div class="strategy-box-head">
+                          <strong>Jalur Likuidasi (Cairkan Semua)</strong>
+                          <span class="badge badge-emerald" id="stratRoiBadge">+0%</span>
+                        </div>
+                        <div class="strategy-metrics">
+                          <div><span>Nilai Bersih Setelah Fee</span><strong class="num" id="stratLiqNet">Rp0</strong></div>
+                          <div><span>Keuntungan Bersih</span><strong class="num" id="stratLiqProfit" style="color:var(--emerald)">Rp0</strong></div>
+                        </div>
+                      </div>
+                      <div class="strategy-box blue">
+                        <div class="strategy-box-head">
+                          <strong>Jalur Keep Lot (Gaji Pasif)</strong>
+                          <span class="badge badge-blue">Arus Dividen</span>
+                        </div>
+                        <div class="strategy-metrics">
+                          <div><span>Dividen / Bulan (Est.)</span><strong class="num" id="stratKeepMonthly">Rp0</strong></div>
+                          <div><span>Cadangan RDPU + BTC</span><strong class="num" id="stratKeepReserve">Rp0</strong></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="milestone-strip" id="milestoneStrip"></div>
+                  </div>
+                </section>
+              </div>
+            </div>
+
+            <!-- Riwayat Tahunan Table -->
+            <section class="card">
+              <div class="card-header">
+                <div>
+                  <h3 class="card-title">Riwayat Tahunan</h3>
+                  <p class="card-description" id="historyDesc">Override bersifat per aset: catatan aktual saham, RDPU, atau BTC hanya mengganti aset itu pada bulan tercatat.</p>
+                </div>
+              </div>
+              <div class="card-content">
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Periode</th>
+                        <th>Aktual Program 2</th>
+                        <th class="right">Total Setoran</th>
+                        <th class="right">Setoran BTC</th>
+                        <th class="right">Saldo BTC</th>
+                        <th class="right">Harga BMRI</th>
+                        <th class="right">Lot BMRI</th>
+                        <th class="right">Harga BBRI</th>
+                        <th class="right">Lot BBRI</th>
+                        <th class="right">Dividen Cair</th>
+                        <th class="right">Setoran RDPU</th>
+                        <th class="right">Return RDPU</th>
+                        <th class="right">Saldo RDPU</th>
+                        <th class="right">Total Portofolio</th>
+                      </tr>
+                    </thead>
+                    <tbody id="simHistoryBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+
+            <!-- Pembelian dari Dividen Table -->
+            <section class="card">
+              <div class="card-header">
+                <div>
+                  <h3 class="card-title">Pembelian dari Dividen</h3>
+                  <p class="card-description">Lot saham dan RDPU yang dibeli dari dividen cair maupun sumber dividen aktual Program 2.</p>
+                </div>
+              </div>
+              <div class="card-content">
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Periode</th>
+                        <th class="right">Dividen Cair</th>
+                        <th>Saham Terbeli dari Dividen</th>
+                        <th class="right">Dividen Dipakai</th>
+                        <th class="right">Sisa ke RDPU</th>
+                        <th>Aktual Program 2</th>
+                      </tr>
+                    </thead>
+                    <tbody id="simDividendBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          </section>
+
+          <!-- =====================================================
+               PANEL 2: PROGRAM 2 — CATATAN AKTUAL
+          ===================================================== -->
+          <section class="tab-panel" id="panelActual" role="tabpanel">
+            <div class="card">
+              <div class="card-header" style="padding-bottom:15px;">
+                <div>
+                  <h3 class="card-title">Ledger Pembelian Aktual</h3>
+                  <p class="card-description">Catat pembelian saham, RDPU, &amp; BTC per bulan; bulan tercatat otomatis menyinkron ke Program 1.</p>
+                </div>
+                <div class="row-actions">
+                  <div class="field" style="width:110px;">
+                    <label for="actualHorizonInput">Horizon Tahun</label>
+                    <input class="input num" id="actualHorizonInput" type="number" min="1" max="50" value="11" />
+                  </div>
+                  <button class="btn btn-primary" id="addHorizonYearBtn" type="button" style="margin-top:20px;">+ Tambah Tahun</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="actual-month-banner">
+              <div>
+                <span class="badge badge-blue">Sinkron Program 1</span>
+                <h4 style="margin:6px 0 2px;font-size:0.95rem;" id="actualMonthTitle">Aktual Oktober 2026</h4>
+                <small style="color:var(--muted-foreground);font-size:0.76rem;" id="actualMonthMeta">Data aktual bulan terakhir tercatat.</small>
+              </div>
+              <div class="actual-month-stat"><span>BMRI</span><strong class="num" id="actualMonthBmri">0 lot</strong></div>
+              <div class="actual-month-stat"><span>BBRI</span><strong class="num" id="actualMonthBbri">0 lot</strong></div>
+              <div class="actual-month-stat"><span>RDPU</span><strong class="num" id="actualMonthRdpu">Rp0</strong></div>
+              <div class="actual-month-stat"><span>Total Aktual</span><strong class="num positive" id="actualMonthTotal">Rp0</strong></div>
+            </div>
+
+            <div class="kpi-grid">
+              <article class="kpi-card">
+                <span class="kpi-label">Akumulasi Setoran BTC</span>
+                <strong class="kpi-value num" id="actKpiBtc">Rp0</strong>
+                <small class="kpi-sub">nominal pembelian BTC</small>
+              </article>
+              <article class="kpi-card">
+                <span class="kpi-label">Akumulasi Saham</span>
+                <strong class="kpi-value positive num" id="actKpiStock">Rp0</strong>
+                <small class="kpi-sub">total nominal beli saham</small>
+              </article>
+              <article class="kpi-card">
+                <span class="kpi-label">Akumulasi Lot</span>
+                <strong class="kpi-value num" id="actKpiLots">0 lot</strong>
+                <small class="kpi-sub">jumlah lot semua saham</small>
+              </article>
+              <article class="kpi-card">
+                <span class="kpi-label">Akumulasi RDPU</span>
+                <strong class="kpi-value num" id="actKpiRdpu">Rp0</strong>
+                <small class="kpi-sub">total nominal beli RDPU</small>
+              </article>
+              <article class="kpi-card hero-kpi">
+                <span class="kpi-label">Total Modal Tercatat</span>
+                <strong class="kpi-value positive num" id="actKpiPortfolio">Rp0</strong>
+                <small class="kpi-sub">saham + RDPU + BTC tercatat</small>
+              </article>
+            </div>
+
+            <div class="ledger-grid">
+              <section class="card col-span-7">
+                <div class="card-header">
+                  <div>
+                    <h3 class="card-title">Pembelian Saham</h3>
+                    <p class="card-description">Default BMRI &amp; BBRI; emiten lain dapat ditambahkan. Mendukung edit &amp; sumber dividen.</p>
+                  </div>
+                </div>
+                <div class="card-content field-group">
+                  <form class="row-actions" id="tickerAddForm" style="gap:8px;flex-wrap:wrap;">
+                    <input class="input" id="newTickerInput" type="text" maxlength="8" placeholder="Kode emiten (mis. BBCA)" style="width:180px;text-transform:uppercase;" />
+                    <button class="btn btn-outline" type="submit">+ Tambah Saham</button>
+                    <div class="ticker-chips" id="tickerChips"></div>
+                  </form>
+
+                  <form id="stockPurchaseForm" class="subpanel">
+                    <div class="input-triple">
+                      <div class="field"><label for="stockFormTicker">Saham</label><select class="select" id="stockFormTicker"></select></div>
+                      <div class="field"><label for="stockFormMonth">Bulan</label><select class="select" id="stockFormMonth"></select></div>
+                      <div class="field"><label for="stockFormYear">Tahun</label><select class="select" id="stockFormYear"></select></div>
+                    </div>
+                    <div class="input-triple">
+                      <div class="field"><label for="stockFormLotPrice">Harga / Lot (Rp)</label><input class="input num" id="stockFormLotPrice" type="text" inputmode="numeric" placeholder="415.000" /></div>
+                      <div class="field"><label for="stockFormLots">Jumlah Lot</label><input class="input num" id="stockFormLots" type="number" min="1" step="1" placeholder="2" /></div>
+                      <div class="field"><label for="stockFormDividend">Dari Dividen (Rp)</label><input class="input num" id="stockFormDividend" type="text" inputmode="numeric" placeholder="0 (opsional)" /></div>
+                    </div>
+                    <div class="row-actions">
+                      <button class="btn btn-primary" id="stockFormSubmit" type="submit">Simpan Saham</button>
+                      <button class="btn btn-outline hidden" id="stockFormCancel" type="button">Batal Edit</button>
+                    </div>
+                  </form>
+
+                  <div class="table-wrap scroll-y">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Bulan</th>
+                          <th>Saham</th>
+                          <th class="right">Harga / Lot</th>
+                          <th class="right">Lot</th>
+                          <th class="right">Nominal</th>
+                          <th class="right">Dari Dividen</th>
+                          <th class="right">Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody id="actualStockBody"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+
+              <div class="col-span-5 field-group" style="gap:16px;">
+                <section class="card">
+                  <div class="card-header">
+                    <div>
+                      <h3 class="card-title">Pembelian RDPU</h3>
+                      <p class="card-description">Nominal RDPU dicatat per bulan dan tahun.</p>
+                    </div>
+                  </div>
+                  <div class="card-content field-group">
+                    <form id="rdpuForm" class="subpanel">
+                      <div class="input-triple">
+                        <div class="field"><label for="rdpuFormMonth">Bulan</label><select class="select" id="rdpuFormMonth"></select></div>
+                        <div class="field"><label for="rdpuFormYear">Tahun</label><select class="select" id="rdpuFormYear"></select></div>
+                        <div class="field"><label for="rdpuFormAmount">Nominal (Rp)</label><input class="input num" id="rdpuFormAmount" type="text" inputmode="numeric" placeholder="250.000" /></div>
+                      </div>
+                      <div class="row-actions">
+                        <button class="btn btn-primary btn-sm" id="rdpuFormSubmit" type="submit">Simpan RDPU</button>
+                        <button class="btn btn-outline btn-sm hidden" id="rdpuFormCancel" type="button">Batal</button>
+                      </div>
+                    </form>
+                    <div class="table-wrap scroll-y" style="max-height:190px;">
+                      <table>
+                        <thead><tr><th>Bulan</th><th class="right">Nominal</th><th class="right">Aksi</th></tr></thead>
+                        <tbody id="actualRdpuBody"></tbody>
+                      </table>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="card">
+                  <div class="card-header">
+                    <div>
+                      <h3 class="card-title">Pembelian BTC</h3>
+                      <p class="card-description">Bulan tercatat mengganti setoran BTC simulator pada bulan itu.</p>
+                    </div>
+                  </div>
+                  <div class="card-content field-group">
+                    <form id="btcForm" class="subpanel">
+                      <div class="input-triple">
+                        <div class="field"><label for="btcFormMonth">Bulan</label><select class="select" id="btcFormMonth"></select></div>
+                        <div class="field"><label for="btcFormYear">Tahun</label><select class="select" id="btcFormYear"></select></div>
+                        <div class="field"><label for="btcFormAmount">Setoran (Rp)</label><input class="input num" id="btcFormAmount" type="text" inputmode="numeric" placeholder="300.000" /></div>
+                      </div>
+                      <div class="row-actions">
+                        <button class="btn btn-primary btn-sm" id="btcFormSubmit" type="submit">Simpan BTC</button>
+                        <button class="btn btn-outline btn-sm hidden" id="btcFormCancel" type="button">Batal</button>
+                      </div>
+                    </form>
+                    <div class="table-wrap scroll-y" style="max-height:190px;">
+                      <table>
+                        <thead><tr><th>Bulan</th><th class="right">Setoran BTC</th><th class="right">Aksi</th></tr></thead>
+                        <tbody id="actualBtcBody"></tbody>
+                      </table>
+                    </div>
+                  </div>
+                </section>
+              </div>
+
+              <section class="card col-span-6">
+                <div class="card-header">
+                  <div>
+                    <h3 class="card-title">Grafik Pembelian Saham</h3>
+                    <p class="card-description">Harga per lot &amp; jumlah lot dari catatan pembelian.</p>
+                  </div>
+                  <div class="row-actions" style="gap:8px;">
+                    <select class="select" id="stockChartTickerFilter" style="width:110px;height:32px;"></select>
+                    <select class="select" id="stockChartYearFilter" style="width:105px;height:32px;"></select>
+                  </div>
+                </div>
+                <div class="card-content">
+                  <div class="chart-container tall">
+                    <canvas id="stockPurchaseChartCanvas"></canvas>
+                    <div id="stockChartFallback" class="hidden"></div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="card col-span-6">
+                <div class="card-header">
+                  <div>
+                    <h3 class="card-title">Informasi Pembelian</h3>
+                    <p class="card-description">Ekstrem harga, lot, &amp; nominal RDPU sesuai filter.</p>
+                  </div>
+                  <div class="row-actions" style="gap:8px;">
+                    <select class="select" id="infoTickerFilter" style="width:110px;height:32px;"></select>
+                    <select class="select" id="infoYearFilter" style="width:105px;height:32px;"></select>
+                  </div>
+                </div>
+                <div class="card-content">
+                  <div class="info-cards-split">
+                    <div class="field-group">
+                      <span class="field-label">Saham</span>
+                      <div class="info-cards-2x2">
+                        <div class="mini-stat"><span>Nominal Terendah</span><strong class="num" id="infoMinPrice">-</strong><small class="field-hint" id="infoMinPriceMeta">-</small></div>
+                        <div class="mini-stat"><span>Nominal Terbesar</span><strong class="num" id="infoMaxPrice">-</strong><small class="field-hint" id="infoMaxPriceMeta">-</small></div>
+                        <div class="mini-stat"><span>Lot Paling Sedikit</span><strong class="num" id="infoMinLots">-</strong><small class="field-hint" id="infoMinLotsMeta">-</small></div>
+                        <div class="mini-stat"><span>Lot Paling Banyak</span><strong class="num" id="infoMaxLots">-</strong><small class="field-hint" id="infoMaxLotsMeta">-</small></div>
+                      </div>
+                    </div>
+                    <div class="field-group">
+                      <span class="field-label">RDPU</span>
+                      <div class="info-cards-2x2" style="grid-template-columns:1fr;">
+                        <div class="mini-stat"><span>Nominal Terendah</span><strong class="num" id="infoMinRdpu">-</strong><small class="field-hint" id="infoMinRdpuMeta">-</small></div>
+                        <div class="mini-stat"><span>Nominal Terbesar</span><strong class="num" id="infoMaxRdpu">-</strong><small class="field-hint" id="infoMaxRdpuMeta">-</small></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="card col-span-12">
+                <div class="card-header">
+                  <div>
+                    <h3 class="card-title">Akumulasi Tahunan</h3>
+                    <p class="card-description">Ringkasan total pembelian saham, lot, RDPU, &amp; setoran BTC per tahun sesuai horizon.</p>
+                  </div>
+                </div>
+                <div class="card-content">
+                  <div class="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Tahun</th>
+                          <th class="right">Pembelian Saham</th>
+                          <th class="right">Total Lot</th>
+                          <th class="right">Pembelian RDPU</th>
+                          <th class="right">Setoran BTC</th>
+                          <th class="right">Total Tahun Ini</th>
+                        </tr>
+                      </thead>
+                      <tbody id="annualSummaryBody"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </section>
+
+          <!-- =====================================================
+               PANEL 3: TOOLS — ANALISIS & KALKULATOR
+               (Card "Posisi Portofolio Aktual" sudah dihapus sesuai #4)
+          ===================================================== -->
+          <section class="tab-panel" id="panelAnalysis" role="tabpanel">
+            <div class="tools-bento">
+              <!-- Kalkulator Komposisi -->
+              <section class="card">
+                <div class="card-header">
+                  <div>
+                    <h3 class="card-title">Kalkulator Komposisi</h3>
+                    <p class="card-description">Masukkan nilai Saham &amp; ETF untuk menghitung porsi portofolio secara instan.</p>
+                  </div>
+                </div>
+                <div class="card-content">
+                  <div class="calc-grid">
+                    <div class="field-group">
+                      <div class="field">
+                        <label for="kalcSaham">Nilai Saham (Rp)</label>
+                        <input class="input num" id="kalcSaham" type="text" inputmode="numeric" value="40.000.000" />
+                      </div>
+                      <div class="field">
+                        <label for="kalcEtf">Nilai ETF (Rp)</label>
+                        <input class="input num" id="kalcEtf" type="text" inputmode="numeric" value="60.000.000" />
+                      </div>
+                    </div>
+                    <div class="result-box" id="kalcOutput"></div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- Average Down / Up -->
+              <section class="card">
+                <div class="card-header">
+                  <div>
+                    <h3 class="card-title">Average Down / Up</h3>
+                    <p class="card-description">Hitung weighted average baru &amp; evaluasi risiko kenaikan average.</p>
+                  </div>
+                </div>
+                <div class="card-content">
+                  <div class="calc-grid">
+                    <div class="field-group">
+                      <div class="input-pair">
+                        <div class="field">
+                          <label for="avgNow">Avg Sekarang (Rp)</label>
+                          <input class="input num" id="avgNow" type="text" inputmode="numeric" value="4.350" />
+                        </div>
+                        <div class="field">
+                          <label for="lotNow">Total Lot Lama</label>
+                          <input class="input num" id="lotNow" type="text" inputmode="numeric" value="25" />
+                        </div>
+                      </div>
+                      <div class="input-pair">
+                        <div class="field">
+                          <label for="hargaBaru">Harga Beli Baru</label>
+                          <input class="input num" id="hargaBaru" type="text" inputmode="numeric" value="3.980" />
+                        </div>
+                        <div class="field">
+                          <label for="lotBaru">Lot Beli Baru</label>
+                          <input class="input num" id="lotBaru" type="text" inputmode="numeric" value="10" />
+                        </div>
+                      </div>
+                      <button class="btn btn-primary" id="avgCalcBtn" type="button">Hitung Average Baru</button>
+                      <span class="field-hint hidden" id="avgError" style="color:var(--destructive);"></span>
+                    </div>
+                    <div class="result-box" id="avgOutput"></div>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <!-- Simulator Persentase Aset -->
+            <section class="card">
+              <div class="card-header">
+                <div>
+                  <h3 class="card-title">Simulator Persentase Aset</h3>
+                  <p class="card-description">Bandingkan rincian bagian aset terhadap Total Aset dengan grafik proporsi dan validasi pas 100%.</p>
+                </div>
+              </div>
+              <div class="card-content">
+                <div class="calc-grid" style="grid-template-columns:minmax(300px,0.9fr) minmax(0,1.1fr);">
+                  <div class="field-group">
+                    <div class="field">
+                      <label for="apTotalAset">Total Aset (Rp)</label>
+                      <input class="input num" id="apTotalAset" type="text" inputmode="numeric" value="100.000.000" />
+                    </div>
+                    <div class="ap-rows" id="apRows"></div>
+                    <div class="row-actions" style="justify-content:space-between;">
+                      <button class="btn btn-outline btn-sm" id="apAddRowBtn" type="button">+ Tambah Bagian</button>
+                      <button class="btn btn-primary btn-sm" id="apCalcBtn" type="button">Hitung Persentase</button>
+                    </div>
+                  </div>
+                  <div class="result-box" id="apOutput"></div>
+                </div>
+              </div>
+            </section>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <!-- SONNER-STYLE FLOATING TOAST STACK (Efek/Feedback #5) -->
+    <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      /* =========================================================
+         REALISTIC DUMMY STATE & CONSTANTS
+      ========================================================= */
+      const MONTHS = [
+        "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+        "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+      ];
+      const LOT_SIZE = 100;
+      const CORE_STOCKS = ["BMRI", "BBRI"];
+      const SELLING_FEE_RATE = 0.0035;
+      const AP_COLORS = ["#2563eb", "#0ea5e9", "#059669", "#d97706", "#dc2626", "#7c3aed", "#db2777", "#0f766e"];
+
+      function createInitialMockState() {
+        return {
+          simulator: {
+            monthlyDeposit: 1800000,
+            btcMonthlyContribution: 300000,
+            durationYears: 15,
+            startMonth: 6,
+            startYear: 2026,
+            bmriPrice: 4320,
+            bbriPrice: 4080,
+            purchaseMode: "alternating",
+            reinvestCustomDividends: true,
+            bmriMonthlyLots: 2,
+            bbriMonthlyLots: 1,
+            stockAllocation: 80,
+            priceChangeEnabled: true,
+            bmriPriceChangeAnnual: 6.5,
+            bbriPriceChangeAnnual: 5.5,
+            rdpuReturnAnnual: 4.5,
+            btcReturnAnnual: 14,
+            dividendGrowthAnnual: 5,
+            bmriDividendInitial: 225,
+            bbriDividendInitial: 240,
+          },
+          actual: {
+            horizonYears: 11,
+            tickers: ["BMRI", "BBRI", "BBCA"],
+            stockPurchases: [
+              { id: "stk_1", ticker: "BMRI", month: 6, year: 2026, lotPrice: 413000, lots: 3, dividendAmount: 0 },
+              { id: "stk_2", ticker: "BBRI", month: 7, year: 2026, lotPrice: 398000, lots: 3, dividendAmount: 0 },
+              { id: "stk_3", ticker: "BMRI", month: 8, year: 2026, lotPrice: 421000, lots: 2, dividendAmount: 320000 },
+              { id: "stk_4", ticker: "BBCA", month: 8, year: 2026, lotPrice: 925000, lots: 1, dividendAmount: 0 },
+              { id: "stk_5", ticker: "BBRI", month: 9, year: 2026, lotPrice: 405000, lots: 3, dividendAmount: 0 },
+              { id: "stk_6", ticker: "BMRI", month: 10, year: 2026, lotPrice: 432000, lots: 3, dividendAmount: 0 },
+            ],
+            rdpuPurchases: [
+              { id: "rdpu_1", month: 6, year: 2026, amount: 360000 },
+              { id: "rdpu_2", month: 7, year: 2026, amount: 360000 },
+              { id: "rdpu_3", month: 8, year: 2026, amount: 400000 },
+              { id: "rdpu_4", month: 9, year: 2026, amount: 360000 },
+              { id: "rdpu_5", month: 10, year: 2026, amount: 380000 },
+            ],
+            btcPurchases: [
+              { id: "btc_1", month: 6, year: 2026, amount: 300000 },
+              { id: "btc_2", month: 7, year: 2026, amount: 350000 },
+              { id: "btc_3", month: 8, year: 2026, amount: 300000 },
+              { id: "btc_4", month: 9, year: 2026, amount: 450000 },
+              { id: "btc_5", month: 10, year: 2026, amount: 300000 },
+            ],
+          },
+        };
+      }
+
+      let mockState = createInitialMockState();
+      let editingStockId = null;
+      let editingRdpuId = null;
+      let editingBtcId = null;
+      let growthChart = null;
+      let stockChart = null;
+      let flashTimer = null;
+
+      /* =========================================================
+         FORMATTERS & VISUAL FEEDBACK HELPERS
+      ========================================================= */
+      const rupiahFmt = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 });
+      const decFmt = new Intl.NumberFormat("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+      const fmtMoney = (v) => rupiahFmt.format(Math.round(Number(v) || 0));
+      const fmtCompact = (v) => {
+        const n = Math.abs(v);
+        if (n >= 1e9) return `Rp${(v / 1e9).toFixed(2).replace(".", ",")} M`;
+        if (n >= 1e6) return `Rp${(v / 1e6).toFixed(1).replace(".", ",")} jt`;
+        if (n >= 1e3) return `Rp${(v / 1e3).toFixed(0)} rb`;
+        return fmtMoney(v);
+      };
+      const parseNum = (v) => Number(String(v || "").replace(/\D/g, "")) || 0;
+      const parseDec = (v) => {
+        const s = String(v || "").trim().replace(",", ".");
+        const n = Number(s);
+        return Number.isFinite(n) ? n : 0;
+      };
+      const fmtInput = (v) => {
+        const n = parseNum(v);
+        return n ? n.toLocaleString("id-ID") : "";
+      };
+      const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+      const esc = (s) => String(s || "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+      const monthName = (m) => MONTHS[clamp(Number(m) || 1, 1, 12) - 1];
+      const invTs = (p) => p.year * 100 + p.month;
+
+      function showToast(message, variant = "success") {
+        const stack = document.querySelector("#toastStack");
+        const item = document.createElement("div");
+        item.className = `toast-item ${variant}`;
+        const icon = variant === "info"
+          ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`
+          : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`;
+        item.innerHTML = `${icon}<span>${esc(message)}</span>`;
+        stack.append(item);
+        while (stack.children.length > 3) stack.firstElementChild.remove();
+        window.setTimeout(() => {
+          item.classList.add("closing");
+          window.setTimeout(() => item.remove(), 200);
+        }, 2800);
+      }
+
+      function triggerKpiFlash() {
+        window.clearTimeout(flashTimer);
+        const cards = document.querySelectorAll("#simKpiGrid .kpi-card");
+        cards.forEach((c) => c.classList.remove("flash"));
+        void document.querySelector("#simKpiGrid")?.offsetWidth;
+        cards.forEach((c) => c.classList.add("flash"));
+        flashTimer = window.setTimeout(() => cards.forEach((c) => c.classList.remove("flash")), 480);
+      }
+
+      function updateSliderTrack(slider, pct) {
+        if (!slider) return;
+        const p = clamp(pct, 0, 100);
+        slider.style.background = `linear-gradient(90deg, var(--blue) 0%, var(--blue) ${p}%, var(--border) ${p}%, var(--border) 100%)`;
+      }
+
+      /* =========================================================
+         SIMULATOR ENGINE
+      ========================================================= */
+      function actualForMonth(calMonth, calYear) {
+        const stocks = mockState.actual.stockPurchases.filter((p) => p.month === calMonth && p.year === calYear);
+        const rdpus = mockState.actual.rdpuPurchases.filter((p) => p.month === calMonth && p.year === calYear);
+        const btcs = mockState.actual.btcPurchases.filter((p) => p.month === calMonth && p.year === calYear);
+        let bmriLots = 0, bmriAmount = 0, bmriDivLots = 0, bmriDivAmt = 0;
+        let bbriLots = 0, bbriAmount = 0, bbriDivLots = 0, bbriDivAmt = 0;
+        let extraStockAmount = 0;
+
+        stocks.forEach((p) => {
+          const val = p.lotPrice * p.lots;
+          const divAmt = Math.min(val, Math.max(0, Number(p.dividendAmount) || 0));
+          const divLots = p.lotPrice > 0 ? Math.floor(divAmt / p.lotPrice) : 0;
+          if (p.ticker === "BMRI") {
+            bmriLots += p.lots; bmriAmount += val; bmriDivLots += divLots; bmriDivAmt += divAmt;
+          } else if (p.ticker === "BBRI") {
+            bbriLots += p.lots; bbriAmount += val; bbriDivLots += divLots; bbriDivAmt += divAmt;
+          } else {
+            extraStockAmount += val;
+          }
+        });
+
+        const rdpuAmount = rdpus.reduce((s, p) => s + p.amount, 0);
+        const btcAmount = btcs.reduce((s, p) => s + p.amount, 0);
+        return {
+          hasAny: stocks.length > 0 || rdpus.length > 0 || btcs.length > 0,
+          hasStock: stocks.length > 0,
+          hasRdpu: rdpus.length > 0,
+          hasBtc: btcs.length > 0,
+          bmriLots, bmriAmount, bmriDivLots, bmriDivAmt,
+          bbriLots, bbriAmount, bbriDivLots, bbriDivAmt,
+          extraStockAmount, rdpuAmount, btcAmount,
+          totalCapital: (bmriAmount + bbriAmount + extraStockAmount - bmriDivAmt - bbriDivAmt) + rdpuAmount,
+        };
+      }
+
+      function runSimulation() {
+        const s = mockState.simulator;
+        const durationMonths = clamp(Math.round(s.durationYears) || 15, 1, 50) * 12;
+        const stockAlloc = clamp(s.stockAllocation, 0, 100);
+        const rdpuAlloc = 100 - stockAlloc;
+        const monthlyStockBudget = (s.monthlyDeposit * stockAlloc) / 100;
+        const monthlyRdpuBudget = (s.monthlyDeposit * rdpuAlloc) / 100;
+        const monthlyRdpuRate = s.rdpuReturnAnnual / 12 / 100;
+        const monthlyBtcRate = s.btcReturnAnnual / 12 / 100;
+
+        let bmriLots = 0, bbriLots = 0, rdpuBalance = 0, btcBalance = 0;
+        let totalContribution = 0, totalRdpuContrib = 0, totalDividends = 0, totalBtcContrib = 0;
+        let curBmriPrice = s.bmriPrice, curBbriPrice = s.bbriPrice;
+        let actualMonthsCount = 0;
+        const yearlyRows = [], chartYears = [], chartContributions = [], chartAssets = [];
+
+        let annDiv = 0, annDivBmri = 0, annDivBbri = 0, annDivCash = 0;
+        let annActBmri = 0, annActBbri = 0, annActRdpu = 0, annActMonths = 0, annBtc = 0, annRdpu = 0, annRdpuGain = 0, annContrib = 0;
+
+        for (let m = 1; m <= durationMonths; m++) {
+          const yr = Math.ceil(m / 12);
+          const totalOffset = (s.startMonth - 1) + (m - 1);
+          const calMonth = (totalOffset % 12) + 1;
+          const calYear = s.startYear + Math.floor(totalOffset / 12);
+
+          if (m > 1 && (m - 1) % 12 === 0 && s.priceChangeEnabled) {
+            curBmriPrice = Math.max(10, Math.round(curBmriPrice * (1 + s.bmriPriceChangeAnnual / 100)));
+            curBbriPrice = Math.max(10, Math.round(curBbriPrice * (1 + s.bbriPriceChangeAnnual / 100)));
+          }
+
+          const bmriLotPrice = curBmriPrice * LOT_SIZE;
+          const bbriLotPrice = curBbriPrice * LOT_SIZE;
+          const act = actualForMonth(calMonth, calYear);
+          if (act.hasAny) { actualMonthsCount++; annActMonths++; }
+
+          let divCash = 0;
+          if (!act.hasStock && calMonth === 5) {
+            const g = Math.pow(1 + s.dividendGrowthAnnual / 100, yr - 1);
+            divCash = bmriLots * LOT_SIZE * s.bmriDividendInitial * g + bbriLots * LOT_SIZE * s.bbriDividendInitial * g;
+          } else if (act.bmriDivAmt + act.bbriDivAmt > 0) {
+            divCash = act.bmriDivAmt + act.bbriDivAmt;
+          }
+          totalDividends += divCash;
+          annDiv += divCash;
+
+          let monthBmri = 0, monthBbri = 0, monthRdpu = 0, monthStockCash = 0;
+          if (act.hasStock) {
+            monthBmri = act.bmriLots; monthBbri = act.bbriLots;
+            annActBmri += act.bmriLots; annActBbri += act.bbriLots;
+            annDivBmri += act.bmriDivLots; annDivBbri += act.bbriDivLots;
+            annDivCash += act.bmriDivAmt + act.bbriDivAmt;
+            monthStockCash = act.bmriAmount + act.bbriAmount + act.extraStockAmount - act.bmriDivAmt - act.bbriDivAmt;
+          } else if (s.purchaseMode === "custom") {
+            let cash = s.monthlyDeposit + divCash;
+            for (let i = 0; i < s.bmriMonthlyLots && cash >= bmriLotPrice; i++) { monthBmri++; cash -= bmriLotPrice; }
+            for (let i = 0; i < s.bbriMonthlyLots && cash >= bbriLotPrice; i++) { monthBbri++; cash -= bbriLotPrice; }
+            if (s.reinvestCustomDividends && divCash > 0) {
+              while (cash >= Math.min(bmriLotPrice, bbriLotPrice)) {
+                if (cash >= bmriLotPrice) { monthBmri++; cash -= bmriLotPrice; annDivBmri++; annDivCash += bmriLotPrice; }
+                else if (cash >= bbriLotPrice) { monthBbri++; cash -= bbriLotPrice; annDivBbri++; annDivCash += bbriLotPrice; }
+                else break;
+              }
+            }
+            monthStockCash = s.monthlyDeposit - cash;
+            if (!act.hasRdpu) monthRdpu = Math.max(0, cash);
+          } else {
+            const turn = CORE_STOCKS[(m - 1) % 2];
+            const lotPrice = turn === "BMRI" ? bmriLotPrice : bbriLotPrice;
+            const avail = monthlyStockBudget + divCash;
+            const lotsBought = Math.floor(avail / lotPrice);
+            if (turn === "BMRI") monthBmri = lotsBought; else monthBbri = lotsBought;
+            if (divCash > 0 && lotsBought > 0) {
+              const divLots = Math.min(lotsBought, Math.floor(divCash / lotPrice));
+              if (turn === "BMRI") annDivBmri += divLots; else annDivBbri += divLots;
+              annDivCash += divLots * lotPrice;
+            }
+            monthStockCash = monthlyStockBudget;
+          }
+
+          if (act.hasRdpu) {
+            monthRdpu = act.rdpuAmount;
+            annActRdpu += act.rdpuAmount;
+          } else if (s.purchaseMode !== "custom") {
+            monthRdpu = monthlyRdpuBudget;
+          }
+
+          bmriLots += monthBmri;
+          bbriLots += monthBbri;
+          const rdpuGain = (rdpuBalance + monthRdpu) * monthlyRdpuRate;
+          rdpuBalance += monthRdpu + rdpuGain;
+          totalRdpuContrib += monthRdpu;
+          annRdpu += monthRdpu;
+          annRdpuGain += rdpuGain;
+
+          const monthBtc = act.hasBtc ? act.btcAmount : s.btcMonthlyContribution;
+          btcBalance = (btcBalance + monthBtc) * (1 + monthlyBtcRate);
+          totalBtcContrib += monthBtc;
+          annBtc += monthBtc;
+
+          const monthTotalContrib = Math.max(0, monthStockCash) + monthRdpu + monthBtc;
+          totalContribution += monthTotalContrib;
+          annContrib += monthTotalContrib;
+
+          if (m % 12 === 0 || m === durationMonths) {
+            const startCalYear = s.startYear + Math.floor((s.startMonth - 1 + (yr - 1) * 12) / 12);
+            const periodLabel = startCalYear === calYear ? `${startCalYear}` : `${startCalYear}–${calYear}`;
+            const portfolioVal = bmriLots * bmriLotPrice + bbriLots * bbriLotPrice + rdpuBalance + btcBalance;
+
+            yearlyRows.push({
+              year: yr,
+              periodLabel,
+              actualMonths: annActMonths,
+              actBmri: annActBmri,
+              actBbri: annActBbri,
+              actRdpu: annActRdpu,
+              totalContribution: annContrib,
+              cumulativeContribution: totalContribution,
+              btcContrib: annBtc,
+              btcBalance,
+              bmriPrice: curBmriPrice,
+              bmriLots,
+              bbriPrice: curBbriPrice,
+              bbriLots,
+              annualDividends: annDiv,
+              divBmriLots: annDivBmri,
+              divBbriLots: annDivBbri,
+              divCashUsed: annDivCash,
+              divLeftoverRdpu: Math.max(0, annDiv - annDivCash),
+              rdpuContrib: annRdpu,
+              rdpuGain: annRdpuGain,
+              rdpuBalance,
+              portfolioValue: portfolioVal,
+            });
+            chartYears.push(`Thn ${yr}`);
+            chartContributions.push(Math.round(totalContribution));
+            chartAssets.push(Math.round(portfolioVal));
+
+            annDiv = annDivBmri = annDivBbri = annDivCash = 0;
+            annActBmri = annActBbri = annActRdpu = annActMonths = annBtc = annRdpu = annRdpuGain = annContrib = 0;
+          }
+        }
+
+        const bmriVal = bmriLots * curBmriPrice * LOT_SIZE;
+        const bbriVal = bbriLots * curBbriPrice * LOT_SIZE;
+        const finalAsset = bmriVal + bbriVal + rdpuBalance + btcBalance;
+        const sellingFee = (bmriVal + bbriVal) * SELLING_FEE_RATE;
+        const netProfit = finalAsset - sellingFee - totalContribution;
+        const finalGrowth = Math.pow(1 + s.dividendGrowthAnnual / 100, Math.ceil(durationMonths / 12) - 1);
+        const passiveIncomeFinal = bmriLots * LOT_SIZE * s.bmriDividendInitial * finalGrowth + bbriLots * LOT_SIZE * s.bbriDividendInitial * finalGrowth;
+
+        return {
+          durationMonths, actualMonthsCount, totalContribution, finalAsset, netProfit, sellingFee,
+          passiveIncomeFinal, bmriLots, bbriLots, bmriVal, bbriVal, rdpuBalance, btcBalance,
+          totalBtcContrib, btcReturnGain: btcBalance - totalBtcContrib, totalDividends,
+          totalRdpuContrib, rdpuReturnGain: rdpuBalance - totalRdpuContrib,
+          yearlyRows, chartYears, chartContributions, chartAssets,
+        };
+      }
+
+      /* =========================================================
+         RENDER PROGRAM 1: SIMULATOR
+      ========================================================= */
+      function syncSimulatorFormFromState() {
+        const s = mockState.simulator;
+        document.querySelector("#simMonthlyDeposit").value = s.monthlyDeposit.toLocaleString("id-ID");
+        document.querySelector("#simBtcMonthly").value = s.btcMonthlyContribution.toLocaleString("id-ID");
+        document.querySelector("#simDurationYears").value = s.durationYears;
+        document.querySelector("#simStartMonth").value = s.startMonth;
+        document.querySelector("#simStartYear").value = s.startYear;
+        document.querySelector("#simBmriPrice").value = s.bmriPrice;
+        document.querySelector("#simBbriPrice").value = s.bbriPrice;
+        document.querySelector("#simPurchaseMode").value = s.purchaseMode;
+        document.querySelector("#simReinvestCustomDividends").checked = s.reinvestCustomDividends;
+        document.querySelector("#simBmriLots").value = s.bmriMonthlyLots;
+        document.querySelector("#simBbriLots").value = s.bbriMonthlyLots;
+        document.querySelector("#simStockAllocation").value = s.stockAllocation;
+        document.querySelector("#simEnablePriceChange").checked = s.priceChangeEnabled;
+        document.querySelector("#simBmriPriceChange").value = s.bmriPriceChangeAnnual;
+        document.querySelector("#simBbriPriceChange").value = s.bbriPriceChangeAnnual;
+        document.querySelector("#simRdpuReturn").value = s.rdpuReturnAnnual;
+        document.querySelector("#simBtcReturn").value = s.btcReturnAnnual;
+        document.querySelector("#simDividendGrowth").value = s.dividendGrowthAnnual;
+        document.querySelector("#simBmriDiv").value = s.bmriDividendInitial;
+        document.querySelector("#simBbriDiv").value = s.bbriDividendInitial;
+      }
+
+      function readSimulatorFormToState() {
+        const s = mockState.simulator;
+        s.monthlyDeposit = parseNum(document.querySelector("#simMonthlyDeposit").value);
+        s.btcMonthlyContribution = parseNum(document.querySelector("#simBtcMonthly").value);
+        s.durationYears = clamp(Number(document.querySelector("#simDurationYears").value) || 15, 1, 50);
+        s.startMonth = Number(document.querySelector("#simStartMonth").value) || 6;
+        s.startYear = clamp(Number(document.querySelector("#simStartYear").value) || 2026, 2000, 2100);
+        s.bmriPrice = Math.max(10, Number(document.querySelector("#simBmriPrice").value) || 4130);
+        s.bbriPrice = Math.max(10, Number(document.querySelector("#simBbriPrice").value) || 4000);
+        s.purchaseMode = document.querySelector("#simPurchaseMode").value;
+        s.reinvestCustomDividends = document.querySelector("#simReinvestCustomDividends").checked;
+        s.bmriMonthlyLots = Math.max(0, Math.floor(Number(document.querySelector("#simBmriLots").value) || 0));
+        s.bbriMonthlyLots = Math.max(0, Math.floor(Number(document.querySelector("#simBbriLots").value) || 0));
+        s.stockAllocation = clamp(Number(document.querySelector("#simStockAllocation").value) || 0, 0, 100);
+        s.priceChangeEnabled = document.querySelector("#simEnablePriceChange").checked;
+        s.bmriPriceChangeAnnual = Number(document.querySelector("#simBmriPriceChange").value) || 0;
+        s.bbriPriceChangeAnnual = Number(document.querySelector("#simBbriPriceChange").value) || 0;
+        s.rdpuReturnAnnual = Math.max(0, Number(document.querySelector("#simRdpuReturn").value) || 0);
+        s.btcReturnAnnual = Number(document.querySelector("#simBtcReturn").value) || 0;
+        s.dividendGrowthAnnual = Math.max(0, Number(document.querySelector("#simDividendGrowth").value) || 0);
+        s.bmriDividendInitial = Math.max(0, parseDec(document.querySelector("#simBmriDiv").value));
+        s.bbriDividendInitial = Math.max(0, parseDec(document.querySelector("#simBbriDiv").value));
+      }
+
+      function renderSimulator({ withFlash = false } = {}) {
+        const s = mockState.simulator;
+        const isCustom = s.purchaseMode === "custom";
+        document.querySelector("#simCustomLotPanel").classList.toggle("hidden", !isCustom);
+        const slider = document.querySelector("#simStockAllocation");
+        slider.disabled = isCustom;
+        updateSliderTrack(slider, isCustom ? 0 : s.stockAllocation);
+
+        document.querySelector("#simBmriPriceChange").disabled = !s.priceChangeEnabled;
+        document.querySelector("#simBbriPriceChange").disabled = !s.priceChangeEnabled;
+        document.querySelector("#simPriceChangeStatus").textContent = s.priceChangeEnabled
+          ? "Aktif — perubahan harga tahunan dihitung."
+          : "Mati — harga saham tetap memakai harga awal.";
+
+        // Update live accordion summary headers
+        document.querySelector("#acc01Summary").textContent = `${fmtCompact(s.monthlyDeposit)}/bln · BTC ${fmtCompact(s.btcMonthlyContribution)} · ${s.durationYears} thn`;
+        document.querySelector("#acc02Summary").textContent = isCustom
+          ? `Custom ${s.bmriMonthlyLots} BMRI + ${s.bbriMonthlyLots} BBRI lot`
+          : `Selang-seling · Saham ${s.stockAllocation}% / RDPU ${100 - s.stockAllocation}%`;
+        document.querySelector("#acc03Summary").textContent = s.priceChangeEnabled
+          ? `Aktif · BMRI ${s.bmriPriceChangeAnnual >= 0 ? "+" : ""}${s.bmriPriceChangeAnnual}% / BBRI ${s.bbriPriceChangeAnnual >= 0 ? "+" : ""}${s.bbriPriceChangeAnnual}%`
+          : "Nonaktif · harga tetap awal";
+        document.querySelector("#acc04Summary").textContent = `RDPU ${s.rdpuReturnAnnual}% · BTC ${s.btcReturnAnnual}% · Div +${s.dividendGrowthAnnual}%/thn`;
+
+        document.querySelector("#simAllocLabel").textContent = isCustom ? "Custom" : `${s.stockAllocation}%`;
+        document.querySelector("#simRdpuAllocLabel").textContent = isCustom ? "Sisa" : `${100 - s.stockAllocation}%`;
+        document.querySelector("#simStockAllocAmount").textContent = isCustom
+          ? `${s.bmriMonthlyLots} BMRI + ${s.bbriMonthlyLots} BBRI`
+          : fmtMoney((s.monthlyDeposit * s.stockAllocation) / 100);
+        document.querySelector("#simRdpuAllocAmount").textContent = isCustom
+          ? "Sisa setelah beli lot"
+          : fmtMoney((s.monthlyDeposit * (100 - s.stockAllocation)) / 100);
+
+        if (isCustom) {
+          let cash = s.monthlyDeposit;
+          let bLots = 0, rLots = 0;
+          const bCost = s.bmriPrice * LOT_SIZE, rCost = s.bbriPrice * LOT_SIZE;
+          for (let i = 0; i < s.bmriMonthlyLots && cash >= bCost; i++) { bLots++; cash -= bCost; }
+          for (let i = 0; i < s.bbriMonthlyLots && cash >= rCost; i++) { rLots++; cash -= rCost; }
+          const stockSpent = bLots * bCost + rLots * rCost;
+          document.querySelector("#customBmriOut").textContent = `${bLots} lot (${fmtMoney(bLots * bCost)})`;
+          document.querySelector("#customBbriOut").textContent = `${rLots} lot (${fmtMoney(rLots * rCost)})`;
+          document.querySelector("#customStockOut").textContent = fmtMoney(stockSpent);
+          document.querySelector("#customRdpuOut").textContent = fmtMoney(cash);
+          document.querySelector("#customLotStatus").textContent = bLots < s.bmriMonthlyLots || rLots < s.bbriMonthlyLots
+            ? "Setoran belum cukup penuh; hanya membeli lot terjangkau."
+            : "Target lot terpenuhi; sisa kas dialokasikan ke RDPU.";
+        }
+
+        const res = runSimulation();
+        const mult = res.finalAsset / Math.max(res.totalContribution, 1);
+
+        document.querySelector("#tabLabelSimulator").textContent = `Proyeksi ${res.durationMonths} Bulan`;
+        document.querySelector("#tabBadgeYears").textContent = `${s.durationYears} Thn`;
+        document.querySelector("#sidePillYears").textContent = `${s.durationYears} Thn`;
+        document.querySelector("#strategyHorizonBadge").textContent = `Horizon ${s.durationYears} Tahun`;
+        document.querySelector("#quickStatusBadge").textContent = `BMRI ${fmtMoney(s.bmriPrice)} · BBRI ${fmtMoney(s.bbriPrice)}`;
+        document.querySelector("#syncBannerTitle").textContent = res.actualMonthsCount > 0
+          ? `Sinkron Program 2 aktif (${res.actualMonthsCount} bulan aktual)`
+          : "Mode Simulasi Penuh";
+        document.querySelector("#syncBannerText").textContent = res.actualMonthsCount > 0
+          ? `Periode yang tercatat di Catatan Aktual otomatis menggantikan proyeksi pada bulan tersebut.`
+          : `Belum ada periode aktual yang cocok dengan rentang simulasi saat ini.`;
+
+        document.querySelector("#kpiTotalContribution").textContent = fmtMoney(res.totalContribution);
+        document.querySelector("#kpiTotalContributionMeta").textContent = `${s.durationYears} tahun (${res.durationMonths} bulan)`;
+        document.querySelector("#kpiFinalAsset").textContent = fmtMoney(res.finalAsset);
+        document.querySelector("#kpiMultiple").textContent = `${decFmt.format(mult)}x`;
+        document.querySelector("#chartMultipleBadge").textContent = `${decFmt.format(mult)}x modal`;
+        document.querySelector("#kpiNetProfit").textContent = fmtMoney(res.netProfit);
+        document.querySelector("#kpiNetProfit").className = `kpi-value num ${res.netProfit >= 0 ? "positive" : "negative"}`;
+        document.querySelector("#kpiPassiveIncome").textContent = fmtMoney(res.passiveIncomeFinal);
+        document.querySelector("#kpiBtcValue").textContent = fmtMoney(res.btcBalance);
+        document.querySelector("#kpiBtcSub").textContent = `Modal ${fmtMoney(res.totalBtcContrib)} · Gain ${fmtMoney(res.btcReturnGain)}`;
+
+        const total = Math.max(res.finalAsset, 1);
+        document.querySelector("#posBmriLots").textContent = `${res.bmriLots.toLocaleString("id-ID")} lot`;
+        document.querySelector("#posBmriBar").style.width = `${Math.min(100, (res.bmriVal / total) * 100)}%`;
+        document.querySelector("#posBmriVal").textContent = `${fmtMoney(res.bmriVal)} (${decFmt.format((res.bmriVal / total) * 100)}%)`;
+
+        document.querySelector("#posBbriLots").textContent = `${res.bbriLots.toLocaleString("id-ID")} lot`;
+        document.querySelector("#posBbriBar").style.width = `${Math.min(100, (res.bbriVal / total) * 100)}%`;
+        document.querySelector("#posBbriVal").textContent = `${fmtMoney(res.bbriVal)} (${decFmt.format((res.bbriVal / total) * 100)}%)`;
+
+        document.querySelector("#posRdpuShare").textContent = `${decFmt.format((res.rdpuBalance / total) * 100)}%`;
+        document.querySelector("#posRdpuBar").style.width = `${Math.min(100, (res.rdpuBalance / total) * 100)}%`;
+        document.querySelector("#posRdpuVal").textContent = fmtMoney(res.rdpuBalance);
+
+        document.querySelector("#posBtcShare").textContent = `${decFmt.format((res.btcBalance / total) * 100)}%`;
+        document.querySelector("#posBtcBar").style.width = `${Math.min(100, (res.btcBalance / total) * 100)}%`;
+        document.querySelector("#posBtcVal").textContent = `${fmtMoney(res.btcBalance)} (Gain ${fmtMoney(res.btcReturnGain)})`;
+
+        document.querySelector("#statSellingFee").textContent = fmtMoney(res.sellingFee);
+        document.querySelector("#statTotalDividends").textContent = fmtMoney(res.totalDividends);
+        document.querySelector("#statTotalRdpu").textContent = fmtMoney(res.totalRdpuContrib);
+        document.querySelector("#statRdpuGain").textContent = fmtMoney(res.rdpuReturnGain);
+
+        // Strategy Comparison & Milestones Card
+        const liqNet = res.finalAsset - res.sellingFee;
+        const roiPct = res.totalContribution > 0 ? (res.netProfit / res.totalContribution) * 100 : 0;
+        document.querySelector("#stratLiqNet").textContent = fmtMoney(liqNet);
+        document.querySelector("#stratLiqProfit").textContent = fmtMoney(res.netProfit);
+        document.querySelector("#stratRoiBadge").textContent = `${roiPct >= 0 ? "+" : ""}${roiPct.toFixed(1).replace(".", ",")}% ROI`;
+        document.querySelector("#stratKeepMonthly").textContent = `${fmtMoney(res.passiveIncomeFinal / 12)} / bln`;
+        document.querySelector("#stratKeepReserve").textContent = fmtMoney(res.rdpuBalance + res.btcBalance);
+
+        const rows = res.yearlyRows;
+        const picks = [];
+        if (rows.length >= 3) {
+          const idx1 = Math.max(0, Math.floor(rows.length / 3) - 1);
+          const idx2 = Math.max(idx1 + 1, Math.floor((rows.length * 2) / 3) - 1);
+          picks.push(rows[idx1], rows[idx2], rows[rows.length - 1]);
+        } else {
+          rows.forEach((r) => picks.push(r));
+        }
+        document.querySelector("#milestoneStrip").innerHTML = picks.map((r) => {
+          const multR = r.portfolioValue / Math.max(r.cumulativeContribution, 1);
+          return `
+            <div class="milestone-pill">
+              <span>Milestone Tahun ${r.year} (${r.periodLabel})</span>
+              <strong class="num">${fmtMoney(r.portfolioValue)}</strong>
+              <small class="num">${decFmt.format(multR)}x modal · Dividen ${fmtCompact(r.annualDividends)}</small>
+            </div>
+          `;
+        }).join("");
+
+        // History Table
+        document.querySelector("#simHistoryBody").innerHTML = rows.map((row) => {
+          const badge = row.actualMonths === 12
+            ? `<span class="badge badge-emerald">Aktual</span>`
+            : row.actualMonths > 0
+            ? `<span class="badge badge-amber">Campuran</span>`
+            : `<span class="badge badge-secondary">Simulasi</span>`;
+          const actSummary = row.actualMonths > 0
+            ? `BMRI ${row.actBmri} lot · BBRI ${row.actBbri} lot · RDPU ${fmtMoney(row.actRdpu)}`
+            : `<span style="color:var(--muted-foreground)">-</span>`;
+          return `
+            <tr>
+              <td>
+                <div class="period-cell">
+                  <div class="period-top"><strong>Tahun ${row.year}</strong>${badge}</div>
+                  <small>${row.periodLabel}${row.actualMonths ? ` · ${row.actualMonths} bln aktual` : ""}</small>
+                </div>
+              </td>
+              <td>${actSummary}</td>
+              <td class="right num">${fmtMoney(row.totalContribution)}</td>
+              <td class="right num">${fmtMoney(row.btcContrib)}</td>
+              <td class="right num">${fmtMoney(row.btcBalance)}</td>
+              <td class="right num">${fmtMoney(row.bmriPrice)}</td>
+              <td class="right num">${row.bmriLots.toLocaleString("id-ID")}</td>
+              <td class="right num">${fmtMoney(row.bbriPrice)}</td>
+              <td class="right num">${row.bbriLots.toLocaleString("id-ID")}</td>
+              <td class="right num">${fmtMoney(row.annualDividends)}</td>
+              <td class="right num">${fmtMoney(row.rdpuContrib)}</td>
+              <td class="right num">${fmtMoney(row.rdpuGain)}</td>
+              <td class="right num">${fmtMoney(row.rdpuBalance)}</td>
+              <td class="right num"><strong>${fmtMoney(row.portfolioValue)}</strong></td>
+            </tr>
+          `;
+        }).join("");
+
+        // Dividend Table
+        const divRows = rows.filter((r) => r.divBmriLots + r.divBbriLots > 0 || r.actualMonths > 0);
+        document.querySelector("#simDividendBody").innerHTML = divRows.length
+          ? divRows.map((row) => {
+              const badge = row.actualMonths > 0
+                ? `<span class="badge badge-blue">${row.actualMonths} bln aktual</span>`
+                : `<span class="badge badge-secondary">Simulasi</span>`;
+              const bought = row.divBmriLots + row.divBbriLots > 0
+                ? `BMRI ${row.divBmriLots} lot · BBRI ${row.divBbriLots} lot`
+                : "Belum cukup 1 lot";
+              return `
+                <tr>
+                  <td><strong>Tahun ${row.year}</strong> <small style="color:var(--muted-foreground)">(${row.periodLabel})</small> ${badge}</td>
+                  <td class="right num">${fmtMoney(row.annualDividends)}</td>
+                  <td>${bought}</td>
+                  <td class="right num">${fmtMoney(row.divCashUsed)}</td>
+                  <td class="right num">${fmtMoney(row.divLeftoverRdpu)}</td>
+                  <td>${row.actualMonths > 0 ? `BMRI ${row.actBmri} · BBRI ${row.actBbri} lot` : "-"}</td>
+                </tr>
+              `;
+            }).join("")
+          : `<tr><td colspan="6"><div class="empty-box">Belum ada pembelian dari dividen pada konfigurasi ini.</div></td></tr>`;
+
+        renderGrowthChart(res.chartYears, res.chartContributions, res.chartAssets);
+        if (withFlash) triggerKpiFlash();
+      }
+
+      function renderGrowthChart(labels, contribs, assets) {
+        const canvas = document.querySelector("#growthChartCanvas");
+        const fallback = document.querySelector("#growthChartFallback");
+        if (window.Chart) {
+          canvas.classList.remove("hidden");
+          fallback.classList.add("hidden");
+          const gridColor = getComputedStyle(document.documentElement).getPropertyValue("--border").trim();
+          const mutedColor = getComputedStyle(document.documentElement).getPropertyValue("--muted-foreground").trim();
+          if (!growthChart) {
+            growthChart = new Chart(canvas, {
+              type: "line",
+              data: {
+                labels,
+                datasets: [
+                  {
+                    label: "Total Modal",
+                    data: contribs,
+                    borderColor: "#dc2626",
+                    backgroundColor: "rgba(220,38,38,0.08)",
+                    borderWidth: 2.5,
+                    pointRadius: 2.5,
+                    tension: 0.25,
+                  },
+                  {
+                    label: "Pertumbuhan Total Aset",
+                    data: assets,
+                    borderColor: "#059669",
+                    backgroundColor: "rgba(5,150,105,0.12)",
+                    borderWidth: 2.5,
+                    pointRadius: 2.5,
+                    tension: 0.25,
+                    fill: true,
+                  },
+                ],
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: "index", intersect: false },
+                plugins: {
+                  legend: { labels: { color: mutedColor, usePointStyle: true, boxWidth: 8 } },
+                  tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${fmtMoney(ctx.parsed.y)}` } },
+                },
+                scales: {
+                  x: { grid: { display: false }, ticks: { color: mutedColor } },
+                  y: {
+                    grid: { color: gridColor },
+                    ticks: {
+                      color: mutedColor,
+                      callback: (v) => v >= 1e9 ? `Rp${(v / 1e9).toFixed(1)}M` : v >= 1e6 ? `Rp${(v / 1e6).toFixed(0)}jt` : fmtMoney(v),
+                    },
+                  },
+                },
+              },
+            });
+          } else {
+            growthChart.data.labels = labels;
+            growthChart.data.datasets[0].data = contribs;
+            growthChart.data.datasets[1].data = assets;
+            growthChart.options.scales.y.grid.color = gridColor;
+            growthChart.options.scales.x.ticks.color = mutedColor;
+            growthChart.options.scales.y.ticks.color = mutedColor;
+            growthChart.options.plugins.legend.labels.color = mutedColor;
+            growthChart.update();
+          }
+          return;
+        }
+        canvas.classList.add("hidden");
+        fallback.classList.remove("hidden");
+        const maxVal = Math.max(...assets, ...contribs, 1);
+        const w = 680, h = 240, pad = 28;
+        const pts = (arr) => arr.map((v, i) => {
+          const x = pad + (i / Math.max(arr.length - 1, 1)) * (w - pad * 2);
+          const y = h - pad - (v / maxVal) * (h - pad * 2);
+          return `${x.toFixed(1)},${y.toFixed(1)}`;
+        }).join(" ");
+        fallback.innerHTML = `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:260px;"><polyline fill="none" stroke="#dc2626" stroke-width="2.5" points="${pts(contribs)}"/><polyline fill="none" stroke="#059669" stroke-width="3" points="${pts(assets)}"/></svg>`;
+      }
+
+      /* =========================================================
+         RENDER PROGRAM 2: CATATAN AKTUAL
+      ========================================================= */
+      function actualYearsList() {
+        const start = new Date().getFullYear();
+        const horizon = clamp(Number(mockState.actual.horizonYears) || 11, 1, 50);
+        const set = new Set();
+        for (let i = 0; i < horizon; i++) set.add(start + i);
+        mockState.actual.stockPurchases.forEach((p) => set.add(p.year));
+        mockState.actual.rdpuPurchases.forEach((p) => set.add(p.year));
+        mockState.actual.btcPurchases.forEach((p) => set.add(p.year));
+        return [...set].sort((a, b) => a - b);
+      }
+
+      function populateActualSelects() {
+        const years = actualYearsList();
+        const yearOpts = years.map((y) => `<option value="${y}">${y}</option>`).join("");
+        const monthOpts = MONTHS.map((m, i) => `<option value="${i + 1}">${m}</option>`).join("");
+        const tickerOpts = mockState.actual.tickers.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("");
+
+        ["stockFormMonth", "rdpuFormMonth", "btcFormMonth"].forEach((id) => {
+          const el = document.querySelector(`#${id}`);
+          const prev = el.value;
+          el.innerHTML = monthOpts;
+          if (prev) el.value = prev;
+        });
+        ["stockFormYear", "rdpuFormYear", "btcFormYear"].forEach((id) => {
+          const el = document.querySelector(`#${id}`);
+          const prev = el.value;
+          el.innerHTML = yearOpts;
+          if (prev && years.includes(Number(prev))) el.value = prev;
+        });
+
+        const sTicker = document.querySelector("#stockFormTicker");
+        const prevTicker = sTicker.value;
+        sTicker.innerHTML = tickerOpts;
+        if (prevTicker && mockState.actual.tickers.includes(prevTicker)) sTicker.value = prevTicker;
+
+        const filterTickerOpts = `<option value="all">Semua</option>` + tickerOpts;
+        const filterYearOpts = `<option value="all">Semua</option>` + yearOpts;
+        ["stockChartTickerFilter", "infoTickerFilter"].forEach((id) => {
+          const el = document.querySelector(`#${id}`);
+          const prev = el.value || "all";
+          el.innerHTML = filterTickerOpts;
+          el.value = prev;
+        });
+        ["stockChartYearFilter", "infoYearFilter"].forEach((id) => {
+          const el = document.querySelector(`#${id}`);
+          const prev = el.value || "all";
+          el.innerHTML = filterYearOpts;
+          el.value = prev;
+        });
+      }
+
+      function renderActual() {
+        const act = mockState.actual;
+        document.querySelector("#actualHorizonInput").value = act.horizonYears;
+        populateActualSelects();
+
+        const totalEntries = act.stockPurchases.length + act.rdpuPurchases.length + act.btcPurchases.length;
+        document.querySelector("#tabBadgeRecords").textContent = `${totalEntries} entri`;
+        document.querySelector("#sidePillRecords").textContent = `${totalEntries}`;
+
+        const allPeriods = [...act.stockPurchases, ...act.rdpuPurchases, ...act.btcPurchases].sort((a, b) => invTs(b) - invTs(a));
+        const latest = allPeriods[0] || { month: 10, year: 2026 };
+        const latestSummary = actualForMonth(latest.month, latest.year);
+        document.querySelector("#actualMonthTitle").textContent = `Aktual ${monthName(latest.month)} ${latest.year}`;
+        document.querySelector("#actualMonthMeta").textContent = "Otomatis menggantikan asumsi Program 1 untuk bulan tersebut.";
+        document.querySelector("#actualMonthBmri").textContent = `${latestSummary.bmriLots} lot · ${fmtMoney(latestSummary.bmriAmount)}`;
+        document.querySelector("#actualMonthBbri").textContent = `${latestSummary.bbriLots} lot · ${fmtMoney(latestSummary.bbriAmount)}`;
+        document.querySelector("#actualMonthRdpu").textContent = fmtMoney(latestSummary.rdpuAmount);
+        document.querySelector("#actualMonthTotal").textContent = fmtMoney(latestSummary.totalCapital + latestSummary.btcAmount);
+
+        const sumBtc = act.btcPurchases.reduce((s, p) => s + p.amount, 0);
+        const sumStock = act.stockPurchases.reduce((s, p) => s + p.lotPrice * p.lots, 0);
+        const sumLots = act.stockPurchases.reduce((s, p) => s + p.lots, 0);
+        const sumRdpu = act.rdpuPurchases.reduce((s, p) => s + p.amount, 0);
+        const totalCap = sumStock + sumRdpu + sumBtc;
+
+        // Sidebar Modal Tercatat sync
+        document.querySelector("#sidebarModalValue").textContent = fmtMoney(totalCap);
+        document.querySelector("#sideLotTotal").textContent = `${sumLots} lot`;
+        document.querySelector("#sideStockVal").textContent = fmtMoney(sumStock);
+        document.querySelector("#sideRdpuVal").textContent = fmtMoney(sumRdpu);
+        document.querySelector("#sideBtcVal").textContent = fmtMoney(sumBtc);
+
+        document.querySelector("#actKpiBtc").textContent = fmtMoney(sumBtc);
+        document.querySelector("#actKpiStock").textContent = fmtMoney(sumStock);
+        document.querySelector("#actKpiLots").textContent = `${sumLots.toLocaleString("id-ID")} lot`;
+        document.querySelector("#actKpiRdpu").textContent = fmtMoney(sumRdpu);
+        document.querySelector("#actKpiPortfolio").textContent = fmtMoney(totalCap);
+
+        document.querySelector("#tickerChips").innerHTML = act.tickers.map((t) => `
+          <span class="ticker-chip">
+            ${esc(t)}
+            <button type="button" data-remove-ticker="${esc(t)}" aria-label="Hapus ${esc(t)}">&times;</button>
+          </span>
+        `).join("");
+
+        const sortedStocks = [...act.stockPurchases].sort((a, b) => invTs(b) - invTs(a));
+        document.querySelector("#actualStockBody").innerHTML = sortedStocks.length
+          ? sortedStocks.map((p) => `
+              <tr>
+                <td>${monthName(p.month)} ${p.year}</td>
+                <td><span class="badge badge-secondary">${esc(p.ticker)}</span></td>
+                <td class="right num">${fmtMoney(p.lotPrice)}</td>
+                <td class="right num">${p.lots}</td>
+                <td class="right num"><strong>${fmtMoney(p.lotPrice * p.lots)}</strong></td>
+                <td class="right num">${p.dividendAmount > 0 ? `<span class="badge badge-emerald">${fmtMoney(p.dividendAmount)}</span>` : "-"}</td>
+                <td class="right">
+                  <div class="row-actions">
+                    <button class="btn btn-ghost btn-sm" type="button" data-edit-stock="${p.id}">Edit</button>
+                    <button class="btn btn-destructive-ghost btn-sm" type="button" data-delete-stock="${p.id}">Hapus</button>
+                  </div>
+                </td>
+              </tr>
+            `).join("")
+          : `<tr><td colspan="7"><div class="empty-box">Belum ada catatan pembelian saham.</div></td></tr>`;
+
+        const sortedRdpu = [...act.rdpuPurchases].sort((a, b) => invTs(b) - invTs(a));
+        document.querySelector("#actualRdpuBody").innerHTML = sortedRdpu.length
+          ? sortedRdpu.map((p) => `
+              <tr>
+                <td>${monthName(p.month)} ${p.year}</td>
+                <td class="right num"><strong>${fmtMoney(p.amount)}</strong></td>
+                <td class="right">
+                  <div class="row-actions">
+                    <button class="btn btn-ghost btn-sm" type="button" data-edit-rdpu="${p.id}">Edit</button>
+                    <button class="btn btn-destructive-ghost btn-sm" type="button" data-delete-rdpu="${p.id}">Hapus</button>
+                  </div>
+                </td>
+              </tr>
+            `).join("")
+          : `<tr><td colspan="3"><div class="empty-box">Belum ada pembelian RDPU.</div></td></tr>`;
+
+        const sortedBtc = [...act.btcPurchases].sort((a, b) => invTs(b) - invTs(a));
+        document.querySelector("#actualBtcBody").innerHTML = sortedBtc.length
+          ? sortedBtc.map((p) => `
+              <tr>
+                <td>${monthName(p.month)} ${p.year}</td>
+                <td class="right num"><strong>${fmtMoney(p.amount)}</strong></td>
+                <td class="right">
+                  <div class="row-actions">
+                    <button class="btn btn-ghost btn-sm" type="button" data-edit-btc="${p.id}">Edit</button>
+                    <button class="btn btn-destructive-ghost btn-sm" type="button" data-delete-btc="${p.id}">Hapus</button>
+                  </div>
+                </td>
+              </tr>
+            `).join("")
+          : `<tr><td colspan="3"><div class="empty-box">Belum ada pembelian BTC.</div></td></tr>`;
+
+        document.querySelector("#annualSummaryBody").innerHTML = actualYearsList().map((y) => {
+          const ys = act.stockPurchases.filter((p) => p.year === y);
+          const yr = act.rdpuPurchases.filter((p) => p.year === y);
+          const yb = act.btcPurchases.filter((p) => p.year === y);
+          const sAmt = ys.reduce((s, p) => s + p.lotPrice * p.lots, 0);
+          const sLots = ys.reduce((s, p) => s + p.lots, 0);
+          const rAmt = yr.reduce((s, p) => s + p.amount, 0);
+          const bAmt = yb.reduce((s, p) => s + p.amount, 0);
+          return `
+            <tr>
+              <td><strong>${y}</strong></td>
+              <td class="right num">${fmtMoney(sAmt)}</td>
+              <td class="right num">${sLots.toLocaleString("id-ID")} lot</td>
+              <td class="right num">${fmtMoney(rAmt)}</td>
+              <td class="right num">${fmtMoney(bAmt)}</td>
+              <td class="right num"><strong>${fmtMoney(sAmt + rAmt + bAmt)}</strong></td>
+            </tr>
+          `;
+        }).join("");
+
+        renderActualInfo();
+        renderStockPurchaseChart();
+      }
+
+      function renderActualInfo() {
+        const ticker = document.querySelector("#infoTickerFilter").value || "all";
+        const year = document.querySelector("#infoYearFilter").value || "all";
+        const stocks = mockState.actual.stockPurchases.filter((p) => (ticker === "all" || p.ticker === ticker) && (year === "all" || p.year === Number(year)));
+        const rdpus = mockState.actual.rdpuPurchases.filter((p) => year === "all" || p.year === Number(year));
+
+        if (stocks.length) {
+          const byValAsc = [...stocks].sort((a, b) => (a.lotPrice * a.lots) - (b.lotPrice * b.lots));
+          const byLotsAsc = [...stocks].sort((a, b) => a.lots - b.lots);
+          const minP = byValAsc[0], maxP = byValAsc[byValAsc.length - 1];
+          const minL = byLotsAsc[0], maxL = byLotsAsc[byLotsAsc.length - 1];
+          document.querySelector("#infoMinPrice").textContent = fmtMoney(minP.lotPrice * minP.lots);
+          document.querySelector("#infoMinPriceMeta").textContent = `${minP.ticker} · ${monthName(minP.month)} ${minP.year}`;
+          document.querySelector("#infoMaxPrice").textContent = fmtMoney(maxP.lotPrice * maxP.lots);
+          document.querySelector("#infoMaxPriceMeta").textContent = `${maxP.ticker} · ${monthName(maxP.month)} ${maxP.year}`;
+          document.querySelector("#infoMinLots").textContent = `${minL.lots} lot`;
+          document.querySelector("#infoMinLotsMeta").textContent = `${minL.ticker} · ${monthName(minL.month)} ${minL.year}`;
+          document.querySelector("#infoMaxLots").textContent = `${maxL.lots} lot`;
+          document.querySelector("#infoMaxLotsMeta").textContent = `${maxL.ticker} · ${monthName(maxL.month)} ${maxL.year}`;
+        } else {
+          ["infoMinPrice", "infoMaxPrice", "infoMinLots", "infoMaxLots"].forEach((id) => document.querySelector(`#${id}`).textContent = "-");
+          ["infoMinPriceMeta", "infoMaxPriceMeta", "infoMinLotsMeta", "infoMaxLotsMeta"].forEach((id) => document.querySelector(`#${id}`).textContent = "Tidak ada data");
+        }
+
+        if (rdpus.length) {
+          const sorted = [...rdpus].sort((a, b) => a.amount - b.amount);
+          const minR = sorted[0], maxR = sorted[sorted.length - 1];
+          document.querySelector("#infoMinRdpu").textContent = fmtMoney(minR.amount);
+          document.querySelector("#infoMinRdpuMeta").textContent = `${monthName(minR.month)} ${minR.year}`;
+          document.querySelector("#infoMaxRdpu").textContent = fmtMoney(maxR.amount);
+          document.querySelector("#infoMaxRdpuMeta").textContent = `${monthName(maxR.month)} ${maxR.year}`;
+        } else {
+          document.querySelector("#infoMinRdpu").textContent = "-";
+          document.querySelector("#infoMaxRdpu").textContent = "-";
+          document.querySelector("#infoMinRdpuMeta").textContent = "Tidak ada data";
+          document.querySelector("#infoMaxRdpuMeta").textContent = "Tidak ada data";
+        }
+      }
+
+      function renderStockPurchaseChart() {
+        const ticker = document.querySelector("#stockChartTickerFilter").value || "all";
+        const year = document.querySelector("#stockChartYearFilter").value || "all";
+        const rows = mockState.actual.stockPurchases
+          .filter((p) => (ticker === "all" || p.ticker === ticker) && (year === "all" || p.year === Number(year)))
+          .sort((a, b) => invTs(a) - invTs(b));
+
+        const labels = rows.map((p) => `${p.ticker} ${monthName(p.month).slice(0, 3)} ${String(p.year).slice(-2)}`);
+        const prices = rows.map((p) => p.lotPrice);
+        const lots = rows.map((p) => p.lots);
+
+        const canvas = document.querySelector("#stockPurchaseChartCanvas");
+        const fallback = document.querySelector("#stockChartFallback");
+        if (window.Chart) {
+          canvas.classList.remove("hidden");
+          fallback.classList.add("hidden");
+          const gridColor = getComputedStyle(document.documentElement).getPropertyValue("--border").trim();
+          const mutedColor = getComputedStyle(document.documentElement).getPropertyValue("--muted-foreground").trim();
+          if (!stockChart) {
+            stockChart = new Chart(canvas, {
+              data: {
+                labels,
+                datasets: [
+                  {
+                    type: "bar",
+                    label: "Jumlah Lot",
+                    data: lots,
+                    backgroundColor: "rgba(37, 99, 235, 0.25)",
+                    borderColor: "#2563eb",
+                    borderWidth: 1.5,
+                    borderRadius: 6,
+                    yAxisID: "yLots",
+                  },
+                  {
+                    type: "line",
+                    label: "Harga / Lot",
+                    data: prices,
+                    borderColor: "#059669",
+                    backgroundColor: "#059669",
+                    borderWidth: 2.5,
+                    tension: 0.25,
+                    yAxisID: "yPrice",
+                  },
+                ],
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: mutedColor, usePointStyle: true } } },
+                scales: {
+                  x: { grid: { display: false }, ticks: { color: mutedColor } },
+                  yPrice: { position: "left", grid: { color: gridColor }, ticks: { color: mutedColor, callback: (v) => `Rp${(v / 1000).toFixed(0)}rb` } },
+                  yLots: { position: "right", grid: { display: false }, beginAtZero: true, ticks: { color: mutedColor, stepSize: 1 } },
+                },
+              },
+            });
+          } else {
+            stockChart.data.labels = labels;
+            stockChart.data.datasets[0].data = lots;
+            stockChart.data.datasets[1].data = prices;
+            stockChart.options.scales.yPrice.grid.color = gridColor;
+            stockChart.options.scales.x.ticks.color = mutedColor;
+            stockChart.options.scales.yPrice.ticks.color = mutedColor;
+            stockChart.options.scales.yLots.ticks.color = mutedColor;
+            stockChart.options.plugins.legend.labels.color = mutedColor;
+            stockChart.update();
+          }
+          return;
+        }
+        canvas.classList.add("hidden");
+        fallback.classList.remove("hidden");
+        fallback.innerHTML = `<div class="empty-box">${rows.length} transaksi saham tercatat (offline preview).</div>`;
+      }
+
+      /* =========================================================
+         RENDER PROGRAM 3: TOOLS (3 KALKULATOR & ANALISIS)
+      ========================================================= */
+      function renderKalkulatorPorsi() {
+        const saham = parseNum(document.querySelector("#kalcSaham").value);
+        const etf = parseNum(document.querySelector("#kalcEtf").value);
+        const total = saham + etf;
+        const out = document.querySelector("#kalcOutput");
+        if (total <= 0) {
+          out.innerHTML = `<div class="empty-box">Masukkan nominal Saham atau ETF untuk menghitung porsi.</div>`;
+          return;
+        }
+        const sPct = (saham / total) * 100;
+        const ePct = (etf / total) * 100;
+        out.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:baseline;">
+            <span style="font-size:0.8rem;color:var(--muted-foreground);">Total Portofolio</span>
+            <strong class="num" style="font-size:1.1rem;">${fmtMoney(total)}</strong>
+          </div>
+          <div class="kalc-bar-row">
+            <strong>Saham</strong>
+            <div class="comp-track"><span class="comp-fill bmri" style="width:${sPct.toFixed(1)}%"></span></div>
+            <span class="num" style="text-align:right;">${sPct.toFixed(1).replace(".", ",")}%</span>
+          </div>
+          <div class="kalc-bar-row">
+            <strong>ETF</strong>
+            <div class="comp-track"><span class="comp-fill rdpu" style="width:${ePct.toFixed(1)}%"></span></div>
+            <span class="num" style="text-align:right;">${ePct.toFixed(1).replace(".", ",")}%</span>
+          </div>
+          <small style="color:var(--muted-foreground);font-size:0.74rem;">Rumus: (% = Nilai Aset / Total Portofolio × 100%)</small>
+        `;
+      }
+
+      function renderAverageCalc({ notify = false } = {}) {
+        const avgLama = parseNum(document.querySelector("#avgNow").value);
+        const lotLama = parseNum(document.querySelector("#lotNow").value);
+        const hargaBaru = parseNum(document.querySelector("#hargaBaru").value);
+        const lotBaru = parseNum(document.querySelector("#lotBaru").value);
+        const err = document.querySelector("#avgError");
+        const out = document.querySelector("#avgOutput");
+
+        if (avgLama <= 0 || lotLama <= 0 || hargaBaru <= 0 || lotBaru <= 0) {
+          err.textContent = "Isi keempat kolom dengan angka > 0.";
+          err.classList.remove("hidden");
+          return;
+        }
+        err.classList.add("hidden");
+        const totalLot = lotLama + lotBaru;
+        const modalTambahan = lotBaru * LOT_SIZE * hargaBaru;
+        const avgBaru = (lotLama * avgLama + lotBaru * hargaBaru) / totalLot;
+        const pct = ((avgBaru - avgLama) / avgLama) * 100;
+        const isDown = pct <= 0;
+        const badgeCls = isDown ? "badge-emerald" : Math.abs(pct) <= 5 ? "badge-blue" : Math.abs(pct) <= 15 ? "badge-amber" : "badge-destructive";
+        const opini = isDown
+          ? `Average turun ${Math.abs(pct).toFixed(2).replace(".", ",")}% — posisi makin sehat di bawah avg lama.`
+          : Math.abs(pct) <= 5
+          ? `Average naik tipis ${pct.toFixed(2).replace(".", ",")}% — masih dekat avg awal.`
+          : `Average naik ${pct.toFixed(2).replace(".", ",")}% — cek area support sebelum eksekusi.`;
+
+        out.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <strong style="font-size:0.86rem;">Hasil Weighted Average</strong>
+            <span class="badge ${badgeCls}">${isDown ? "AVERAGE DOWN" : "AVERAGE UP"}</span>
+          </div>
+          <div class="mini-stat-grid">
+            <div class="mini-stat" style="background:var(--card);"><span>Average Baru</span><strong class="num">${fmtMoney(avgBaru)}</strong></div>
+            <div class="mini-stat" style="background:var(--card);"><span>Perubahan Avg</span><strong class="num" style="color:${isDown ? "var(--emerald)" : "var(--amber)"}">${pct >= 0 ? "+" : ""}${pct.toFixed(2).replace(".", ",")}%</strong></div>
+            <div class="mini-stat" style="background:var(--card);"><span>Total Lot Baru</span><strong class="num">${totalLot.toLocaleString("id-ID")} lot</strong></div>
+            <div class="mini-stat" style="background:var(--card);"><span>Modal Tambahan</span><strong class="num">${fmtMoney(modalTambahan)}</strong></div>
+          </div>
+          <small style="font-size:0.76rem;color:var(--muted-foreground);">${opini}</small>
+        `;
+        if (notify) showToast(`Average baru dihitung: ${fmtMoney(avgBaru)} (${isDown ? "Average Down" : "Average Up"})`, "info");
+      }
+
+      function addAsetPersenRow(name = "", val = "") {
+        const wrap = document.querySelector("#apRows");
+        const row = document.createElement("div");
+        row.className = "ap-row";
+        row.innerHTML = `
+          <input class="input ap-name" type="text" placeholder="Nama aset" value="${esc(name)}" />
+          <input class="input num ap-val" type="text" inputmode="numeric" placeholder="Nominal (Rp)" value="${esc(val)}" />
+          <button class="btn btn-destructive-ghost btn-icon" type="button" aria-label="Hapus baris">&times;</button>
+        `;
+        const valInput = row.querySelector(".ap-val");
+        valInput.addEventListener("input", () => { valInput.value = fmtInput(valInput.value); });
+        row.querySelector("button").addEventListener("click", () => {
+          if (wrap.children.length > 1) row.remove();
+          renderAsetPersen();
+        });
+        wrap.append(row);
+      }
+
+      function renderAsetPersen({ notify = false } = {}) {
+        const total = parseNum(document.querySelector("#apTotalAset").value);
+        const rows = [...document.querySelectorAll("#apRows .ap-row")]
+          .map((r, i) => ({
+            name: r.querySelector(".ap-name").value.trim() || `Bagian ${i + 1}`,
+            value: parseNum(r.querySelector(".ap-val").value),
+            color: AP_COLORS[i % AP_COLORS.length],
+          }))
+          .filter((r) => r.value > 0);
+        const out = document.querySelector("#apOutput");
+        if (total <= 0 || !rows.length) {
+          out.innerHTML = `<div class="empty-box">Isi Total Aset dan minimal satu bagian aset.</div>`;
+          return;
+        }
+        const sumVal = rows.reduce((s, r) => s + r.value, 0);
+        const sumPct = (sumVal / total) * 100;
+        const diff = sumPct - 100;
+        let cursor = 0;
+        const stops = rows.map((r) => {
+          const pct = (r.value / total) * 100;
+          const start = cursor;
+          cursor = Math.min(100, cursor + pct);
+          return `${r.color} ${start.toFixed(2)}% ${cursor.toFixed(2)}%`;
+        });
+        if (cursor < 100) stops.push(`var(--border) ${cursor.toFixed(2)}% 100%`);
+
+        const statusBadge = Math.abs(diff) <= 0.01
+          ? `<span class="badge badge-emerald">Pas 100% dari Total Aset</span>`
+          : diff < 0
+          ? `<span class="badge badge-amber">Kurang ${Math.abs(diff).toFixed(2).replace(".", ",")}% (${fmtMoney(total - sumVal)})</span>`
+          : `<span class="badge badge-destructive">Lebih ${diff.toFixed(2).replace(".", ",")}% (${fmtMoney(sumVal - total)})</span>`;
+
+        out.innerHTML = `
+          <div class="ap-result-grid">
+            <div class="ap-pie-wrap">
+              <div class="ap-pie" style="background:conic-gradient(${stops.join(", ")});"></div>
+              <div class="ap-legend">
+                ${rows.map((r) => `<span class="ap-legend-item"><span class="ap-swatch" style="background:${r.color}"></span>${esc(r.name)}</span>`).join("")}
+              </div>
+            </div>
+            <div class="field-group">
+              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                <strong style="font-size:0.86rem;">Rincian Proporsi</strong>
+                ${statusBadge}
+              </div>
+              <div class="table-wrap" style="background:var(--card);">
+                <table>
+                  <thead><tr><th>Bagian</th><th class="right">Nominal</th><th class="right">Porsi</th></tr></thead>
+                  <tbody>
+                    ${rows.map((r) => `
+                      <tr>
+                        <td><span class="ap-swatch" style="background:${r.color}"></span>${esc(r.name)}</td>
+                        <td class="right num">${fmtMoney(r.value)}</td>
+                        <td class="right num">${((r.value / total) * 100).toFixed(2).replace(".", ",")}%</td>
+                      </tr>
+                    `).join("")}
+                    <tr>
+                      <td><strong>Total Bagian</strong></td>
+                      <td class="right num"><strong>${fmtMoney(sumVal)}</strong></td>
+                      <td class="right num"><strong>${sumPct.toFixed(2).replace(".", ",")}%</strong></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        `;
+        if (notify) showToast(`Komposisi persentase diperbarui (total ${sumPct.toFixed(1).replace(".", ",")}%).`, "info");
+      }
+
+      /* =========================================================
+         NAVIGATION, EVENTS & INITIALIZATION
+      ========================================================= */
+      function switchTab(tab) {
+        const subtitles = {
+          simulator: "Proyeksi compounding saham, RDPU, & BTC",
+          actual: "Catatan pembelian aktual saham, RDPU, & BTC",
+          analysis: "Kalkulator komposisi, average down/up, & persentase aset",
+        };
+        document.querySelector("#topbarSubtitle").textContent = subtitles[tab] || subtitles.simulator;
+
+        document.querySelectorAll(".tab-trigger").forEach((btn) => {
+          const active = btn.dataset.tab === tab;
+          btn.classList.toggle("active", active);
+          btn.setAttribute("aria-selected", String(active));
+        });
+        document.querySelectorAll("[data-tab-nav]").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.tabNav === tab);
+        });
+
+        document.querySelector("#panelSimulator").classList.toggle("active", tab === "simulator");
+        document.querySelector("#panelActual").classList.toggle("active", tab === "actual");
+        document.querySelector("#panelAnalysis").classList.toggle("active", tab === "analysis");
+        if (tab === "simulator" && growthChart) growthChart.resize();
+        if (tab === "actual" && stockChart) stockChart.resize();
+      }
+
+      function init() {
+        document.querySelector("#simStartMonth").innerHTML = MONTHS.map((m, i) => `<option value="${i + 1}">${m}</option>`).join("");
+        syncSimulatorFormFromState();
+
+        document.querySelectorAll(".tab-trigger").forEach((btn) => {
+          btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+        });
+        document.querySelectorAll("[data-tab-nav]").forEach((btn) => {
+          btn.addEventListener("click", () => switchTab(btn.dataset.tabNav));
+        });
+
+        document.querySelector("#toggleAllAccBtn").addEventListener("click", (e) => {
+          const accs = [...document.querySelectorAll(".param-acc")];
+          const allOpen = accs.every((d) => d.open);
+          accs.forEach((d, idx) => { d.open = allOpen ? idx === 0 : true; });
+          e.target.textContent = allOpen ? "Buka Semua" : "Ringkas";
+        });
+
+        document.querySelector("#sidebarToggle").addEventListener("click", () => {
+          document.querySelector("#appShell").classList.toggle("sidebar-collapsed");
+        });
+        document.querySelector("#themeToggle").addEventListener("click", () => {
+          const html = document.documentElement;
+          const next = html.dataset.theme === "dark" ? "light" : "dark";
+          html.dataset.theme = next;
+          document.querySelector("#themeToggleLabel").textContent = next === "dark" ? "Light Mode" : "Dark Mode";
+          document.querySelector("#themeIconSun").classList.toggle("hidden", next !== "dark");
+          document.querySelector("#themeIconMoon").classList.toggle("hidden", next === "dark");
+          renderSimulator();
+          renderStockPurchaseChart();
+          showToast(`Beralih ke ${next === "dark" ? "Dark Mode" : "Light Mode"}.`, "info");
+        });
+        document.querySelector("#resetDummyBtn").addEventListener("click", () => {
+          mockState = createInitialMockState();
+          syncSimulatorFormFromState();
+          renderAllMock({ withFlash: true });
+          showToast("Data dummy dipulihkan ke kondisi awal.");
+        });
+
+        const simForm = document.querySelector("#simulatorForm");
+        ["simMonthlyDeposit", "simBtcMonthly"].forEach((id) => {
+          const el = document.querySelector(`#${id}`);
+          el.addEventListener("input", () => { el.value = fmtInput(el.value); });
+        });
+        simForm.addEventListener("input", () => { readSimulatorFormToState(); renderSimulator({ withFlash: true }); });
+        simForm.addEventListener("change", () => { readSimulatorFormToState(); renderSimulator({ withFlash: true }); });
+        document.querySelectorAll("[data-lot-preset]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const [b, r] = btn.dataset.lotPreset.split("-").map(Number);
+            mockState.simulator.bmriMonthlyLots = b;
+            mockState.simulator.bbriMonthlyLots = r;
+            syncSimulatorFormFromState();
+            renderSimulator({ withFlash: true });
+            showToast(`Preset lot ${b} BMRI + ${r} BBRI diterapkan.`, "info");
+          });
+        });
+
+        document.querySelector("#actualHorizonInput").addEventListener("change", (e) => {
+          mockState.actual.horizonYears = clamp(Number(e.target.value) || 11, 1, 50);
+          renderActual();
+        });
+        document.querySelector("#addHorizonYearBtn").addEventListener("click", () => {
+          mockState.actual.horizonYears = clamp(mockState.actual.horizonYears + 1, 1, 50);
+          renderActual();
+          showToast(`Horizon ditambah menjadi ${mockState.actual.horizonYears} tahun.`);
+        });
+        document.querySelector("#tickerAddForm").addEventListener("submit", (e) => {
+          e.preventDefault();
+          const inp = document.querySelector("#newTickerInput");
+          const code = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+          if (!code || mockState.actual.tickers.includes(code)) return;
+          mockState.actual.tickers.push(code);
+          inp.value = "";
+          renderAllMock();
+          showToast(`Emiten ${code} ditambahkan ke daftar saham.`);
+        });
+        document.querySelector("#tickerChips").addEventListener("click", (e) => {
+          const t = e.target.dataset.removeTicker;
+          if (!t) return;
+          mockState.actual.tickers = mockState.actual.tickers.filter((x) => x !== t);
+          mockState.actual.stockPurchases = mockState.actual.stockPurchases.filter((p) => p.ticker !== t);
+          renderAllMock();
+          showToast(`Emiten ${t} dihapus.`, "info");
+        });
+
+        ["stockFormLotPrice", "stockFormDividend", "rdpuFormAmount", "btcFormAmount"].forEach((id) => {
+          const inp = document.querySelector(`#${id}`);
+          inp.addEventListener("input", () => { inp.value = fmtInput(inp.value); });
+        });
+
+        document.querySelector("#stockPurchaseForm").addEventListener("submit", (e) => {
+          e.preventDefault();
+          const lotPrice = parseNum(document.querySelector("#stockFormLotPrice").value);
+          const lots = Math.floor(Number(document.querySelector("#stockFormLots").value) || 0);
+          if (lotPrice <= 0 || lots <= 0) return;
+          const item = {
+            id: editingStockId || `stk_${Date.now()}`,
+            ticker: document.querySelector("#stockFormTicker").value,
+            month: Number(document.querySelector("#stockFormMonth").value),
+            year: Number(document.querySelector("#stockFormYear").value),
+            lotPrice,
+            lots,
+            dividendAmount: parseNum(document.querySelector("#stockFormDividend").value),
+          };
+          if (editingStockId) {
+            mockState.actual.stockPurchases = mockState.actual.stockPurchases.map((p) => p.id === editingStockId ? item : p);
+          } else {
+            mockState.actual.stockPurchases.push(item);
+          }
+          editingStockId = null;
+          e.target.reset();
+          document.querySelector("#stockFormSubmit").textContent = "Simpan Saham";
+          document.querySelector("#stockFormCancel").classList.add("hidden");
+          renderAllMock({ withFlash: true });
+          showToast(`Tersimpan: ${item.ticker} ${item.lots} lot (${monthName(item.month)} ${item.year}).`);
+        });
+
+        document.querySelector("#stockFormCancel").addEventListener("click", () => {
+          editingStockId = null;
+          document.querySelector("#stockPurchaseForm").reset();
+          document.querySelector("#stockFormSubmit").textContent = "Simpan Saham";
+          document.querySelector("#stockFormCancel").classList.add("hidden");
+        });
+
+        document.querySelector("#actualStockBody").addEventListener("click", (e) => {
+          const editId = e.target.dataset.editStock;
+          const delId = e.target.dataset.deleteStock;
+          if (editId) {
+            const p = mockState.actual.stockPurchases.find((x) => x.id === editId);
+            if (!p) return;
+            editingStockId = p.id;
+            document.querySelector("#stockFormTicker").value = p.ticker;
+            document.querySelector("#stockFormMonth").value = p.month;
+            document.querySelector("#stockFormYear").value = p.year;
+            document.querySelector("#stockFormLotPrice").value = p.lotPrice.toLocaleString("id-ID");
+            document.querySelector("#stockFormLots").value = p.lots;
+            document.querySelector("#stockFormDividend").value = p.dividendAmount ? p.dividendAmount.toLocaleString("id-ID") : "";
+            document.querySelector("#stockFormSubmit").textContent = "Update Saham";
+            document.querySelector("#stockFormCancel").classList.remove("hidden");
+          } else if (delId) {
+            mockState.actual.stockPurchases = mockState.actual.stockPurchases.filter((x) => x.id !== delId);
+            renderAllMock({ withFlash: true });
+            showToast("Catatan saham dihapus.", "info");
+          }
+        });
+
+        document.querySelector("#rdpuForm").addEventListener("submit", (e) => {
+          e.preventDefault();
+          const amount = parseNum(document.querySelector("#rdpuFormAmount").value);
+          if (amount <= 0) return;
+          const item = {
+            id: editingRdpuId || `rdpu_${Date.now()}`,
+            month: Number(document.querySelector("#rdpuFormMonth").value),
+            year: Number(document.querySelector("#rdpuFormYear").value),
+            amount,
+          };
+          if (editingRdpuId) {
+            mockState.actual.rdpuPurchases = mockState.actual.rdpuPurchases.map((p) => p.id === editingRdpuId ? item : p);
+          } else {
+            mockState.actual.rdpuPurchases.push(item);
+          }
+          editingRdpuId = null;
+          e.target.reset();
+          document.querySelector("#rdpuFormSubmit").textContent = "Simpan RDPU";
+          document.querySelector("#rdpuFormCancel").classList.add("hidden");
+          renderAllMock({ withFlash: true });
+          showToast(`Tersimpan RDPU ${fmtMoney(item.amount)} (${monthName(item.month)} ${item.year}).`);
+        });
+        document.querySelector("#rdpuFormCancel").addEventListener("click", () => {
+          editingRdpuId = null;
+          document.querySelector("#rdpuForm").reset();
+          document.querySelector("#rdpuFormSubmit").textContent = "Simpan RDPU";
+          document.querySelector("#rdpuFormCancel").classList.add("hidden");
+        });
+        document.querySelector("#actualRdpuBody").addEventListener("click", (e) => {
+          const editId = e.target.dataset.editRdpu;
+          const delId = e.target.dataset.deleteRdpu;
+          if (editId) {
+            const p = mockState.actual.rdpuPurchases.find((x) => x.id === editId);
+            if (!p) return;
+            editingRdpuId = p.id;
+            document.querySelector("#rdpuFormMonth").value = p.month;
+            document.querySelector("#rdpuFormYear").value = p.year;
+            document.querySelector("#rdpuFormAmount").value = p.amount.toLocaleString("id-ID");
+            document.querySelector("#rdpuFormSubmit").textContent = "Update RDPU";
+            document.querySelector("#rdpuFormCancel").classList.remove("hidden");
+          } else if (delId) {
+            mockState.actual.rdpuPurchases = mockState.actual.rdpuPurchases.filter((x) => x.id !== delId);
+            renderAllMock({ withFlash: true });
+            showToast("Catatan RDPU dihapus.", "info");
+          }
+        });
+
+        document.querySelector("#btcForm").addEventListener("submit", (e) => {
+          e.preventDefault();
+          const amount = parseNum(document.querySelector("#btcFormAmount").value);
+          if (amount <= 0) return;
+          const item = {
+            id: editingBtcId || `btc_${Date.now()}`,
+            month: Number(document.querySelector("#btcFormMonth").value),
+            year: Number(document.querySelector("#btcFormYear").value),
+            amount,
+          };
+          if (editingBtcId) {
+            mockState.actual.btcPurchases = mockState.actual.btcPurchases.map((p) => p.id === editingBtcId ? item : p);
+          } else {
+            mockState.actual.btcPurchases.push(item);
+          }
+          editingBtcId = null;
+          e.target.reset();
+          document.querySelector("#btcFormSubmit").textContent = "Simpan BTC";
+          document.querySelector("#btcFormCancel").classList.add("hidden");
+          renderAllMock({ withFlash: true });
+          showToast(`Tersimpan BTC ${fmtMoney(item.amount)} (${monthName(item.month)} ${item.year}).`);
+        });
+        document.querySelector("#btcFormCancel").addEventListener("click", () => {
+          editingBtcId = null;
+          document.querySelector("#btcForm").reset();
+          document.querySelector("#btcFormSubmit").textContent = "Simpan BTC";
+          document.querySelector("#btcFormCancel").classList.add("hidden");
+        });
+        document.querySelector("#actualBtcBody").addEventListener("click", (e) => {
+          const editId = e.target.dataset.editBtc;
+          const delId = e.target.dataset.deleteBtc;
+          if (editId) {
+            const p = mockState.actual.btcPurchases.find((x) => x.id === editId);
+            if (!p) return;
+            editingBtcId = p.id;
+            document.querySelector("#btcFormMonth").value = p.month;
+            document.querySelector("#btcFormYear").value = p.year;
+            document.querySelector("#btcFormAmount").value = p.amount.toLocaleString("id-ID");
+            document.querySelector("#btcFormSubmit").textContent = "Update BTC";
+            document.querySelector("#btcFormCancel").classList.remove("hidden");
+          } else if (delId) {
+            mockState.actual.btcPurchases = mockState.actual.btcPurchases.filter((x) => x.id !== delId);
+            renderAllMock({ withFlash: true });
+            showToast("Catatan BTC dihapus.", "info");
+          }
+        });
+
+        document.querySelector("#stockChartTickerFilter").addEventListener("change", renderStockPurchaseChart);
+        document.querySelector("#stockChartYearFilter").addEventListener("change", renderStockPurchaseChart);
+        document.querySelector("#infoTickerFilter").addEventListener("change", renderActualInfo);
+        document.querySelector("#infoYearFilter").addEventListener("change", renderActualInfo);
+
+        ["kalcSaham", "kalcEtf"].forEach((id) => {
+          const inp = document.querySelector(`#${id}`);
+          inp.addEventListener("input", () => { inp.value = fmtInput(inp.value); renderKalkulatorPorsi(); });
+        });
+
+        ["avgNow", "lotNow", "hargaBaru", "lotBaru"].forEach((id) => {
+          const inp = document.querySelector(`#${id}`);
+          inp.addEventListener("input", () => { inp.value = fmtInput(inp.value); });
+        });
+        document.querySelector("#avgCalcBtn").addEventListener("click", () => renderAverageCalc({ notify: true }));
+
+        const apTotal = document.querySelector("#apTotalAset");
+        apTotal.addEventListener("input", () => { apTotal.value = fmtInput(apTotal.value); });
+        addAsetPersenRow("Saham Bluechip", "55.000.000");
+        addAsetPersenRow("RDPU Likuid", "25.000.000");
+        addAsetPersenRow("Bitcoin (BTC)", "20.000.000");
+        document.querySelector("#apAddRowBtn").addEventListener("click", () => addAsetPersenRow());
+        document.querySelector("#apCalcBtn").addEventListener("click", () => renderAsetPersen({ notify: true }));
+
+        renderAllMock();
+      }
+
+      function renderAllMock(opts = {}) {
+        renderSimulator(opts);
+        renderActual();
+        renderKalkulatorPorsi();
+        renderAverageCalc();
+        renderAsetPersen();
+      }
+
+      init();
+    </script>
+  </body>
+</html>
